@@ -2,6 +2,9 @@ import { FOOD_PER_ANT, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constan
 import { FOOD_TABLE, type FoodItem } from './food';
 import { World, type Ant, type AntRole } from './world';
 
+/** Ant fields that only live while the ant is steering a certain way; never written to a save. */
+type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave';
+
 export interface SaveV1 {
   version: 1;
   seed: number;
@@ -11,6 +14,10 @@ export interface SaveV1 {
   /** Optional (absent in older saves): food delivered in total; derived as stock + ants * FOOD_PER_ANT when missing. */
   totalDelivered?: number;
   hatchProgress: number;
+  /** Optional (absent in older saves: start at the current stock): the highest stock ever reached. */
+  peakStock?: number;
+  /** Optional (absent in older saves: start at the current larvae count): the highest number of larvae ever waiting. */
+  peakLarvae?: number;
   /** Optional (absent in older saves): whether the first ant has appeared. */
   started?: boolean;
   nextId: number;
@@ -19,8 +26,17 @@ export interface SaveV1 {
    * `timer` is optional (absent in older saves): seconds of gnawing left (or seconds left inside the nest), 0 otherwise.
    * `role` is optional (absent in older saves = 'forager'); `nestKind` is optional (absent = 'hatch' for an ant in state 'nest').
    * `lifespan` is optional and ignored (removed: ants no longer die of old age; older saves still hold it).
+   * `speedMul` / `curiosity` / `stubbornness` are optional (absent in older saves = 1.0); the transient steering state
+   * (strayT, strayH, lostT, lostH, weave) is never saved.
    */
-  ants: (Omit<Ant, 'timer' | 'role'> & { timer?: number; role?: AntRole; lifespan?: number })[];
+  ants: (Omit<Ant, 'timer' | 'role' | 'speedMul' | 'curiosity' | 'stubbornness' | TransientAntKey> & {
+    timer?: number;
+    role?: AntRole;
+    speedMul?: number;
+    curiosity?: number;
+    stubbornness?: number;
+    lifespan?: number;
+  })[];
   /** Living-creature fields (`alive`, `touches`, `heading`, `corpseOf`) are optional; transient ones (cooldown, hop, wanderT) are never saved. */
   food: FoodItem[];
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
@@ -35,7 +51,14 @@ function foodToSave(f: FoodItem): FoodItem {
   if (f.touches !== undefined) o.touches = f.touches;
   if (f.heading !== undefined) o.heading = f.heading;
   if (f.corpseOf !== undefined) o.corpseOf = f.corpseOf;
+  if (f.speedMul !== undefined) o.speedMul = f.speedMul;
   return o;
+}
+
+/** Persistent fields of an ant only (the transient steering state is left out). */
+function antToSave(a: Ant): SaveV1['ants'][number] {
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, ...rest } = a;
+  return rest;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -68,10 +91,12 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     stock: w.stock,
     totalDelivered: w.totalDelivered,
     hatchProgress: w.hatchProgress,
+    peakStock: w.peakStock,
+    peakLarvae: w.peakLarvae,
     started: w.started,
     nextId: w.nextId,
     introDone: extra.introDone,
-    ants: w.ants.map((a) => ({ ...a })),
+    ants: w.ants.map(antToSave),
     food: w.food.map(foodToSave),
     pheromone: bytesToBase64(bytes),
     camera: { ...extra.camera },
@@ -89,13 +114,22 @@ export function worldFromSave(s: SaveV1): World {
   w.totalDelivered = s.totalDelivered ?? s.stock + s.ants.length * FOOD_PER_ANT;
   // Old saves (colony floor) may hold up to LEGACY_MAX_HATCH_PROGRESS seconds: clamp into the effective cycle range.
   w.hatchProgress = Math.max(0, Math.min(w.hatchInterval - STEP_S, s.hatchProgress));
+  w.peakStock = Math.max(s.peakStock ?? 0, s.stock);
+  w.peakLarvae = Math.max(s.peakLarvae ?? 0, w.larvae);
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
   for (const a of s.ants) {
     // `lifespan` was removed (ants no longer die of old age); old saves may still carry it: drop it.
     const { lifespan: _lifespan, ...rest } = a;
-    const ant: Ant = { ...rest, timer: a.timer ?? 0, role: a.role ?? 'forager' };
+    const ant: Ant = {
+      ...rest,
+      timer: a.timer ?? 0,
+      role: a.role ?? 'forager',
+      speedMul: a.speedMul ?? 1,
+      curiosity: a.curiosity ?? 1,
+      stubbornness: a.stubbornness ?? 1,
+    };
     if (ant.state === 'nest') ant.nestKind = a.nestKind ?? 'hatch';
     else delete ant.nestKind;
     w.ants.push(ant);
@@ -115,6 +149,9 @@ const ANT_ROLES = ['forager', 'nurse'];
 /** Saves from the old colony-floor rules stored up to 15 s here; they still load (clamped on restore). */
 const LEGACY_MAX_HATCH_PROGRESS = 15;
 const MAX_ENTRIES = 2000;
+/** Accepted range of the personality traits and of a creature's speedMul in a save (generous: drawn values stay well inside). */
+const TRAIT_MIN = 0.3;
+const TRAIT_MAX = 3;
 /** Largest piece count of any food kind (a loaded save may hold 0..max; old saves hold smaller numbers). */
 const MAX_PIECES = Math.max(...Object.values(FOOD_TABLE).map((f) => f.pieces));
 
@@ -128,7 +165,10 @@ function validAnt(a: unknown): boolean {
     (o.targetFood === null || isNum(o.targetFood)) &&
     (o.timer === undefined || (isNum(o.timer) && o.timer >= 0)) &&
     (o.nestKind === undefined || (typeof o.nestKind === 'string' && NEST_KINDS.includes(o.nestKind))) &&
-    (o.role === undefined || (typeof o.role === 'string' && ANT_ROLES.includes(o.role)))
+    (o.role === undefined || (typeof o.role === 'string' && ANT_ROLES.includes(o.role))) &&
+    (o.speedMul === undefined || inRange(o.speedMul, TRAIT_MIN, TRAIT_MAX)) &&
+    (o.curiosity === undefined || inRange(o.curiosity, TRAIT_MIN, TRAIT_MAX)) &&
+    (o.stubbornness === undefined || inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX))
   );
 }
 
@@ -142,6 +182,7 @@ function validFood(f: unknown): boolean {
     (o.alive === undefined || typeof o.alive === 'boolean') &&
     (o.touches === undefined || (isInt(o.touches) && o.touches >= 0 && o.touches <= 2)) &&
     (o.heading === undefined || isNum(o.heading)) &&
+    (o.speedMul === undefined || inRange(o.speedMul, TRAIT_MIN, TRAIT_MAX)) &&
     (o.corpseOf === undefined || o.corpseOf === 'beetle' || o.corpseOf === 'fly' || o.corpseOf === 'caterpillar')
   );
 }
@@ -161,6 +202,9 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (!isNum(o.seed) || !isNum(o.rngState)) return null;
   if (!inRange(o.hatchProgress, 0, LEGACY_MAX_HATCH_PROGRESS)) return null;
   if (!isNum(o.time) || o.time < 0 || !isNum(o.stock) || o.stock < 0 || !isInt(o.nextId)) return null;
+  for (const k of ['peakStock', 'peakLarvae'] as const) {
+    if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
+  }
   if (o.totalDelivered !== undefined && (!isNum(o.totalDelivered) || o.totalDelivered < 0)) return null;
   if (o.started !== undefined && typeof o.started !== 'boolean') return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;

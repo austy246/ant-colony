@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, NEST, STEP_S, TOUCH_COOLDOWN_S, WORLD_H, WORLD_W,
+  CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, NEST, PREY_SPEED_VAR, STEP_S, TOUCH_COOLDOWN_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE } from './food';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
@@ -62,7 +62,8 @@ describe('caterpillar crawls', () => {
       for (let i = 0; i < 20 / STEP_S; i++) {
         w.step(STEP_S);
         far = Math.max(far, Math.hypot(c.x - x0, c.y - y0));
-        expect(Math.hypot(c.x - px, c.y - py)).toBeLessThanOrEqual(CATERPILLAR_SPEED * STEP_S + 1e-9);
+        // each creature walks at its own speedMul (1 +- PREY_SPEED_VAR)
+        expect(Math.hypot(c.x - px, c.y - py)).toBeLessThanOrEqual(CATERPILLAR_SPEED * (1 + PREY_SPEED_VAR) * STEP_S + 1e-9);
         px = c.x;
         py = c.y;
       }
@@ -74,6 +75,7 @@ describe('caterpillar crawls', () => {
     const w = flatWorld(2);
     w.terrain.speed.fill(0.5);
     const c = w.placeFood('caterpillar', 200, 100)!;
+    c.speedMul = 1; // exact speed check: neutral creature
     let len = 0;
     let px = c.x;
     let py = c.y;
@@ -187,6 +189,7 @@ describe('first touch: the caterpillar speeds up', () => {
     const lengthOf = (touch: boolean): number => {
       const w = flatWorld(4);
       const c = w.placeFood('caterpillar', 150, 100)!;
+      c.speedMul = 1; // exact speed check: neutral creature
       if (touch) {
         antAt(w, c.x, c.y);
         w.step(STEP_S);
@@ -215,6 +218,7 @@ describe('first touch: the caterpillar speeds up', () => {
   it('the flight lasts CATERPILLAR_FLEE_S (5 s), then it crawls at the normal pace again; fleeT is not saved', () => {
     const w = flatWorld(5);
     const c = w.placeFood('caterpillar', 150, 100)!;
+    c.speedMul = 1; // exact speed check: neutral creature
     antAt(w, c.x, c.y);
     w.step(STEP_S);
     w.ants.length = 0;

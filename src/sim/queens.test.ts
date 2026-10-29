@@ -6,6 +6,7 @@ import { World } from './world';
 function flatWorld(seed = 1): World {
   const w = World.create(seed);
   w.stock = 0;
+  w.hatchJitter = 0; // exact hatch timing is checked here; the jitter has its own tests in personality.test.ts
   w.terrain.surface.fill(Surface.Ground);
   w.terrain.speed.fill(1);
   return w;

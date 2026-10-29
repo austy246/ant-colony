@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEETLE_SPEED, HOP_DUR, NEST, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
+import { BEETLE_SPEED, HOP_DUR, NEST, PREY_SPEED_VAR, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE } from './food';
 import { Surface } from './terrain';
 import { World } from './world';
@@ -64,7 +64,7 @@ describe('beetle (alive) walks', () => {
       for (let i = 0; i < 20 / STEP_S; i++) {
         w.step(STEP_S);
         far = Math.max(far, Math.hypot(b.x - x0, b.y - y0));
-        expect(Math.hypot(b.x - px, b.y - py)).toBeLessThanOrEqual(BEETLE_SPEED * STEP_S + 1e-9);
+        expect(Math.hypot(b.x - px, b.y - py)).toBeLessThanOrEqual(BEETLE_SPEED * (1 + PREY_SPEED_VAR) * STEP_S + 1e-9); // own speedMul 1 +- PREY_SPEED_VAR
         px = b.x;
         py = b.y;
       }
@@ -76,6 +76,7 @@ describe('beetle (alive) walks', () => {
     const w = flatWorld(2);
     w.terrain.speed.fill(0.5);
     const b = w.placeFood('beetle', 200, 100)!;
+    b.speedMul = 1; // exact speed check: neutral creature
     let len = 0;
     let px = b.x;
     let py = b.y;

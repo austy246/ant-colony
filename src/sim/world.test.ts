@@ -10,6 +10,7 @@ import { World } from './world';
 function flatWorld(seed = 1): World {
   const w = World.create(seed);
   w.stock = 0;
+  w.hatchJitter = 0; // these tests check exact hatch timing; the jitter has its own tests in personality.test.ts
   w.terrain.surface.fill(Surface.Ground);
   w.terrain.speed.fill(1);
   return w;
@@ -714,6 +715,7 @@ describe('World', () => {
         const w = flatWorld(28);
         const far = w.placeFood('carrion', 280, 150)!; // far away: the ant keeps walking toward it
         const a = w.spawnAnt();
+        a.speedMul = 1; // exact speed check: neutral ant
         a.x = 200;
         a.y = 150;
         a.state = state;

@@ -21,8 +21,11 @@ function run(w: World, seconds: number): void {
 }
 
 /** A single old wandering ant (age far beyond the young-ant range) at (x, y) with the given heading. */
-function oldAnt(w: World, x: number, y: number, heading: number) {
+function oldAnt(w: World, x: number, y: number, heading: number, curiosity = 1) {
   const a = w.spawnAnt();
+  a.speedMul = 1; // neutral personality (curiosity as given) so the geometry below is exact
+  a.curiosity = curiosity;
+  a.stubbornness = 1;
   w.started = false;
   a.x = x;
   a.y = y;
@@ -161,18 +164,21 @@ describe('exploration', () => {
   });
 
   it('a pheromone trail still wins over exploration, even through explored ground', () => {
-    const arrange = (withTrail: boolean): number => {
+    const arrange = (withTrail: boolean, curiosity = 1): number => {
       const w = flatWorld(8);
       // Rows above y = 96 (the trail side) are explored, everything south of them is empty.
       for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) w.explored[y * CW + x] = y * EXPLORE_CELL < 96 ? 6 : 0;
       if (withTrail) {
         for (let y = 90; y <= 97; y++) for (let x = 158; x <= 200; x++) w.pher.data[y * w.pher.w + x] = MAX_PHEROMONE;
       }
-      const a = oldAnt(w, 160, 100, 0);
+      const a = oldAnt(w, 160, 100, 0, curiosity);
       run(w, 1);
       return a.y;
     };
     expect(arrange(true)).toBeLessThan(98.5); // follows the trail north into explored ground
+    // The most curious ant (curiosity 1.6) still prefers a fresh trail to unexplored ground.
+    // (the same rng stream with and without the trail, so only the trail differs.)
+    expect(arrange(true, 1.6)).toBeLessThan(arrange(false, 1.6) - 2);
     expect(arrange(false)).toBeGreaterThan(100.5); // without the trail it avoids the explored side
   });
 

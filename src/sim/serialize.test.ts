@@ -7,6 +7,21 @@ import { World } from './world';
 const MAX_PIECES = Math.max(...Object.values(FOOD_TABLE).map((f) => f.pieces));
 const EXTRA = { introDone: true, camera: { x: 10, y: 20, zoom: 2 } };
 
+/**
+ * Drops the transient steering state (weave, strays, lost episodes) of every ant. A save never holds it, so a world that is
+ * compared with its own restored copy must not carry any either (the restored ant starts with a fresh weave of 0).
+ */
+function calm(w: World): World {
+  for (const a of w.ants) {
+    delete a.strayT;
+    delete a.strayH;
+    delete a.lostT;
+    delete a.lostH;
+    delete a.weave;
+  }
+  return w;
+}
+
 function busyWorld(): World {
   const w = World.create(1234);
   for (let i = 0; i < 12; i++) w.spawnAnt();
@@ -20,7 +35,7 @@ function busyWorld(): World {
   w.pher.deposit(61, 141, 4.9);
   // Whole STEP_S multiples keep the private substep accumulator ~0 (it is intentionally not saved).
   for (let i = 0; i < 90; i++) w.step(STEP_S);
-  return w;
+  return calm(w);
 }
 
 describe('serialize', () => {
@@ -95,6 +110,7 @@ describe('serialize', () => {
     for (let i = 0; i < 60; i++) w.step(STEP_S); // 2 s: arrived and halfway through the bite
     expect(a.state).toBe('gnaw');
     expect(a.timer).toBeGreaterThan(0.5);
+    calm(w);
     const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
     expect(validateSave(s)).not.toBeNull();
     const r = worldFromSave(validateSave(s)!);
@@ -269,7 +285,11 @@ describe('validateSave', () => {
       const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
       expect(validateSave(s)).not.toBeNull();
       const sb = s.food.find((f) => f.id === beetle!.id)!;
-      expect(sb).toEqual({ id: beetle!.id, kind: 'beetle', x: beetle!.x, y: beetle!.y, piecesLeft: 18, alive: true, touches: 1, heading: beetle!.heading });
+      expect(sb).toEqual({
+        id: beetle!.id, kind: 'beetle', x: beetle!.x, y: beetle!.y, piecesLeft: 18, alive: true, touches: 1, heading: beetle!.heading,
+        speedMul: beetle!.speedMul,
+      });
+      expect(beetle!.speedMul).toBeGreaterThan(0);
       for (const f of s.food) {
         expect('cooldown' in f).toBe(false);
         expect('hop' in f).toBe(false);

@@ -51,3 +51,45 @@ export const CATERPILLAR_SPEED = 2.5;
 export const CATERPILLAR_FLEE_MUL = 2.5;
 /** Seconds a touched caterpillar hurries away from the ant that touched it. */
 export const CATERPILLAR_FLEE_S = 5;
+
+// ---- Natural variation ("random vibe"); all randomness comes from the world's seeded Rng ----
+/** Per-ant personality ranges drawn at spawn (uniform). Ants loaded from old saves get the neutral 1.0 for each. */
+export const SPEED_MUL_MIN = 0.88;
+export const SPEED_MUL_MAX = 1.12;
+/** Curiosity scales heading jitter, the chance to stray off a trail and the pull of unexplored ground. */
+export const CURIOSITY_MIN = 0.6;
+export const CURIOSITY_MAX = 1.6;
+/** Stubbornness divides the stray chance: a stubborn ant follows a trail longer before it is distracted. */
+export const STUBBORNNESS_MIN = 0.5;
+export const STUBBORNNESS_MAX = 1.5;
+/** Chance per substep that a wanderer pulled by pheromone gets distracted (times curiosity / stubbornness). */
+export const STRAY_P = 0.004;
+/** A pheromone pull (weight * trail strength) must exceed this for the ant to count as "following a trail". */
+export const STRAY_PULL_MIN = 0.05;
+/** A distracted ant ignores pheromone for STRAY_MIN_S + (STRAY_MAX_S - STRAY_MIN_S) * random seconds. */
+export const STRAY_MIN_S = 2;
+export const STRAY_MAX_S = 6;
+/** ... and turns away from its heading by STRAY_TURN_MIN..STRAY_TURN_MAX rad (either side). */
+export const STRAY_TURN_MIN = 0.6;
+export const STRAY_TURN_MAX = 1.6;
+/** Heading weave of returning carriers: std (rad) at curiosity 1, correlation time (s). */
+export const WEAVE_AMP = 0.35;
+export const WEAVE_TAU_S = 1.5;
+/** Weave std of an ant walking to food (a slight curve instead of a straight line); fades out near the food. */
+export const APPROACH_WEAVE_AMP = 0.18;
+/** Chance per second (times curiosity) that a carrier gets confused and heads off in a random direction. */
+export const LOST_P = 0.01;
+export const LOST_MIN_S = 1.5;
+export const LOST_MAX_S = 3;
+/** The queen's hatch cycle lasts interval * (1 - HATCH_JITTER + 2 * HATCH_JITTER * random), drawn when the cycle starts. */
+export const HATCH_JITTER = 0.2;
+/** Beetles and caterpillars walk at their base speed times 1 +- PREY_SPEED_VAR (drawn once, when placed). */
+export const PREY_SPEED_VAR = 0.15;
+
+// ---- Nest needs (the underground layout is sized by the peaks the colony has reached) ----
+/** Food one storage chamber (pantry) holds. */
+export const PANTRY_CAPACITY = 25;
+/** Larvae one brood chamber holds. */
+export const LARVAE_PER_CHAMBER = 10;
+export const MAX_PANTRIES = 6;
+export const MAX_LARVAE_CHAMBERS = 4;

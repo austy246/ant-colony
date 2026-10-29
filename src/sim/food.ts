@@ -39,6 +39,8 @@ export interface FoodItem {
   touches?: number;
   /** Facing of a living creature in radians (a beetle / caterpillar walks that way; a fly's is its last hop direction). */
   heading?: number;
+  /** Walking-speed factor of a beetle / caterpillar (1 +- PREY_SPEED_VAR, drawn when placed; absent = 1). Saved. */
+  speedMul?: number;
   /** Set when a living creature died: `kind` is then 'carrion' and this says what it was. */
   corpseOf?: PreyKind;
   /** TRANSIENT (not saved): seconds until the creature can be touched again (absent = 0). */

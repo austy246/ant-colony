@@ -1,7 +1,10 @@
 import {
+  APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
+  STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
   BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
+import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import { generateTerrain, speedAt, type Terrain } from './terrain';
@@ -27,6 +30,22 @@ export interface Ant {
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
   role: AntRole;
+  /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
+  speedMul: number;
+  /** Scales heading jitter, the chance to stray off a trail, the pull of unexplored ground and the weave of a carrier. */
+  curiosity: number;
+  /** Divides the chance to stray off a trail: a stubborn ant follows a trail longer. */
+  stubbornness: number;
+  /** TRANSIENT (not saved): seconds a distracted wanderer still ignores pheromone (absent = following normally). */
+  strayT?: number;
+  /** TRANSIENT: the heading a distracted wanderer is turning toward while strayT > 0. */
+  strayH?: number;
+  /** TRANSIENT: seconds a confused carrier still heads off along lostH instead of toward the nest. */
+  lostT?: number;
+  /** TRANSIENT: heading of a confused carrier. */
+  lostH?: number;
+  /** TRANSIENT: smooth random heading offset (rad) of an ant walking to food or carrying; correlated over ~WEAVE_TAU_S. */
+  weave?: number;
 }
 
 const BASE_SPEED = 12;
@@ -54,7 +73,11 @@ const EXPLORE_H = Math.ceil(WORLD_H / EXPLORE_CELL);
 const EXPLORE_DECAY = Math.exp((-STEP_S * Math.LN2) / EXPLORE_HALF_LIFE_S);
 /** Explored value a wandering ant adds to its cell per second spent there. */
 const EXPLORE_RATE = 1;
-/** Score penalty per unit of explored value in the cell a candidate heading points at (a detected trail or food always outweighs it). */
+/**
+ * Score penalty per unit of explored value in the cell a candidate heading points at (a detected trail or food always outweighs it).
+ * Scaled by the ant's curiosity as 0.7 + 0.3 * curiosity (0.88 - 1.18), so even the most curious ant keeps trail > explored ground
+ * (EXPLORE_CAP * 0.1 * 1.18 = 0.71 < the pull 0.15 * MAX_PHEROMONE of a fresh trail).
+ */
 const EXPLORE_WEIGHT = 0.1;
 /** How far ahead (px) a wanderer reads the explored grid. */
 const EXPLORE_LOOKAHEAD = 16;
@@ -107,6 +130,17 @@ export class World {
   totalDelivered = 0;
   /** Seconds of the current hatching cycle, in [0, effective hatch interval); 0 while no cycle runs. */
   hatchProgress = 0;
+  /**
+   * Length of the current hatching cycle as a multiple of `hatchInterval`, drawn when the cycle starts
+   * (1 - hatchJitter .. 1 + hatchJitter). TRANSIENT: 1 after a load, the next cycle draws again.
+   */
+  hatchMul = 1;
+  /** Half-width of the cycle jitter (HATCH_JITTER); tests set 0 for exact timing. */
+  hatchJitter = HATCH_JITTER;
+  /** Highest `stock` ever reached (never decreases; saved). Sizes the pantries of the underground view. */
+  peakStock: number;
+  /** Highest `larvae` count ever reached (never decreases; saved). Sizes the brood chambers. */
+  peakLarvae: number;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
   /** Ants killed so far by a defending beetle (transient: not saved, 0 after a load). */
@@ -135,6 +169,8 @@ export class World {
     this.terrain = terrain;
     this.pher = pher;
     this.rng = rng;
+    this.peakStock = this.stock;
+    this.peakLarvae = this.larvae;
   }
 
   static create(seed: number): World {
@@ -157,9 +193,18 @@ export class World {
     return HATCH_INTERVAL_S / this.queens;
   }
 
-  /** Progress of the current hatching cycle in [0, 1]. */
+  /** Progress of the current hatching cycle in [0, 1] (the cycle is `hatchInterval * hatchMul` long). */
   get hatchFraction(): number {
-    return Math.max(0, Math.min(1, this.hatchProgress / this.hatchInterval));
+    return Math.max(0, Math.min(1, this.hatchProgress / (this.hatchInterval * this.hatchMul)));
+  }
+
+  /** What the underground layout needs: queens, and pantries / brood chambers for the peak stock / larvae. */
+  get nestNeeds(): { queens: number; pantries: number; larvaeChambers: number } {
+    return {
+      queens: this.queens,
+      pantries: pantriesNeeded(this.peakStock),
+      larvaeChambers: larvaeChambersNeeded(this.peakLarvae),
+    };
   }
 
   /** Ants working in the nest for good (role 'nurse'): they feed the queen, carry eggs and never go out. */
@@ -207,7 +252,14 @@ export class World {
       targetFood: null,
       timer: 0,
       role: 'forager',
+      speedMul: 1,
+      curiosity: 1,
+      stubbornness: 1,
     };
+    // Personality last, so the draws above keep their order.
+    ant.speedMul = SPEED_MUL_MIN + (SPEED_MUL_MAX - SPEED_MUL_MIN) * rng.next();
+    ant.curiosity = CURIOSITY_MIN + (CURIOSITY_MAX - CURIOSITY_MIN) * rng.next();
+    ant.stubbornness = STUBBORNNESS_MIN + (STUBBORNNESS_MAX - STUBBORNNESS_MIN) * rng.next();
     if (inNest) {
       ant.state = 'nest';
       ant.nestKind = 'hatch';
@@ -227,6 +279,7 @@ export class World {
       item.alive = true;
       item.touches = 0;
       item.heading = this.rng.next() * TWO_PI - Math.PI;
+      if (kind !== 'fly') item.speedMul = 1 + PREY_SPEED_VAR * (2 * this.rng.next() - 1);
     }
     this.food.push(item);
     return item;
@@ -267,6 +320,7 @@ export class World {
     const ex = this.explored;
     for (let i = 0; i < ex.length; i++) ex[i] *= EXPLORE_DECAY;
     for (const ant of this.ants) this.updateAnt(ant);
+    this.trackPeaks();
     this.updateCreatures();
     this.resolveTouches();
     this.hatch();
@@ -306,6 +360,13 @@ export class World {
         this.emerge(oldest, 'wander');
       }
     }
+  }
+
+  /** Remembers the highest stock / larvae count reached (the nest is sized by the peaks, which never shrink). */
+  private trackPeaks(): void {
+    if (this.stock > this.peakStock) this.peakStock = this.stock;
+    const l = this.larvae;
+    if (l > this.peakLarvae) this.peakLarvae = l;
   }
 
   /** Living creatures: cooldowns tick, hopping flies fly, beetles and caterpillars walk. */
@@ -377,7 +438,7 @@ export class World {
     }
     f.heading = wrapAngle(h);
     const base = cat ? CATERPILLAR_SPEED * (fleeing ? CATERPILLAR_FLEE_MUL : 1) : BEETLE_SPEED;
-    const v = base * speedAt(t, f.x, f.y) * STEP_S;
+    const v = base * (f.speedMul ?? 1) * speedAt(t, f.x, f.y) * STEP_S;
     const nx = f.x + Math.cos(f.heading) * v;
     const ny = f.y + Math.sin(f.heading) * v;
     if (isFreeSpot(t, nx, ny)) {
@@ -466,8 +527,12 @@ export class World {
       this.hatchProgress = 0;
       return;
     }
+    if (this.hatchProgress === 0) {
+      // A new cycle starts: its length is the nominal interval times 0.8 .. 1.2, fixed for the whole cycle.
+      this.hatchMul = 1 - this.hatchJitter + 2 * this.hatchJitter * this.rng.next();
+    }
     this.hatchProgress += STEP_S;
-    if (this.hatchProgress >= this.hatchInterval - 1e-9) {
+    if (this.hatchProgress >= this.hatchInterval * this.hatchMul - 1e-9) {
       this.stock = Math.max(0, Math.round((this.stock - FOOD_PER_ANT) * 1e6) / 1e6);
       this.spawnAnt(true);
       this.hatchProgress = 0;
@@ -545,6 +610,11 @@ export class World {
       }
     }
 
+    if (ant.state !== 'wander' && ant.strayT !== undefined) {
+      delete ant.strayT; // found something to do: the distraction is over
+      delete ant.strayH;
+    }
+
     if (ant.state === 'gnaw') {
       this.gnaw(ant);
       return;
@@ -558,9 +628,13 @@ export class World {
         ant.state = 'wander';
         ant.targetFood = null;
       } else {
+        const fd = Math.hypot(f.x - ant.x, f.y - ant.y);
         desired = Math.atan2(f.y - ant.y, f.x - ant.x);
         pherWeight = 0.3;
-        if (Math.hypot(f.x - ant.x, f.y - ant.y) <= PICKUP_DIST) {
+        // A slight random curve on the way in; it fades out near the food so the ant still arrives.
+        this.stepWeave(ant, APPROACH_WEAVE_AMP * ant.curiosity);
+        desired += (ant.weave ?? 0) * Math.min(1, fd / 15);
+        if (fd <= PICKUP_DIST) {
           // Nothing can be taken from a living creature: stand and wait for the touch.
           if (isAlive(f)) return;
           // Arrived: stand still and gnaw for a while before taking a piece.
@@ -571,10 +645,24 @@ export class World {
       }
     }
     if (ant.state === 'carry') {
-      desired = Math.atan2(NEST.y - ant.y, NEST.x - ant.x);
+      desired = this.carryHeading(ant);
       this.pher.deposit(ant.x, ant.y, DEPOSIT);
     } else if (ant.state === 'wander') {
-      desired = ant.heading + (this.rng.next() - 0.5) * WANDER_JITTER;
+      const jitter = (this.rng.next() - 0.5) * WANDER_JITTER * ant.curiosity;
+      if (ant.strayT !== undefined) {
+        ant.strayT -= STEP_S;
+        if (ant.strayT <= 1e-9) {
+          delete ant.strayT;
+          delete ant.strayH;
+        }
+      }
+      if (ant.strayT !== undefined) {
+        // Distracted: wander off on its own heading and ignore the trail for now.
+        ant.strayH = (ant.strayH ?? ant.heading) + jitter;
+        desired = ant.strayH;
+      } else {
+        desired = ant.heading + jitter;
+      }
       const homeD = Math.hypot(ant.x - NEST.x, ant.y - NEST.y);
       if (homeD < OUTBOUND_R) {
         desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
@@ -584,16 +672,26 @@ export class World {
         const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
-      pherWeight = 0.15;
+      pherWeight = ant.strayT !== undefined ? 0 : 0.15;
       this.markExplored(ant.x, ant.y);
     }
 
-    this.move(ant, desired, pherWeight);
+    const pull = this.move(ant, desired, pherWeight);
+    // Following a trail (a real pull) may end in a distraction; it starts next substep.
+    if (ant.state === 'wander' && ant.strayT === undefined && pull > STRAY_PULL_MIN) {
+      if (this.rng.next() < (STRAY_P * ant.curiosity) / ant.stubbornness) {
+        ant.strayT = STRAY_MIN_S + (STRAY_MAX_S - STRAY_MIN_S) * this.rng.next();
+        const sign = this.rng.next() < 0.5 ? 1 : -1;
+        ant.strayH = ant.heading + sign * (STRAY_TURN_MIN + (STRAY_TURN_MAX - STRAY_TURN_MIN) * this.rng.next());
+      }
+    }
 
     if (ant.state === 'carry' && Math.hypot(ant.x - NEST.x, ant.y - NEST.y) <= NEST.r) {
       this.stock += ant.carry;
       this.totalDelivered += ant.carry;
       ant.carry = 0;
+      delete ant.lostT;
+      delete ant.lostH;
       this.deliveryCount++;
       // The forager goes down into the nest to unload and rest; it keeps its food target if that food still exists.
       const f = this.findFood(ant.targetFood);
@@ -604,6 +702,39 @@ export class World {
       ant.x = NEST.x + (this.rng.next() - 0.5) * 4;
       ant.y = NEST.y + (this.rng.next() - 0.5) * 4;
     }
+  }
+
+  /**
+   * Advances the ant's smooth heading offset `weave`: an Ornstein-Uhlenbeck process with correlation time WEAVE_TAU_S and
+   * stationary standard deviation `amp` rad, clamped to +-1 rad so the ant always makes progress toward its goal.
+   */
+  private stepWeave(ant: Ant, amp: number): void {
+    const decay = Math.exp(-STEP_S / WEAVE_TAU_S);
+    const rng = this.rng;
+    const gauss = (rng.next() + rng.next() + rng.next() - 1.5) * 2; // mean 0, std 1
+    const w = decay * (ant.weave ?? 0) + amp * Math.sqrt(1 - decay * decay) * gauss;
+    ant.weave = Math.max(-1, Math.min(1, w));
+  }
+
+  /**
+   * Heading of a carrier: straight toward the nest plus a smooth random weave (so the way home is wavy), except while it is
+   * confused (`lostT` > 0): then it walks a random heading for a moment and homing resumes. LOST_P is per second.
+   */
+  private carryHeading(ant: Ant): number {
+    this.stepWeave(ant, WEAVE_AMP * ant.curiosity);
+    const weave = ant.weave ?? 0;
+    if (ant.lostT !== undefined) {
+      ant.lostT -= STEP_S;
+      if (ant.lostT <= 1e-9) {
+        delete ant.lostT;
+        delete ant.lostH;
+      }
+    } else if (this.rng.next() < LOST_P * ant.curiosity * STEP_S) {
+      ant.lostT = LOST_MIN_S + (LOST_MAX_S - LOST_MIN_S) * this.rng.next();
+      ant.lostH = this.rng.next() * TWO_PI - Math.PI;
+    }
+    if (ant.lostT !== undefined) return (ant.lostH ?? ant.heading) + weave * 0.3;
+    return Math.atan2(NEST.y - ant.y, NEST.x - ant.x) + weave;
   }
 
   /** A gnawing ant stands still; when its bite ends it takes a piece, unless the food is gone or used up meanwhile. */
@@ -636,8 +767,12 @@ export class World {
     this.explored[i] = Math.min(EXPLORE_CAP, this.explored[i] + STEP_S * EXPLORE_RATE);
   }
 
-  /** Pick the best of the candidate headings candidate headings around `desired`, turn smoothly toward it and advance. */
-  private move(ant: Ant, desired: number, pherWeight: number): void {
+  /**
+   * Pick the best of the candidate headings around `desired`, turn smoothly toward it and advance.
+   * Returns the pheromone pull: pherWeight times the strongest trail value any candidate heading senses (0 without trail).
+   */
+  private move(ant: Ant, desired: number, pherWeight: number): number {
+    let pull = 0;
     let best = desired;
     let bestScore = -Infinity;
     const wander = ant.state === 'wander';
@@ -647,9 +782,11 @@ export class World {
       const s = Math.sin(h);
       let score = speedAt(this.terrain, ant.x + c * LOOKAHEAD, ant.y + s * LOOKAHEAD) - TURN_PENALTY * Math.abs(turn);
       if (pherWeight > 0) {
-        score += pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, 1);
+        const p = pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, 1);
+        score += p;
+        if (p > pull) pull = p;
       }
-      if (wander) score -= EXPLORE_WEIGHT * this.explored[this.exploreIndex(ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)];
+      if (wander) score -= EXPLORE_WEIGHT * (0.7 + 0.3 * ant.curiosity) * this.explored[this.exploreIndex(ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)];
       if (score > bestScore) {
         bestScore = score;
         best = h;
@@ -657,7 +794,7 @@ export class World {
     }
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
-    const v = BASE_SPEED * (ant.state === 'carry' ? CARRY_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
+    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
     let nx = ant.x + Math.cos(ant.heading) * v;
     let ny = ant.y + Math.sin(ant.heading) * v;
     const maxX = this.terrain.w - 0.5;
@@ -673,5 +810,6 @@ export class World {
     }
     ant.x = nx;
     ant.y = ny;
+    return pull;
   }
 }

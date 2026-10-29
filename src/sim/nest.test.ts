@@ -79,7 +79,7 @@ describe('hatchlings stay in the nest', () => {
       const w = flatWorld(seed);
       w.spawnAnt();
       w.stock = FOOD_PER_ANT;
-      until(w, () => w.ants.length === 2, HATCH_INTERVAL_S + 1);
+      until(w, () => w.ants.length === 2, HATCH_INTERVAL_S * 1.2 + 1); // the cycle is jittered: 8-12 s
       const h = w.ants[1];
       expect(h.state, `seed ${seed}`).toBe('nest');
       expect(h.nestKind).toBe('hatch');
