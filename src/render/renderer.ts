@@ -107,6 +107,8 @@ export class Renderer {
     c.scale(zoom, zoom);
     c.imageSmoothingEnabled = false;
 
+    // The terrain canvas is on the fine grid (WORLD_W*FINE x WORLD_H*FINE); drawn into world space (art pixels) with
+    // smoothing off, one fine pixel is half an art pixel, the same pixel size as the ants and sprites.
     c.drawImage(this.terrainCanvas as unknown as CanvasImageSource, 0, 0, WORLD_W, WORLD_H);
 
     if (this.view === 'pheromone') this.drawPheromoneView(c);
@@ -114,7 +116,7 @@ export class Renderer {
     else {
       for (const f of this.world.food) drawFood(c, f.kind, f.x, f.y);
       const q = this.queen;
-      if (q?.visible) drawQueen(c, Math.round(q.x), Math.round(q.y), q.digProgress);
+      if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
 
       const ants = this.sorted;
       ants.length = 0;
