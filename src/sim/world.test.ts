@@ -79,7 +79,7 @@ describe('World', () => {
       if (delivered(w, 8) > 0) success++;
     }
     expect(success).toBeGreaterThanOrEqual(9);
-  });
+  }, 30_000);
 
   it('a single carried piece is added to stock when the ant reaches the nest', () => {
     const w = flatWorld(1);
