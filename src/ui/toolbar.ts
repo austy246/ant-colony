@@ -1,6 +1,6 @@
 import type { Tool } from './input';
 
-export type ViewName = 'normal' | 'pheromone' | 'terrain';
+export type ViewName = 'normal' | 'pheromone' | 'terrain' | 'underground';
 
 export const TOOL_BUTTONS: { label: string; tool: Tool }[] = [
   { label: 'Brouk', tool: { kind: 'place', food: 'beetle' } },
@@ -18,6 +18,7 @@ export const VIEW_BUTTONS: { label: string; view: ViewName; key: string }[] = [
   { label: 'Běžný (1)', view: 'normal', key: '1' },
   { label: 'Feromony (P)', view: 'pheromone', key: 'p' },
   { label: 'Terén (T)', view: 'terrain', key: 't' },
+  { label: 'Podzemí (U)', view: 'underground', key: 'u' },
 ];
 
 function makeButton(label: string): HTMLButtonElement {
@@ -28,7 +29,7 @@ function makeButton(label: string): HTMLButtonElement {
 }
 
 /** Physical key -> view shortcut key, independent of the keyboard layout. */
-const CODE_TO_KEY: Record<string, string> = { Digit1: '1', Numpad1: '1', KeyP: 'p', KeyT: 't' };
+const CODE_TO_KEY: Record<string, string> = { Digit1: '1', Numpad1: '1', KeyP: 'p', KeyT: 't', KeyU: 'u' };
 
 export function buildToolbar(
   root: HTMLElement,
@@ -40,7 +41,9 @@ export function buildToolbar(
 
   const toolEls = TOOL_BUTTONS.map(({ label, tool }) => {
     const b = makeButton(label);
-    b.addEventListener('click', () => selectTool(b, tool));
+    b.addEventListener('click', () => {
+      if (!b.classList.contains('disabled')) selectTool(b, tool);
+    });
     bar.appendChild(b);
     return b;
   });
@@ -63,6 +66,10 @@ export function buildToolbar(
 
   function selectView(el: HTMLButtonElement, view: ViewName): void {
     for (const b of viewEls) b.classList.toggle('active', b === el);
+    // underground there is no map to place prey on: the tool buttons stay visible but dimmed and inert
+    const under = view === 'underground';
+    bar.classList.toggle('underground', under);
+    for (const b of toolEls) b.classList.toggle('disabled', under);
     onView(view);
   }
 

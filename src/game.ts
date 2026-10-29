@@ -1,5 +1,6 @@
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
+import { nestHud, UndergroundView } from './render/underground';
 import { clearSave, loadGame, saveGame } from './save';
 import { NEST, SCALE } from './sim/constants';
 import { worldFromSave, worldToSave } from './sim/serialize';
@@ -7,6 +8,7 @@ import { World } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
 import { buildToolbar } from './ui/toolbar';
+import { createViewController } from './ui/viewController';
 
 const AUTOSAVE_MS = 10_000;
 const HUD_MS = 250;
@@ -65,6 +67,46 @@ export async function startGame(): Promise<void> {
     hud.textContent = `Mravenci: ${world.ants.length} · Zásoba: ${world.stock.toFixed(1)}`;
   };
 
+  // --- underground ("Podzemí") ---
+  const nest = el('div', 'nest-hud', '', ui);
+  nest.hidden = true;
+  const nestLine = el('div', 'nest-line', '', nest);
+  const nestBar = el('div', 'nest-bar', '', nest);
+  const nestFill = el('div', 'nest-fill', '', nestBar);
+  const nestNote = el('div', 'nest-note', '', nest);
+  const nestNext = el('div', 'nest-note', '', nest);
+  let underground: UndergroundView | null = null;
+  const updateNestHud = (): void => {
+    const h = nestHud(world);
+    if (nestLine.textContent !== h.line) nestLine.textContent = h.line;
+    nestBar.hidden = h.hatch === null;
+    if (h.hatch !== null) nestFill.style.width = `%`;
+    const note = h.wait ?? '';
+    if (nestNote.textContent !== note) nestNote.textContent = note;
+    nestNote.hidden = note === '';
+    const next = h.nextQueen ?? '';
+    if (nestNext.textContent !== next) nestNext.textContent = next;
+    nestNext.hidden = next === '';
+  };
+  const views = createViewController({
+    setSurfaceView: (v) => renderer.setView(v),
+    attachInput: () => input.attach(),
+    detachInput: () => input.detach(),
+    enterUnderground: () => {
+      underground ??= new UndergroundView(canvas, world);
+      underground.resize();
+      underground.enter();
+      hud.hidden = true;
+      nest.hidden = false;
+      updateNestHud();
+    },
+    leaveUnderground: () => {
+      renderer.resize();
+      nest.hidden = true;
+      hud.hidden = !introDone;
+    },
+  });
+
   // --- saving ---
   let saving = false;
   let pendingSave = false;
@@ -112,7 +154,7 @@ export async function startGame(): Promise<void> {
     buildToolbar(
       ui,
       (t) => (tool = t),
-      (v) => renderer.setView(v),
+      (v) => views.setView(v),
     );
     renderer.setQueen(null);
     settle = {
@@ -137,7 +179,7 @@ export async function startGame(): Promise<void> {
     buildToolbar(
       ui,
       (t) => (tool = t),
-      (v) => renderer.setView(v),
+      (v) => views.setView(v),
     );
     updateHud();
   }
@@ -154,7 +196,10 @@ export async function startGame(): Promise<void> {
   const resetClock = (): void => {
     last = performance.now();
   };
-  window.addEventListener('resize', () => renderer.resize());
+  window.addEventListener('resize', () => {
+    if (views.isUnderground()) underground?.resize();
+    else renderer.resize();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') void autosave();
     else resetClock();
@@ -192,7 +237,10 @@ export async function startGame(): Promise<void> {
       camera.clamp();
       if (settle.t >= SETTLE_S) settle = null;
     }
-    renderer.draw();
+    if (views.isUnderground() && underground) {
+      underground.draw(dt);
+      updateNestHud();
+    } else renderer.draw();
     hudAcc += dt;
     if (hudAcc >= HUD_MS / 1000) {
       hudAcc = 0;

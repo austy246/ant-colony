@@ -20,10 +20,10 @@ describe('buildToolbar', () => {
     expect(buttons().map((b) => b.textContent)).toEqual([
       'Brouk', 'Housenka', 'Moucha', 'Zdechlina', 'Malina', 'Houba',
       'Přesunout', 'Smazat', 'Posun',
-      'Běžný (1)', 'Feromony (P)', 'Terén (T)',
+      'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
     ]);
     expect(TOOL_BUTTONS).toHaveLength(9);
-    expect(VIEW_BUTTONS.map((v) => v.view)).toEqual(['normal', 'pheromone', 'terrain']);
+    expect(VIEW_BUTTONS.map((v) => v.view)).toEqual(['normal', 'pheromone', 'terrain', 'underground']);
     expect(root.querySelector('div.toolbar')).not.toBeNull();
     expect(buttons().every((b) => b.type === 'button')).toBe(true);
   });
@@ -54,13 +54,15 @@ describe('buildToolbar', () => {
     expect(buttons().find((b) => b.textContent === 'Terén (T)')!.classList.contains('active')).toBe(true);
   });
 
-  it('keys 1/p/t trigger views, case-insensitive', () => {
+  it('keys 1/p/t/u trigger views, case-insensitive', () => {
     const onView = vi.fn();
     buildToolbar(root, () => {}, onView);
     key('p');
     key('T');
     key('1');
-    expect(onView.mock.calls.map((c) => c[0])).toEqual(['pheromone', 'terrain', 'normal']);
+    key('u');
+    key('U');
+    expect(onView.mock.calls.map((c) => c[0])).toEqual(['pheromone', 'terrain', 'normal', 'underground', 'underground']);
   });
 
   it('keys are ignored in inputs and with modifiers', () => {
@@ -109,5 +111,48 @@ describe('view shortcuts on a Czech keyboard layout', () => {
     root.appendChild(input);
     key('+', input, { code: 'Digit1' });
     expect(onView).not.toHaveBeenCalled();
+  });
+});
+
+describe('underground view button', () => {
+  const tools = () => buttons().slice(0, 9);
+  const activeView = () => buttons().slice(9).filter((b) => b.classList.contains('active')).map((b) => b.textContent);
+
+  it('KeyU works on any keyboard layout and highlights the button', () => {
+    const onView = vi.fn();
+    buildToolbar(root, () => {}, onView);
+    key('ů', document, { code: 'KeyU' });
+    expect(onView).toHaveBeenLastCalledWith('underground');
+    expect(activeView()).toEqual(['Podzemí (U)']);
+  });
+
+  it('clicking it calls onView and disables the prey and tool buttons (still visible)', () => {
+    const onView = vi.fn();
+    buildToolbar(root, () => {}, onView);
+    expect(tools().some((b) => b.classList.contains('disabled'))).toBe(false);
+    buttons().find((b) => b.textContent === 'Podzemí (U)')!.click();
+    expect(onView).toHaveBeenLastCalledWith('underground');
+    expect(tools().every((b) => b.classList.contains('disabled'))).toBe(true);
+    expect(root.querySelector('.toolbar')!.classList.contains('underground')).toBe(true);
+  });
+
+  it('any surface view enables the tools again and the selected tool stays selected', () => {
+    buildToolbar(root, () => {}, () => {});
+    buttons().find((b) => b.textContent === 'Smazat')!.click();
+    key('u');
+    key('p');
+    expect(tools().some((b) => b.classList.contains('disabled'))).toBe(false);
+    expect(root.querySelector('.toolbar')!.classList.contains('underground')).toBe(false);
+    expect(tools().filter((b) => b.classList.contains('active')).map((b) => b.textContent)).toEqual(['Smazat']);
+    expect(activeView()).toEqual(['Feromony (P)']);
+  });
+
+  it('clicks on a disabled tool button are ignored', () => {
+    const onTool = vi.fn();
+    buildToolbar(root, onTool, () => {});
+    onTool.mockClear();
+    key('u');
+    buttons().find((b) => b.textContent === 'Houba')!.click();
+    expect(onTool).not.toHaveBeenCalled();
   });
 });
