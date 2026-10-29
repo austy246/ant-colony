@@ -1,7 +1,7 @@
 # Mravenci – návrh hry (první verze)
 
 Repozitář: `austy246/ant-colony` (pojmenoval autor hry).
-Po schválení se tento dokument uloží do repozitáře jako `docs/superpowers/specs/2026-10-29-ant-colony-design.md`.
+Stav: schváleno autorem hry 2026-10-29.
 
 ## Záměr a proč
 
