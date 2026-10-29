@@ -150,3 +150,13 @@ describe('Intro', () => {
     expect(i.consumeSpawn()).toBe(false);
   });
 });
+
+describe('Intro.cameraAt with degenerate view sizes', () => {
+  it.each([[0, 0], [-5, -5], [NaN, NaN], [Infinity, 0]])('stays finite for %s x %s', (w, h) => {
+    for (const t of [0, 1, 3, 5, 9, 10]) {
+      const c = at(t).cameraAt(w, h);
+      expect(Number.isFinite(c.x + c.y + c.zoom)).toBe(true);
+      expect(c.zoom).toBeGreaterThan(0);
+    }
+  });
+});

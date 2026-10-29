@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadGame, saveGame } from './save';
+import { clearSave, loadGame, saveGame } from './save';
 import { worldToSave, type SaveV1 } from './sim/serialize';
 import { World } from './sim/world';
 
@@ -159,5 +159,35 @@ describe('save/load', () => {
     const spy = vi.spyOn(indexedDB, 'open');
     await fresh.saveGame(sample());
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('clearSave', () => {
+  it('removes the localStorage entry', async () => {
+    await saveGame(sample());
+    await clearSave();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(await loadGame()).toBeNull();
+  });
+
+  it('removes the IndexedDB entry too', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw quotaError();
+    });
+    await saveGame(sample());
+    vi.restoreAllMocks();
+    expect(await loadGame()).not.toBeNull();
+    await clearSave();
+    expect(await loadGame()).toBeNull();
+  });
+
+  it('resolves when storage and IndexedDB both throw', async () => {
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    vi.spyOn(indexedDB, 'open').mockImplementation(() => {
+      throw new Error('idb unavailable');
+    });
+    await expect(clearSave()).resolves.toBeUndefined();
   });
 });

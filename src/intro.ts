@@ -53,7 +53,8 @@ export class Intro {
   }
 
   cameraAt(viewW = DEFAULT_VIEW_W, viewH = DEFAULT_VIEW_H): { x: number; y: number; zoom: number } {
-    const fit = Math.min(viewW / WORLD_W, viewH / WORLD_H);
+    const safe = (n: number): number => (Number.isFinite(n) && n > 1 ? n : 1);
+    const fit = Math.max(Math.min(safe(viewW) / WORLD_W, safe(viewH) / WORLD_H), 1e-6);
     const cx = WORLD_W / 2;
     const cy = WORLD_H / 2;
     if (this.t < T_ZOOM) return { x: cx, y: cy, zoom: fit };

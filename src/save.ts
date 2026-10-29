@@ -91,3 +91,18 @@ export async function loadGame(): Promise<SaveV1 | null> {
     return null;
   }
 }
+
+/** Removes the save from localStorage and IndexedDB. Best effort: never throws. */
+export async function clearSave(): Promise<void> {
+  try {
+    localStorage.removeItem(LS_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    await idbRun('readwrite', (st) => st.delete(IDB_KEY));
+  } catch {
+    // IndexedDB unavailable: nothing more to clear
+  }
+  idbInUse = false;
+}

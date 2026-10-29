@@ -169,6 +169,19 @@ describe('Input camera', () => {
     expect(after.y).toBeCloseTo(before.y, 4);
   });
 
+  it('wheel normalises deltaMode lines (x16) and pages (x100)', () => {
+    const z0 = camera.zoom;
+    canvas.dispatchEvent(
+      new WheelEvent('wheel', { clientX: 200, clientY: 150, deltaY: -3, deltaMode: 1, cancelable: true, bubbles: true }),
+    );
+    expect(camera.zoom).toBeCloseTo(z0 * Math.exp(3 * 16 * 0.0015), 5);
+    camera.zoom = 4;
+    canvas.dispatchEvent(
+      new WheelEvent('wheel', { clientX: 200, clientY: 150, deltaY: -1, deltaMode: 2, cancelable: true, bubbles: true }),
+    );
+    expect(camera.zoom).toBeCloseTo(4 * Math.exp(100 * 0.0015), 5);
+  });
+
   it('pinch zooms and does not place', () => {
     const z = camera.zoom;
     const t = { pointerType: 'touch' };

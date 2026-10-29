@@ -99,7 +99,8 @@ export class Input {
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     const p = this.local(e);
-    this.camera.zoomAt(p.x, p.y, Math.exp(-e.deltaY * WHEEL_SENSITIVITY));
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1;
+    this.camera.zoomAt(p.x, p.y, Math.exp(-e.deltaY * unit * WHEEL_SENSITIVITY));
   };
 
   private onDown = (e: PointerEvent): void => {
