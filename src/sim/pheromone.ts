@@ -1,6 +1,7 @@
 import { MAX_PHEROMONE, NEST } from './constants';
 
-const HALF_LIFE_S = 25;
+/** Evaporation half-life: a trail with no more traffic is essentially gone after ~40 s. */
+export const PHEROMONE_HALF_LIFE_S = 6;
 const MIN_VALUE = 0.01;
 const GLOW_RADIUS = 40;
 
@@ -53,7 +54,7 @@ export class PheromoneField {
 
   step(dt: number): void {
     const data = this.data;
-    const decay = Math.exp((-dt * Math.LN2) / HALF_LIFE_S);
+    const decay = Math.exp((-dt * Math.LN2) / PHEROMONE_HALF_LIFE_S);
     for (let i = 0; i < data.length; i++) {
       const n = data[i] * decay;
       data[i] = n < MIN_VALUE ? 0 : n;

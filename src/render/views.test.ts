@@ -4,11 +4,19 @@ import { Surface } from '../sim/terrain';
 import { pheromoneAlpha, surfaceOverlayColor } from './views';
 
 describe('pheromoneAlpha', () => {
-  it('is 0 below the 0.02 threshold and visible at it', () => {
+  it('is 0 below the 0.05 threshold and faintly visible at it', () => {
     expect(pheromoneAlpha(0)).toBe(0);
-    expect(pheromoneAlpha(0.0199)).toBe(0);
+    expect(pheromoneAlpha(0.0499)).toBe(0);
     expect(pheromoneAlpha(-1)).toBe(0);
-    expect(pheromoneAlpha(0.02)).toBeGreaterThanOrEqual(0.35);
+    expect(pheromoneAlpha(0.05)).toBeGreaterThan(0.1);
+    expect(pheromoneAlpha(0.05)).toBeLessThan(0.15);
+  });
+  it('is roughly proportional to strength: faint trail dim, fresh carrier cell clearly visible, strong trail bright', () => {
+    expect(pheromoneAlpha(0.5)).toBeCloseTo(0.12 + 0.83 * 0.1, 5);
+    expect(pheromoneAlpha(0.5)).toBeGreaterThan(0.15);
+    expect(pheromoneAlpha(0.5)).toBeLessThan(0.3);
+    expect(pheromoneAlpha(MAX_PHEROMONE)).toBeCloseTo(0.95, 5);
+    expect(pheromoneAlpha(0.1)).toBeLessThan(pheromoneAlpha(1));
   });
   it('is monotonic non-decreasing over a sweep', () => {
     let prev = 0;

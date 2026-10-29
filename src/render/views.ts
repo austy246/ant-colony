@@ -3,14 +3,14 @@ import { homeGlow } from '../sim/pheromone';
 import { Surface, type Terrain } from '../sim/terrain';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
 
-export const PHEROMONE_MIN = 0.02;
+export const PHEROMONE_MIN = 0.05;
 export const PHEROMONE_DARK = 'rgba(6,8,14,.80)';
 export const TERRAIN_DARK = 'rgba(10,10,10,.68)';
 
 /** Alpha of a trail cell: 0 below the threshold, monotonic, capped at 0.95. */
 export function pheromoneAlpha(value: number): number {
   if (!Number.isFinite(value) || value < PHEROMONE_MIN) return 0;
-  return Math.min(0.95, 0.35 + (0.6 * value) / MAX_PHEROMONE);
+  return Math.min(0.95, 0.12 + (0.83 * value) / MAX_PHEROMONE);
 }
 
 export function surfaceOverlayColor(s: number): string | null {

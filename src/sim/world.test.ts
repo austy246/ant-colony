@@ -297,7 +297,9 @@ describe('World', () => {
       const a = w.spawnAnt();
       a.lifespan = 1e6;
     }
-    run(w, 90);
+    // With the 6 s half-life the trail only lives while ants keep carrying (beetle is eaten up by ~35 s; 90 s
+    // would measure an already evaporated trail). At 30 s measured: on-line sum ~59 vs 0 off the line.
+    run(w, 30);
     const sumRow = (y: number) => {
       let s = 0;
       for (let x = NEST.x + 8; x <= NEST.x + 52; x++) {

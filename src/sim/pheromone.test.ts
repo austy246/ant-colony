@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { PheromoneField, homeGlow } from './pheromone';
+import { PheromoneField, PHEROMONE_HALF_LIFE_S, homeGlow } from './pheromone';
+import { pheromoneAlpha } from '../render/views';
 import { MAX_PHEROMONE, NEST, STEP_S } from './constants';
 
 describe('PheromoneField', () => {
@@ -16,10 +17,10 @@ describe('PheromoneField', () => {
     expect(f.sample(3, 3)).toBe(MAX_PHEROMONE);
   });
 
-  it('after 25 s of steps value halves (±5 %)', () => {
+  it('after one half-life of steps value halves (±5 %)', () => {
     const f = new PheromoneField(20, 20);
     f.data.fill(2);
-    for (let i = 0; i < 25 * 30; i++) f.step(STEP_S);
+    for (let i = 0; i < PHEROMONE_HALF_LIFE_S * 30; i++) f.step(STEP_S);
     expect(f.sample(10, 10)).toBeGreaterThan(0.95);
     expect(f.sample(10, 10)).toBeLessThan(1.05);
   });
@@ -41,25 +42,38 @@ describe('PheromoneField', () => {
     expect(f.sample(5, 5)).toBe(0);
   });
 
-  it('single pixel halves in 25 s and does not spread', () => {
+  it('single pixel halves in one half-life and does not spread', () => {
     const f = new PheromoneField(10, 10);
     f.deposit(5, 5, 1);
-    for (let i = 0; i < 25 * 30; i++) f.step(STEP_S);
+    for (let i = 0; i < PHEROMONE_HALF_LIFE_S * 30; i++) f.step(STEP_S);
     expect(f.sample(5, 5)).toBeGreaterThan(0.475);
     expect(f.sample(5, 5)).toBeLessThan(0.525);
     for (const [x, y] of [[4, 5], [6, 5], [5, 4], [5, 6]]) expect(f.sample(x, y)).toBe(0);
   });
 
-  it('a line keeps width 1 and halves in 25 s', () => {
+  it('a line keeps width 1 and halves in one half-life', () => {
     const f = new PheromoneField(30, 10);
     for (let x = 5; x < 25; x++) f.deposit(x, 5, 1);
-    for (let i = 0; i < 25 * 30; i++) f.step(STEP_S);
+    for (let i = 0; i < PHEROMONE_HALF_LIFE_S * 30; i++) f.step(STEP_S);
     for (let x = 5; x < 25; x++) {
       expect(f.sample(x, 5)).toBeGreaterThan(0.475);
       expect(f.sample(x, 5)).toBeLessThan(0.525);
       expect(f.sample(x, 4)).toBe(0);
       expect(f.sample(x, 6)).toBe(0);
     }
+  });
+
+  it('half-life is 6 s', () => {
+    expect(PHEROMONE_HALF_LIFE_S).toBe(6);
+  });
+
+  it('a fully fresh trail cell (5) is below 0.06 after 40 s and invisible after 45 s', () => {
+    const f = new PheromoneField(10, 10);
+    f.deposit(5, 5, MAX_PHEROMONE);
+    for (let i = 0; i < 40 * 30; i++) f.step(STEP_S);
+    expect(f.sample(5, 5)).toBeLessThan(0.06);
+    for (let i = 0; i < 5 * 30; i++) f.step(STEP_S);
+    expect(pheromoneAlpha(f.sample(5, 5))).toBe(0);
   });
 
   it('sampleMax finds neighbour within radius only', () => {
