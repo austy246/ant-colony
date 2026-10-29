@@ -1,0 +1,130 @@
+import { describe, it, expect } from 'vitest';
+import { Camera, MAX_ZOOM } from './camera';
+import { WORLD_W, WORLD_H, SCALE } from '../sim/constants';
+
+describe('Camera', () => {
+  it('defaults to SCALE zoom centred on the world', () => {
+    const c = new Camera(1280, 720);
+    expect(c.zoom).toBe(SCALE);
+    expect(c.x).toBe(WORLD_W / 2);
+    expect(c.y).toBe(WORLD_H / 2);
+  });
+
+  it('screenToWorld inverts worldToScreen', () => {
+    const c = new Camera(800, 600);
+    c.x = 100; c.y = 80; c.zoom = 5;
+    const s = c.worldToScreen(123.4, 56.7);
+    const w = c.screenToWorld(s.x, s.y);
+    expect(w.x).toBeCloseTo(123.4, 9);
+    expect(w.y).toBeCloseTo(56.7, 9);
+    const w2 = c.screenToWorld(10, 20);
+    const s2 = c.worldToScreen(w2.x, w2.y);
+    expect(s2.x).toBeCloseTo(10, 9);
+    expect(s2.y).toBeCloseTo(20, 9);
+  });
+
+  it('zoomAt keeps the point under the cursor fixed', () => {
+    const c = new Camera(800, 600);
+    c.x = 160; c.y = 100; c.zoom = 4;
+    const before = c.screenToWorld(300, 200);
+    c.zoomAt(300, 200, 1.5);
+    const after = c.screenToWorld(300, 200);
+    expect(c.zoom).toBeCloseTo(6, 9);
+    expect(after.x).toBeCloseTo(before.x, 9);
+    expect(after.y).toBeCloseTo(before.y, 9);
+  });
+
+  it('zoom is clamped to min and 16', () => {
+    const c = new Camera(1600, 900);
+    c.zoomAt(800, 450, 1000);
+    expect(c.zoom).toBe(MAX_ZOOM);
+    expect(MAX_ZOOM).toBe(16);
+    c.zoomAt(800, 450, 1e-6);
+    expect(c.zoom).toBe(c.minZoom);
+    expect(c.minZoom).toBeCloseTo(Math.min(1600 / WORLD_W, 900 / WORLD_H), 9);
+  });
+
+  it('ignores invalid zoom factors', () => {
+    const c = new Camera(800, 600);
+    const z = c.zoom;
+    for (const f of [0, -2, NaN, Infinity]) c.zoomAt(10, 10, f);
+    expect(c.zoom).toBe(z);
+  });
+
+  it('minZoom never drops below 1 on small views', () => {
+    const c = new Camera(100, 80);
+    expect(c.minZoom).toBe(1);
+  });
+
+  it('panBy cannot move view fully off the map', () => {
+    const c = new Camera(800, 600);
+    c.panBy(-1e6, -1e6);
+    expect(c.x).toBe(WORLD_W);
+    expect(c.y).toBe(WORLD_H);
+    c.panBy(1e6, 1e6);
+    expect(c.x).toBe(0);
+    expect(c.y).toBe(0);
+  });
+
+  it('panBy moves content with the pointer', () => {
+    const c = new Camera(800, 600);
+    c.zoom = 4; c.x = 160; c.y = 100;
+    c.panBy(40, -20);
+    expect(c.x).toBe(150);
+    expect(c.y).toBe(105);
+  });
+
+  it('centres the world when the view is larger than it', () => {
+    const c = new Camera(2000, 1400); // minZoom 7: view (285x200) vs world 320x200
+    c.zoom = c.minZoom;
+    c.panBy(500, 500);
+    expect(c.y).toBeCloseTo(WORLD_H / 2, 9); // 1400/7 == 200 -> fits exactly
+    const wide = new Camera(3200, 600);
+    wide.fitWorld(); // zoom 3 -> view 1066x200 wide, world fits horizontally
+    wide.panBy(900, 0);
+    expect(wide.x).toBeCloseTo(WORLD_W / 2, 9);
+  });
+
+  it('resize keeps zoom within new limits', () => {
+    const c = new Camera(800, 600);
+    c.zoom = 2.5;
+    c.resize(2400, 1500);
+    expect(c.minZoom).toBeCloseTo(7.5, 9);
+    expect(c.zoom).toBeCloseTo(7.5, 9);
+    c.zoom = 16;
+    c.resize(400, 300);
+    expect(c.zoom).toBe(16);
+  });
+
+  it('resize ignores invalid sizes', () => {
+    const c = new Camera(800, 600);
+    const min = c.minZoom;
+    c.resize(0, 300);
+    c.resize(NaN, NaN);
+    c.resize(-5, 100);
+    expect(c.minZoom).toBe(min);
+  });
+
+  it('resize re-clamps the centre', () => {
+    const c = new Camera(800, 600);
+    c.x = WORLD_W; c.y = WORLD_H;
+    c.resize(2400, 1500);
+    expect(c.x).toBeLessThanOrEqual(WORLD_W);
+    expect(Number.isFinite(c.x)).toBe(true);
+  });
+
+  it('fitWorld shows the whole world', () => {
+    const c = new Camera(1000, 500);
+    c.zoom = 12; c.x = 5; c.y = 5;
+    c.fitWorld();
+    expect(c.zoom).toBeCloseTo(Math.min(1000 / WORLD_W, 500 / WORLD_H), 9);
+    expect(c.x).toBe(WORLD_W / 2);
+    expect(c.y).toBe(WORLD_H / 2);
+    const tl = c.screenToWorld(0, 0);
+    const br = c.screenToWorld(1000, 500);
+    expect(tl.x).toBeLessThanOrEqual(0 + 1e-9);
+    expect(tl.y).toBeLessThanOrEqual(0 + 1e-9);
+    expect(br.x).toBeGreaterThanOrEqual(WORLD_W - 1e-9);
+    expect(br.y).toBeGreaterThanOrEqual(WORLD_H - 1e-9);
+  });
+});
