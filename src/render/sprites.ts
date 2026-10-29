@@ -41,37 +41,58 @@ function shadow(c: Ctx2D, x: number, y: number, rx: number, ry: number): void {
   ell(c, x + 1, y + 2, rx, ry, SHADOW);
 }
 
-/** Black ant, about 11x7 art pixels. `facing` 1 = right, -1 = left. */
+/**
+ * Worker ant sprite on a 2x finer pixel grid than the terrain (one ant pixel = half an art pixel), 14x8 ant pixels
+ * = about 7x4 art pixels, facing right. Legend: B body, H highlight, D shade, L legs/antennae, . empty.
+ * Column 7 is the horizontal centre (so the left-facing mirror is exact); row 4 is the vertical centre.
+ */
+const ANT_ROWS = [
+  '...L..L..L...L',
+  '....L.L.L...L.',
+  '.BHB.LLL.B.L..',
+  'DBBHBBHBBBD...',
+  'DBBBBBBBBBD...',
+  '.DBD.LLL.B.L..',
+  '....L.L.L...L.',
+  '...L..L..L...L',
+];
+const ANT_COLORS: Record<string, string> = { B: '#241a12', H: '#4e3d2e', D: '#3a2c20', L: '#1a1410' };
+const ANT_CRUMB = '#e8e0c8';
+/** Horizontal runs of equal colour per row: [row, firstCol, lastCol, colour]. */
+const ANT_RUNS: [number, number, number, string][] = [];
+ANT_ROWS.forEach((row, r) => {
+  let c0 = 0;
+  while (c0 < row.length) {
+    const ch = row[c0];
+    let c1 = c0;
+    while (c1 + 1 < row.length && row[c1 + 1] === ch) c1++;
+    if (ch !== '.') ANT_RUNS.push([r, c0, c1, ANT_COLORS[ch]]);
+    c0 = c1 + 1;
+  }
+});
+
+/** Black ant, about 7x4 art pixels drawn with 2x finer pixels. `facing` 1 = right, -1 = left. */
 export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying: boolean): void {
-  // Snap to the art-pixel grid so the sprite does not wobble while the ant moves sub-pixel.
-  x = Math.round(x);
-  y = Math.round(y);
-  const s = facing;
-  const L = '#1a1410';
-  shadow(c, x, y, 5, 1.8);
-  for (const i of LEG_IDX) {
-    const bx = x + i * 1.6;
-    line(c, bx, y, bx + i, y - 3, L);
-    line(c, bx, y, bx + i, y + 3, L);
-    px(c, bx + i + s, y - 3, L);
-    px(c, bx + i + s, y + 3, L);
+  // Snap to the half-art-pixel grid so the sprite does not wobble while the ant moves sub-pixel.
+  const sx = Math.round(x * 2) / 2;
+  const sy = Math.round(y * 2) / 2;
+  const right = facing === 1;
+  c.save();
+  c.translate(sx, sy);
+  c.scale(0.5, 0.5);
+  // Everything below is in ant pixels (integer rects); column col spans [col - 7, col - 6) facing right.
+  const fx = (c0: number, c1: number): number => (right ? c0 - 7 : 6 - c1);
+  c.fillStyle = SHADOW;
+  c.fillRect(fx(2, 10), 2, 9, 1);
+  for (const [r, c0, c1, col] of ANT_RUNS) {
+    c.fillStyle = col;
+    c.fillRect(fx(c0, c1), r - 4, c1 - c0 + 1, 1);
   }
-  ell(c, x - s * 3.6, y, 3, 2.2, '#241a12');
-  px(c, x - s * 4.6, y - 1, '#4e3d2e');
-  px(c, x - s * 3.6, y - 1, '#3a2c20');
-  ell(c, x, y, 1.8, 1.6, '#241a12');
-  px(c, x, y - 1, '#4e3d2e');
-  ell(c, x + s * 3, y, 2, 1.8, '#241a12');
-  px(c, x + s * 3, y - 1, '#4e3d2e');
-  px(c, x + s * 4, y, '#3a2c20');
-  px(c, x + s * 5, y - 2, L);
-  px(c, x + s * 6, y - 3, L);
-  px(c, x + s * 5, y + 1, L);
-  px(c, x + s * 6, y + 2, L);
   if (carrying) {
-    ell(c, x + s * 6, y - 2, 1.6, 1.4, '#e8e0c8');
-    px(c, x + s * 6, y - 3, '#fff');
+    c.fillStyle = ANT_CRUMB;
+    c.fillRect(fx(12, 13), -1, 2, 2);
   }
+  c.restore();
 }
 
 const clamp01 = (p: number): number => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0);

@@ -85,60 +85,91 @@ describe('sprites', () => {
     return cv.getContext('2d').getImageData(0, 0, 40, 40).data;
   }
 
-  it('drawAnt paints pixels and none is red-dominant when not carrying', () => {
+  // The worker ant is drawn on a 2x finer grid (1 ant pixel = 0.5 art pixel), so the ant tests render at 4x
+  // (the game's default zoom): 160x160 canvas, ant at art (20, 20) = screen (80, 80), one ant pixel = 2 screen px.
+  const ZOOM = 4;
+  const SIZE = 40 * ZOOM;
+  function drawAntZoomed(facing: 1 | -1, carrying: boolean, x = 20, y = 20): Uint8ClampedArray {
+    const cv = createCanvas(SIZE, SIZE);
+    const ctx = cv.getContext('2d') as unknown as Ctx2D;
+    ctx.scale(ZOOM, ZOOM);
+    drawAnt(ctx, x, y, facing, carrying);
+    return cv.getContext('2d').getImageData(0, 0, SIZE, SIZE).data;
+  }
+  const alphaAt = (d: Uint8ClampedArray, x: number, y: number): number => d[(y * SIZE + x) * 4 + 3];
+  const BLACKS = new Set(['241a12', '4e3d2e', '3a2c20', '1a1410']);
+
+  it('drawAnt is fully black (fixed palette, no red, no pale pixels) when not carrying', () => {
     for (const facing of [1, -1] as const) {
-      const d = draw((c) => drawAnt(c, 20, 20, facing, false));
-      let painted = 0;
+      const d = drawAntZoomed(facing, false);
+      let opaque = 0;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i + 3] === 0) continue;
-        painted++;
         expect(d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40).toBe(false);
+        if (d[i + 3] === 255) {
+          opaque++;
+          const hex = [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+          expect(BLACKS.has(hex), hex).toBe(true);
+        } else {
+          expect(Math.max(d[i], d[i + 1], d[i + 2])).toBeLessThan(40); // soft shadow only
+        }
       }
-      expect(painted).toBeGreaterThan(10);
+      expect(opaque).toBeGreaterThan(40);
     }
+  });
+
+  it('drawAnt footprint is about 7x4 art pixels (28x16 screen px at zoom 4), about 30 % smaller than before', () => {
+    const d = drawAntZoomed(1, false);
+    let x0 = SIZE, x1 = -1, y0 = SIZE, y1 = -1;
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        if (alphaAt(d, x, y) === 0) continue;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x);
+        y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+    }
+    expect(x1 - x0 + 1).toBe(28);
+    expect(y1 - y0 + 1).toBeLessThanOrEqual(16);
+    expect(y1 - y0 + 1).toBeGreaterThanOrEqual(14);
   });
 
   it('drawAnt carrying adds a pale crumb', () => {
-    const plain = draw((c) => drawAnt(c, 20, 20, 1, false));
-    const carry = draw((c) => drawAnt(c, 20, 20, 1, true));
-    expect(hash(plain)).not.toBe(hash(carry));
+    expect(hash(drawAntZoomed(1, false))).not.toBe(hash(drawAntZoomed(1, true)));
   });
 
-  it('drawAnt flips horizontally with facing', () => {
-    const a = draw((c) => drawAnt(c, 20, 20, 1, false));
-    const b = draw((c) => drawAnt(c, 20, 20, -1, false));
-    // mirror axis: legs/body are centred on x=20 (pixel column 20 maps to itself); allow +-1 rounding column
-    let diff = 0;
-    for (let y = 10; y < 30; y++) {
-      for (let x = 8; x < 33; x++) {
-        const i = (y * 40 + x) * 4 + 3;
-        const j = (y * 40 + (40 - x)) * 4 + 3;
-        if ((a[i] > 0) !== (b[j] > 0)) diff++;
+  it('drawAnt flips horizontally with facing (exact mirror about the ant centre)', () => {
+    const a = drawAntZoomed(1, false);
+    const b = drawAntZoomed(-1, false);
+    const cx = 20 * ZOOM; // screen column of the centre; pixel column x mirrors to 2 * cx - 1 - x
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        const mx = 2 * cx - 1 - x;
+        if (mx < 0 || mx >= SIZE) continue;
+        expect(alphaAt(a, x, y) > 0, `${x},${y}`).toBe(alphaAt(b, mx, y) > 0);
       }
     }
-    expect(diff).toBeLessThan(25);
     expect(hash(a)).not.toBe(hash(b));
   });
 
-  it('crumb #e8e0c8 appears only when carrying, on the head side', () => {
+  it('crumb #e8e0c8 (2x2 ant pixels) appears only when carrying, on the head side', () => {
     const crumbXs = (d: Uint8ClampedArray): number[] => {
       const xs: number[] = [];
-      for (let y = 0; y < 40; y++) {
-        for (let x = 0; x < 40; x++) {
-          const i = (y * 40 + x) * 4;
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          const i = (y * SIZE + x) * 4;
           if (d[i] === 0xe8 && d[i + 1] === 0xe0 && d[i + 2] === 0xc8 && d[i + 3] === 255) xs.push(x);
         }
       }
       return xs;
     };
-    expect(crumbXs(draw((c) => drawAnt(c, 20, 20, 1, false)))).toHaveLength(0);
-    expect(crumbXs(draw((c) => drawAnt(c, 20, 20, -1, false)))).toHaveLength(0);
-    const right = crumbXs(draw((c) => drawAnt(c, 20, 20, 1, true)));
-    const left = crumbXs(draw((c) => drawAnt(c, 20, 20, -1, true)));
-    expect(right.length).toBeGreaterThan(0);
-    expect(left.length).toBeGreaterThan(0);
-    expect(right.every((x) => x > 20)).toBe(true);
-    expect(left.every((x) => x < 20)).toBe(true);
+    expect(crumbXs(drawAntZoomed(1, false))).toHaveLength(0);
+    expect(crumbXs(drawAntZoomed(-1, false))).toHaveLength(0);
+    const right = crumbXs(drawAntZoomed(1, true));
+    const left = crumbXs(drawAntZoomed(-1, true));
+    expect(right).toHaveLength(2 * 2 * 2 * 2); // 2x2 ant pixels, each 2x2 screen px
+    expect(left).toHaveLength(2 * 2 * 2 * 2);
+    expect(right.every((x) => x > 20 * ZOOM)).toBe(true);
+    expect(left.every((x) => x < 20 * ZOOM)).toBe(true);
   });
 
   it('drawFood paints every kind', () => {

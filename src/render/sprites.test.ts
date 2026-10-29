@@ -10,17 +10,23 @@ function pixels(draw: (c: Ctx2D) => void): Uint8ClampedArray {
 }
 
 describe('sprite snapping', () => {
-  it('drawAnt at fractional coordinates renders the same pixels as at the rounded ones', () => {
+  it('drawAnt snaps to the half-art-pixel grid: fractional coordinates render like the nearest half pixel', () => {
     for (const carrying of [false, true]) {
-      const a = pixels((c) => drawAnt(c, 20.4, 10.4, 1, carrying));
-      const b = pixels((c) => drawAnt(c, 20, 10, 1, carrying));
-      expect(Array.from(a)).toEqual(Array.from(b));
-      const l1 = pixels((c) => drawAnt(c, 20.4, 10.4, -1, carrying));
-      const l2 = pixels((c) => drawAnt(c, 20, 10, -1, carrying));
-      expect(Array.from(l1)).toEqual(Array.from(l2));
+      for (const facing of [1, -1] as const) {
+        const a = pixels((c) => drawAnt(c, 20.4, 10.4, facing, carrying));
+        const b = pixels((c) => drawAnt(c, 20.5, 10.5, facing, carrying));
+        expect(Array.from(a)).toEqual(Array.from(b));
+        const l1 = pixels((c) => drawAnt(c, 20.2, 10.2, facing, carrying));
+        const l2 = pixels((c) => drawAnt(c, 20, 10, facing, carrying));
+        expect(Array.from(l1)).toEqual(Array.from(l2));
+      }
     }
     expect(Array.from(pixels((c) => drawAnt(c, 20.4, 10.4, 1, false)))).not.toEqual(
       Array.from(pixels((c) => drawAnt(c, 22, 10, 1, false))),
+    );
+    // half-pixel steps are distinct positions
+    expect(Array.from(pixels((c) => drawAnt(c, 20, 10, 1, false)))).not.toEqual(
+      Array.from(pixels((c) => drawAnt(c, 20.5, 10, 1, false))),
     );
   });
 
