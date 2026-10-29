@@ -2,8 +2,10 @@ import { createCanvas } from '@napi-rs/canvas';
 import { describe, expect, it } from 'vitest';
 import type { FoodKind } from '../sim/food';
 import { FINE } from './fine';
-import { drawAnt, drawFood, drawQueen, type Ctx2D } from './sprites';
+import { AntSprites, drawAnt, drawFood, drawQueen, type Ctx2D } from './sprites';
+import type { CanvasLike } from './terrainRender';
 
+const makeCanvas = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
 const ZOOM = 4; // the game's default zoom: 1 fine pixel = ZOOM / FINE = 2 screen px
 const CELL = ZOOM / FINE;
 const ART = 80; // art pixels per test canvas side, anchor in the middle
@@ -59,47 +61,53 @@ function anyPainted(d: Uint8ClampedArray): number {
 const KINDS: FoodKind[] = ['beetle', 'caterpillar', 'fly', 'carrion', 'berry', 'mushroom'];
 
 describe('worker ant (fine grid)', () => {
-  const ant = (facing: 1 | -1, carrying: boolean, x = AX, y = AX): Uint8ClampedArray =>
-    render((c) => drawAnt(c, x, y, facing, carrying));
+  const sprites = new AntSprites(makeCanvas);
+  const ant = (dir: number, carrying: boolean, x = AX, y = AX, frame = 0): Uint8ClampedArray =>
+    render((c) => drawAnt(c, sprites, x, y, dir, frame, carrying));
   const BLACKS = new Set(['241a12', '4e3d2e', '3a2c20', '1a1410']);
 
-  it('is fully black (fixed palette, no red, no pale pixels) when not carrying', () => {
-    for (const facing of [1, -1] as const) {
-      const d = ant(facing, false);
-      let opaque = 0;
-      for (let i = 0; i < d.length; i += 4) {
-        if (d[i + 3] === 0) continue;
-        expect(d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40).toBe(false);
-        if (d[i + 3] === 255) {
-          opaque++;
-          const hex = [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
-          expect(BLACKS.has(hex), hex).toBe(true);
-        } else {
-          expect(Math.max(d[i], d[i + 1], d[i + 2])).toBeLessThan(40); // soft shadow only
+  it('is fully black (fixed palette, no red, no pale pixels) when not carrying, in every direction and frame', () => {
+    for (let dir = 0; dir < 16; dir++) {
+      for (let frame = 0; frame < 4; frame++) {
+        const d = ant(dir, false, AX, AX, frame);
+        let opaque = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] === 0) continue;
+          expect(d[i] > d[i + 1] + 40 && d[i] > d[i + 2] + 40).toBe(false);
+          if (d[i + 3] === 255) {
+            opaque++;
+            const hex = [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+            expect(BLACKS.has(hex), `dir ${dir} ${hex}`).toBe(true);
+          } else {
+            expect(Math.max(d[i], d[i + 1], d[i + 2])).toBeLessThan(40); // soft shadow only
+          }
         }
+        expect(opaque / (CELL * CELL), `dir ${dir} frame ${frame}`).toBeGreaterThan(25);
+        expect(opaque / (CELL * CELL)).toBeLessThan(90);
       }
-      expect(opaque).toBeGreaterThan(40);
     }
   });
 
-  it('footprint is about 7x4 art pixels (28x16 screen px at zoom 4)', () => {
-    const b = bounds(ant(1, false));
-    expect(b.x1 - b.x0 + 1).toBe(28);
-    expect(b.y1 - b.y0 + 1).toBeLessThanOrEqual(16);
-    expect(b.y1 - b.y0 + 1).toBeGreaterThanOrEqual(14);
+  it('footprint facing right is about 13-14 fine px (6.5-7 art px) wide and 9-10 fine px tall', () => {
+    const b = bounds(ant(0, false), 255);
+    expect((b.x1 - b.x0 + 1) / CELL).toBeGreaterThanOrEqual(12);
+    expect((b.x1 - b.x0 + 1) / CELL).toBeLessThanOrEqual(15);
+    expect((b.y1 - b.y0 + 1) / CELL).toBeGreaterThanOrEqual(8);
+    expect((b.y1 - b.y0 + 1) / CELL).toBeLessThanOrEqual(11);
   });
 
   it('carrying adds a pale crumb', () => {
-    expect(hash(ant(1, false))).not.toBe(hash(ant(1, true)));
+    expect(hash(ant(0, false))).not.toBe(hash(ant(0, true)));
   });
 
-  it('flips horizontally with facing (exact mirror about the ant centre)', () => {
-    const a = ant(1, false);
-    const b = ant(-1, false);
-    const cx = AX * ZOOM; // screen column of the centre; pixel column x mirrors to 2 * cx - 1 - x
+  it('facing left (dir 8) is the exact mirror image of facing right (dir 0) about the ant centre', () => {
+    const a = ant(0, false);
+    const b = ant(8, false);
+    const cx = AX * ZOOM; // screen column of the centre; pixel column x mirrors to 2 * cx - 1 - x (+ half a fine pixel)
+    const shift = CELL; // the centre fine pixel starts at the anchor, so the mirror axis is one fine pixel right of it
     for (let y = 0; y < SIZE; y++) {
       for (let x = 0; x < SIZE; x++) {
-        const mx = 2 * cx - 1 - x;
+        const mx = 2 * cx + shift - 1 - x;
         if (mx < 0 || mx >= SIZE) continue;
         expect(alphaAt(a, x, y) > 0, `${x},${y}`).toBe(alphaAt(b, mx, y) > 0);
       }
@@ -107,37 +115,70 @@ describe('worker ant (fine grid)', () => {
     expect(hash(a)).not.toBe(hash(b));
   });
 
-  it('crumb #e8e0c8 (2x2 ant pixels) appears only when carrying, on the head side', () => {
-    const crumbXs = (d: Uint8ClampedArray): number[] => {
-      const xs: number[] = [];
+  it('a heading of pi/2 (dir 4) and 0 (dir 0) look different; all 16 directions differ from each other', () => {
+    const hs = Array.from({ length: 16 }, (_, k) => hash(ant(k, false)));
+    expect(new Set(hs).size).toBe(16);
+  });
+
+  it('crumb #e8e0c8 appears only when carrying, on the head side (right for dir 0, left for dir 8, below for dir 4)', () => {
+    const crumbs = (d: Uint8ClampedArray): [number, number][] => {
+      const xs: [number, number][] = [];
       for (let y = 0; y < SIZE; y++) {
         for (let x = 0; x < SIZE; x++) {
           const i = (y * SIZE + x) * 4;
-          if (d[i] === 0xe8 && d[i + 1] === 0xe0 && d[i + 2] === 0xc8 && d[i + 3] === 255) xs.push(x);
+          if (d[i] === 0xe8 && d[i + 1] === 0xe0 && d[i + 2] === 0xc8 && d[i + 3] === 255) xs.push([x, y]);
         }
       }
       return xs;
     };
-    expect(crumbXs(ant(1, false))).toHaveLength(0);
-    expect(crumbXs(ant(-1, false))).toHaveLength(0);
-    const right = crumbXs(ant(1, true));
-    const left = crumbXs(ant(-1, true));
-    expect(right).toHaveLength(2 * 2 * 2 * 2); // 2x2 ant pixels, each 2x2 screen px
-    expect(left).toHaveLength(2 * 2 * 2 * 2);
-    expect(right.every((x) => x > AX * ZOOM)).toBe(true);
-    expect(left.every((x) => x < AX * ZOOM)).toBe(true);
+    expect(crumbs(ant(0, false))).toHaveLength(0);
+    expect(crumbs(ant(8, false))).toHaveLength(0);
+    const right = crumbs(ant(0, true));
+    const left = crumbs(ant(8, true));
+    const down = crumbs(ant(4, true));
+    expect(right).toHaveLength(6 * CELL * CELL); // 2 x 3 fine pixels
+    expect(left).toHaveLength(6 * CELL * CELL);
+    expect(right.every(([x]) => x > AX * ZOOM)).toBe(true);
+    expect(left.every(([x]) => x < AX * ZOOM)).toBe(true);
+    expect(down.every(([, y]) => y > AX * ZOOM)).toBe(true);
   });
 
   it('snaps to the half-art-pixel grid: fractional coordinates render like the nearest half pixel', () => {
     const small = (fn: (c: Ctx2D) => void): number[] => Array.from(render(fn, 2));
     for (const carrying of [false, true]) {
-      for (const facing of [1, -1] as const) {
-        expect(small((c) => drawAnt(c, 20.4, 10.4, facing, carrying))).toEqual(small((c) => drawAnt(c, 20.5, 10.5, facing, carrying)));
-        expect(small((c) => drawAnt(c, 20.2, 10.2, facing, carrying))).toEqual(small((c) => drawAnt(c, 20, 10, facing, carrying)));
+      for (const dir of [0, 3, 8]) {
+        const d = (x: number, y: number) => small((c) => drawAnt(c, sprites, x, y, dir, 1, carrying));
+        expect(d(20.4, 10.4)).toEqual(d(20.5, 10.5));
+        expect(d(20.2, 10.2)).toEqual(d(20, 10));
       }
     }
-    expect(small((c) => drawAnt(c, 20.4, 10.4, 1, false))).not.toEqual(small((c) => drawAnt(c, 22, 10, 1, false)));
-    expect(small((c) => drawAnt(c, 20, 10, 1, false))).not.toEqual(small((c) => drawAnt(c, 20.5, 10, 1, false)));
+    const d = (x: number, y: number) => small((c) => drawAnt(c, sprites, x, y, 0, 0, false));
+    expect(d(20.4, 10.4)).not.toEqual(d(22, 10));
+    expect(d(20, 10)).not.toEqual(d(20.5, 10));
+  });
+
+  it('is drawn on the fine grid (pixel for pixel), with smoothing off', () => {
+    const d = ant(3, true, AX, AX, 2);
+    for (let y = 0; y < SIZE; y += 2) {
+      for (let x = 0; x < SIZE; x += 2) {
+        const i = (y * SIZE + x) * 4;
+        expect(Array.from(d.slice(i, i + 4))).toEqual(Array.from(d.slice(i + 4, i + 8)));
+      }
+    }
+  });
+
+  it('builds its 128 sprites lazily, once: a second draw creates no canvases', () => {
+    let made = 0;
+    const counting = new AntSprites((w, h) => {
+      made++;
+      return makeCanvas(w, h);
+    });
+    expect(made).toBe(0);
+    render((c) => drawAnt(c, counting, AX, AX, 0, 0, false));
+    expect(made).toBe(16 * 4 * 2);
+    render((c) => drawAnt(c, counting, AX, AX, 5, 3, true));
+    render((c) => drawAnt(c, counting, AX + 3, AX, 9, 1, false));
+    expect(made).toBe(128);
   });
 });
 

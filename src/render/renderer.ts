@@ -2,7 +2,9 @@ import { WORLD_H, WORLD_W } from '../sim/constants';
 import type { Terrain } from '../sim/terrain';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
-import { drawAnt, drawFood, drawQueen } from './sprites';
+import { ANT_FRAMES, antDirection } from './antArt';
+import { advanceStride, frameFor, type StrideState } from './stride';
+import { AntSprites, drawAnt, drawFood, drawQueen } from './sprites';
 import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
@@ -48,6 +50,10 @@ export class Renderer {
   /** Offscreen WORLD_W x WORLD_H canvas + reused pixel buffer for the pheromone trail (one pixel per cell). */
   private trailCanvas: CanvasLike | null = null;
   private trailImage: ImageData | null = null;
+  private antSprites: AntSprites | null = null;
+  /** Walking-animation state per ant id; entries of ants that are gone are pruned by generation. */
+  private strides = new Map<number, StrideState>();
+  private strideGen = 0;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -122,7 +128,17 @@ export class Renderer {
       ants.length = 0;
       for (const a of this.world.ants) ants.push(a);
       ants.sort(byY);
-      for (const a of ants) drawAnt(c, a.x, a.y, Math.cos(a.heading) >= 0 ? 1 : -1, a.carry > 0);
+      const sprites = (this.antSprites ??= new AntSprites(this.make));
+      const gen = ++this.strideGen;
+      for (const a of ants) {
+        const st = advanceStride(this.strides.get(a.id), a.x, a.y);
+        st.gen = gen;
+        this.strides.set(a.id, st);
+        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0);
+      }
+      if (this.strides.size > ants.length) {
+        for (const [id, st] of this.strides) if (st.gen !== gen) this.strides.delete(id);
+      }
     }
 
     // Vignette in screen space.

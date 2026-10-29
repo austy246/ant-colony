@@ -1,6 +1,8 @@
 import type { FoodKind } from '../sim/food';
+import { ANT_CENTER, ANT_DIRS, ANT_FRAMES, ANT_RGBA, ANT_SIZE, antPixels } from './antArt';
 import { FINE } from './fine';
 import { preySprite, queenSprite, type Sprite } from './preyArt';
+import type { CanvasFactory, CanvasLike } from './terrainRender';
 
 export type Ctx2D = CanvasRenderingContext2D;
 
@@ -23,57 +25,56 @@ function blit(c: Ctx2D, spr: Sprite, x: number, y: number): void {
 }
 
 /**
- * Worker ant sprite on a 2x finer pixel grid than the terrain (one ant pixel = half an art pixel), 14x8 ant pixels
- * = about 7x4 art pixels, facing right. Legend: B body, H highlight, D shade, L legs/antennae, . empty.
- * Column 7 is the horizontal centre (so the left-facing mirror is exact); row 4 is the vertical centre.
+ * Pre-rendered worker-ant sprites: every (carrying x frame x direction) variant, ANT_SIZE x ANT_SIZE fine pixels each,
+ * built once (lazily, on first use) into small offscreen canvases through the injectable canvas factory.
  */
-const ANT_ROWS = [
-  '...L..L..L...L',
-  '....L.L.L...L.',
-  '.BHB.LLL.B.L..',
-  'DBBHBBHBBBD...',
-  'DBBBBBBBBBD...',
-  '.DBD.LLL.B.L..',
-  '....L.L.L...L.',
-  '...L..L..L...L',
-];
-const ANT_COLORS: Record<string, string> = { B: '#241a12', H: '#4e3d2e', D: '#3a2c20', L: '#1a1410' };
-const ANT_CRUMB = '#e8e0c8';
-/** Horizontal runs of equal colour per row: [row, firstCol, lastCol, colour]. */
-const ANT_RUNS: [number, number, number, string][] = [];
-ANT_ROWS.forEach((row, r) => {
-  let c0 = 0;
-  while (c0 < row.length) {
-    const ch = row[c0];
-    let c1 = c0;
-    while (c1 + 1 < row.length && row[c1 + 1] === ch) c1++;
-    if (ch !== '.') ANT_RUNS.push([r, c0, c1, ANT_COLORS[ch]]);
-    c0 = c1 + 1;
-  }
-});
+export class AntSprites {
+  private cache: CanvasLike[] | null = null;
 
-/** Black ant, about 7x4 art pixels drawn with 2x finer pixels. `facing` 1 = right, -1 = left. */
-export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying: boolean): void {
-  // Snap to the half-art-pixel grid so the sprite does not wobble while the ant moves sub-pixel.
-  const sx = Math.round(x * 2) / 2;
-  const sy = Math.round(y * 2) / 2;
-  const right = facing === 1;
-  c.save();
-  c.translate(sx, sy);
-  c.scale(0.5, 0.5);
-  // Everything below is in ant pixels (integer rects); column col spans [col - 7, col - 6) facing right.
-  const fx = (c0: number, c1: number): number => (right ? c0 - 7 : 6 - c1);
-  c.fillStyle = SHADOW;
-  c.fillRect(fx(2, 10), 2, 9, 1);
-  for (const [r, c0, c1, col] of ANT_RUNS) {
-    c.fillStyle = col;
-    c.fillRect(fx(c0, c1), r - 4, c1 - c0 + 1, 1);
+  constructor(private make: CanvasFactory) {}
+
+  private build(): CanvasLike[] {
+    const out: CanvasLike[] = [];
+    for (const carrying of [false, true]) {
+      for (let f = 0; f < ANT_FRAMES; f++) {
+        for (let k = 0; k < ANT_DIRS; k++) {
+          const cv = this.make(ANT_SIZE, ANT_SIZE);
+          const ctx = cv.getContext('2d');
+          if (ctx) {
+            const img = ctx.createImageData(ANT_SIZE, ANT_SIZE);
+            const px = antPixels(k, f, carrying);
+            for (let i = 0; i < px.length; i++) {
+              const [r, g, b, a] = ANT_RGBA[px[i]];
+              img.data[i * 4] = r;
+              img.data[i * 4 + 1] = g;
+              img.data[i * 4 + 2] = b;
+              img.data[i * 4 + 3] = a;
+            }
+            ctx.putImageData(img, 0, 0);
+          }
+          out.push(cv);
+        }
+      }
+    }
+    return out;
   }
-  if (carrying) {
-    c.fillStyle = ANT_CRUMB;
-    c.fillRect(fx(12, 13), -1, 2, 2);
+
+  get(dir: number, frame: number, carrying: boolean): CanvasLike {
+    this.cache ??= this.build();
+    return this.cache[((carrying ? ANT_FRAMES : 0) + frame) * ANT_DIRS + dir];
   }
-  c.restore();
+}
+
+/** Draws one pre-rendered ant with a single drawImage at the (snapped) world position, smoothing off. */
+export function drawAnt(c: Ctx2D, sprites: AntSprites, x: number, y: number, dir: number, frame: number, carrying: boolean): void {
+  if (c.imageSmoothingEnabled) c.imageSmoothingEnabled = false;
+  c.drawImage(
+    sprites.get(dir, frame, carrying) as unknown as CanvasImageSource,
+    snap(x) - ANT_CENTER / FINE,
+    snap(y) - ANT_CENTER / FINE,
+    ANT_SIZE / FINE,
+    ANT_SIZE / FINE,
+  );
 }
 
 const clamp01 = (p: number): number => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0);

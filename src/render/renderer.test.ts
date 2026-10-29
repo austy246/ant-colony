@@ -216,3 +216,79 @@ describe('Renderer draw order', () => {
     }
   });
 });
+
+describe('Renderer worker ants (rotation, walking, cache)', () => {
+  function antSetup() {
+    const made: CanvasLike[] = [];
+    const rec = (w: number, h: number): CanvasLike => {
+      const c = make(w, h);
+      made.push(c);
+      return c;
+    };
+    const canvas = createCanvas(1, 1);
+    Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
+    const world = World.create(7);
+    const camera = new Camera(640, 400);
+    camera.zoom = 4;
+    camera.x = 100;
+    camera.y = 100;
+    const r = new Renderer(canvas as unknown as HTMLCanvasElement, world, camera, rec);
+    // the screen area around world (100, 100): 40 x 40 art px at zoom 4 would be 160 px; sample the 40x40 screen px core
+    const snap = (): number[] => Array.from(canvas.getContext('2d').getImageData(300, 180, 40, 40).data);
+    const ant = world.spawnAnt();
+    ant.x = 100;
+    ant.y = 100;
+    ant.heading = 0;
+    return { r, world, ant, made, snap, camera };
+  }
+
+  it('an ant heading down (pi/2) is drawn differently from one heading right (0)', () => {
+    const { r, ant, snap } = antSetup();
+    ant.heading = 0;
+    r.draw();
+    const right = snap();
+    ant.heading = Math.PI / 2;
+    r.draw();
+    const down = snap();
+    expect(down).not.toEqual(right);
+    ant.heading = Math.PI;
+    r.draw();
+    expect(snap()).not.toEqual(right);
+  });
+
+  it('a standing ant keeps its frame; a walking ant animates', () => {
+    const { r, ant, snap } = antSetup();
+    r.draw();
+    const first = snap();
+    for (let i = 0; i < 5; i++) r.draw();
+    expect(snap()).toEqual(first);
+    expect(ant.x).toBe(100);
+    const { r: r2, ant: a2, snap: s2 } = antSetup();
+    r2.draw();
+    const f0 = s2();
+    a2.x += 0.75; // quarter stride = next frame (then snap back to the same pixel grid)
+    r2.draw();
+    a2.x -= 0.75;
+    r2.draw(); // moving back advances the phase again by another quarter
+    expect(s2()).not.toEqual(f0);
+  });
+
+  it('prunes stride state of ants that are gone, and builds the sprite cache only once per Renderer', () => {
+    const { r, world, ant, made } = antSetup();
+    const extra = world.spawnAnt();
+    extra.x = 120;
+    extra.y = 110;
+    r.draw();
+    const afterFirst = made.length;
+    expect((r as unknown as { strides: Map<number, unknown> }).strides.size).toBe(2);
+    r.draw();
+    r.draw();
+    expect(made.length).toBe(afterFirst);
+    world.ants.splice(world.ants.indexOf(extra), 1);
+    r.draw();
+    const strides = (r as unknown as { strides: Map<number, unknown> }).strides;
+    expect(strides.size).toBe(1);
+    expect(strides.has(ant.id)).toBe(true);
+    expect(made.length).toBe(afterFirst);
+  });
+});
