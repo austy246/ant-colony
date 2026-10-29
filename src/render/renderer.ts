@@ -2,7 +2,7 @@ import { WORLD_H, WORLD_W } from '../sim/constants';
 import type { Terrain } from '../sim/terrain';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
-import { drawAnt, drawFood } from './sprites';
+import { drawAnt, drawFood, drawQueen } from './sprites';
 import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
@@ -22,6 +22,13 @@ const defaultMake: CanvasFactory = (w, h) => {
 
 const byY = (p: Ant, q: Ant): number => p.y - q.y;
 
+export interface QueenState {
+  visible: boolean;
+  x: number;
+  y: number;
+  digProgress: number;
+}
+
 export type View = 'normal' | 'pheromone' | 'terrain';
 
 export class Renderer {
@@ -37,6 +44,7 @@ export class Renderer {
   private glowCanvas: CanvasLike | null = null;
   private overlayCanvas: CanvasLike | null = null;
   private overlayRef: Terrain | null = null;
+  private queen: QueenState | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -52,6 +60,11 @@ export class Renderer {
 
   setView(v: View): void {
     this.view = v;
+  }
+
+  /** Intro queen (drawn above terrain/food, below ants); null or invisible = nothing. */
+  setQueen(q: QueenState | null): void {
+    this.queen = q;
   }
 
   getView(): View {
@@ -97,6 +110,8 @@ export class Renderer {
     else if (this.view === 'terrain') this.drawTerrainView(c);
     else {
       for (const f of this.world.food) drawFood(c, f.kind, f.x, f.y);
+      const q = this.queen;
+      if (q?.visible) drawQueen(c, Math.round(q.x), Math.round(q.y), q.digProgress);
 
       const ants = this.sorted;
       ants.length = 0;

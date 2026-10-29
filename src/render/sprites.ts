@@ -71,6 +71,63 @@ export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying
   }
 }
 
+const clamp01 = (p: number): number => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0);
+
+/** Radii of the hole the queen digs; starts at the nest crater's hole (7 x 3.6) and widens. */
+export function queenHoleRadii(digProgress: number): { rx: number; ry: number } {
+  const p = clamp01(digProgress);
+  return { rx: 7 + 4 * p, ry: 3.6 + 2 * p };
+}
+
+const CRUMB_COLORS = ['#8d7152', '#6b5238', '#5a432c', '#7d6244'];
+const CRUMB_COUNT = 7;
+
+/** Deterministic dirt crumbs flung out of the hole (offsets from the nest); empty unless 0 < p < 1. */
+export function queenCrumbs(digProgress: number): { dx: number; dy: number; color: string }[] {
+  if (!Number.isFinite(digProgress) || digProgress <= 0 || digProgress >= 1) return [];
+  const out: { dx: number; dy: number; color: string }[] = [];
+  for (let i = 0; i < CRUMB_COUNT; i++) {
+    // Each crumb loops through its own flight (phase 0..1): out and up, then back down.
+    const phase = (digProgress * 5 + i / CRUMB_COUNT) % 1;
+    const dir = (i % 2 === 0 ? 1 : -1) * (1 + (i % 3) * 0.6);
+    const dx = dir * 4 + dir * phase * 8;
+    const dy = -2 - Math.sin(phase * Math.PI) * (5 + (i % 3) * 2) + phase * 4;
+    out.push({ dx, dy, color: CRUMB_COLORS[i % CRUMB_COLORS.length] });
+  }
+  return out;
+}
+
+/** Queen: a larger all-black ant (about 1.6x the worker), facing right. Drawn in world coordinates. */
+export function drawQueen(c: Ctx2D, x: number, y: number, digProgress: number): void {
+  const { rx, ry } = queenHoleRadii(digProgress);
+  if (digProgress > 0) {
+    ell(c, x, y, rx, ry, '#0e0805');
+    ell(c, x + 1, y + 1, rx - 2, ry - 1, '#050302');
+  }
+  const L = '#1a1410';
+  shadow(c, x, y, 9, 3.2);
+  for (const i of LEG_IDX) {
+    const bx = x + i * 2.6;
+    line(c, bx, y, bx + i * 1.4, y - 5, L);
+    line(c, bx, y, bx + i * 1.4, y + 5, L);
+    px(c, bx + i * 1.4 + 1, y - 5, L);
+    px(c, bx + i * 1.4 + 1, y + 5, L);
+  }
+  ell(c, x - 6, y, 5.6, 3.8, '#241a12');
+  ell(c, x - 6, y - 1, 3.6, 2, '#3a2c20');
+  px(c, x - 8, y - 2, '#4e3d2e', 2, 1);
+  ell(c, x, y, 3, 2.6, '#241a12');
+  px(c, x - 1, y - 1, '#4e3d2e', 2, 1);
+  ell(c, x + 5, y, 3.4, 3, '#241a12');
+  px(c, x + 4, y - 2, '#4e3d2e', 2, 1);
+  px(c, x + 7, y, '#3a2c20');
+  line(c, x + 8, y - 2, x + 11, y - 5, L);
+  line(c, x + 8, y + 2, x + 11, y + 5, L);
+  px(c, x + 11, y - 6, L);
+  px(c, x + 11, y + 6, L);
+  for (const k of queenCrumbs(digProgress)) px(c, x + k.dx, y + k.dy, k.color);
+}
+
 function beetle(c: Ctx2D, x: number, y: number): void {
   shadow(c, x, y, 7, 3.5);
   for (const i of LEG_IDX) {

@@ -60,3 +60,37 @@ describe('Renderer views', () => {
     expect(px(200.25, 40.25)).toEqual(before);
   });
 });
+
+describe('Renderer queen', () => {
+  const Q = { x: 100, y: 100, digProgress: 0 };
+
+  it('visible queen paints dark body pixels; invisible paints nothing extra', () => {
+    const { r, px } = setup();
+    r.draw();
+    const before = px(Q.x, Q.y);
+    r.setQueen({ visible: false, ...Q });
+    r.draw();
+    expect(px(Q.x, Q.y)).toEqual(before);
+    r.setQueen(null);
+    r.draw();
+    expect(px(Q.x, Q.y)).toEqual(before);
+    r.setQueen({ visible: true, ...Q });
+    r.draw();
+    const after = px(Q.x, Q.y);
+    expect(after).not.toEqual(before);
+    expect(Math.max(...after)).toBeLessThan(70);
+    expect(after[0] - after[2]).toBeLessThan(30);
+  });
+
+  it('digging grows a dark hole around the queen', () => {
+    const { r, px } = setup();
+    r.setQueen({ visible: true, x: 100, y: 100, digProgress: 0 });
+    r.draw();
+    const small = px(100 + 7, 100 + 3);
+    r.setQueen({ visible: true, x: 100, y: 100, digProgress: 0.9 });
+    r.draw();
+    const big = px(100 + 7, 100 + 3);
+    expect(Math.max(...big)).toBeLessThan(40);
+    expect(big[0] + big[1] + big[2]).toBeLessThan(small[0] + small[1] + small[2]);
+  });
+});
