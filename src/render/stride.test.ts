@@ -60,3 +60,14 @@ describe('frameFor', () => {
     expect(frameFor(0.9999999999, 4)).toBe(3);
   });
 });
+
+describe('advanceStride with its own stride length', () => {
+  it('a longer stride advances the phase more slowly', () => {
+    let s = advanceStride(undefined, 0, 0, 6);
+    s = advanceStride(s, 3, 0, 6);
+    expect(s.phase).toBeCloseTo(0.5, 9);
+    let d = advanceStride(undefined, 0, 0);
+    d = advanceStride(d, STRIDE_ART_PX / 2, 0);
+    expect(d.phase).toBeCloseTo(0.5, 9);
+  });
+});

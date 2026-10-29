@@ -15,13 +15,13 @@ export const TELEPORT_ART_PX = 20;
 
 /**
  * Advances the stride state to the ant's new position. Mutates and returns `prev` (no allocation per ant per frame);
- * creates a fresh state when `prev` is undefined.
+ * creates a fresh state when `prev` is undefined. `strideLen` = art pixels per full gait cycle (bigger creatures take longer strides).
  */
-export function advanceStride(prev: StrideState | undefined, x: number, y: number): StrideState {
+export function advanceStride(prev: StrideState | undefined, x: number, y: number, strideLen: number = STRIDE_ART_PX): StrideState {
   if (!prev) return { x, y, phase: 0 };
   const d = Math.hypot(x - prev.x, y - prev.y);
   if (d > 0 && d <= TELEPORT_ART_PX) {
-    const p = prev.phase + d / STRIDE_ART_PX;
+    const p = prev.phase + d / strideLen;
     prev.phase = p - Math.floor(p); // wrap, so the phase never grows and keeps full precision
   }
   prev.x = x;
