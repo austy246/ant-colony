@@ -3,6 +3,8 @@ import type { FoodKind } from '../sim/food';
 export type Ctx2D = CanvasRenderingContext2D;
 
 export const SHADOW = 'rgba(10,6,3,.38)';
+const LEG_IDX = [-1, 0, 1];
+const BERRY_PTS = [[0, 0], [3, -1], [-3, -1], [1, 3], [-2, 3], [4, 2], [0, -3]];
 
 /** Single art pixel (or w x h block). */
 export function px(c: Ctx2D, x: number, y: number, col: string, w = 1, h = 1): void {
@@ -44,7 +46,7 @@ export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying
   const s = facing;
   const L = '#1a1410';
   shadow(c, x, y, 5, 1.8);
-  for (const i of [-1, 0, 1]) {
+  for (const i of LEG_IDX) {
     const bx = x + i * 1.6;
     line(c, bx, y, bx + i, y - 3, L);
     line(c, bx, y, bx + i, y + 3, L);
@@ -58,7 +60,7 @@ export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying
   px(c, x, y - 1, '#4e3d2e');
   ell(c, x + s * 3, y, 2, 1.8, '#241a12');
   px(c, x + s * 3, y - 1, '#4e3d2e');
-  px(c, x + s * 4, y, '#d8c8a8');
+  px(c, x + s * 4, y, '#3a2c20');
   px(c, x + s * 5, y - 2, L);
   px(c, x + s * 6, y - 3, L);
   px(c, x + s * 5, y + 1, L);
@@ -71,7 +73,7 @@ export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying
 
 function beetle(c: Ctx2D, x: number, y: number): void {
   shadow(c, x, y, 7, 3.5);
-  for (const i of [-1, 0, 1]) {
+  for (const i of LEG_IDX) {
     line(c, x + i * 2.4, y, x + i * 2.4 - 1, y - 4, '#0d1210');
     line(c, x + i * 2.4, y, x + i * 2.4 - 1, y + 4, '#0d1210');
   }
@@ -119,7 +121,7 @@ function fly(c: Ctx2D, x: number, y: number): void {
 /** Larger dead insect (grasshopper-like husk) lying on its side. */
 function carrion(c: Ctx2D, x: number, y: number): void {
   shadow(c, x, y, 9, 3.6);
-  for (const i of [-1, 0, 1]) {
+  for (const i of LEG_IDX) {
     line(c, x + i * 3, y + 1, x + i * 3 - 2, y + 5, '#3b3226');
     line(c, x + i * 3, y - 1, x + i * 3 + 2, y - 5, '#3b3226');
   }
@@ -134,7 +136,7 @@ function carrion(c: Ctx2D, x: number, y: number): void {
 function berry(c: Ctx2D, x: number, y: number): void {
   shadow(c, x, y, 5, 3);
   ell(c, x - 4, y - 4, 2.5, 1.4, '#3d6023');
-  for (const p of [[0, 0], [3, -1], [-3, -1], [1, 3], [-2, 3], [4, 2], [0, -3]]) {
+  for (const p of BERRY_PTS) {
     ell(c, x + p[0], y + p[1], 2.1, 2.1, '#a81830');
     px(c, x + p[0] - 1, y + p[1] - 1, '#f06a7e');
   }

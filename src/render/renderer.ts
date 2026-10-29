@@ -5,6 +5,8 @@ import type { Camera } from '../ui/camera';
 import { drawAnt, drawFood } from './sprites';
 import { renderTerrain, type CanvasLike } from './terrainRender';
 
+const byY = (p: Ant, q: Ant): number => p.y - q.y;
+
 export type View = 'normal' | 'pheromone' | 'terrain';
 
 export class Renderer {
@@ -77,7 +79,7 @@ export class Renderer {
     const ants = this.sorted;
     ants.length = 0;
     for (const a of this.world.ants) ants.push(a);
-    ants.sort((p, q) => p.y - q.y);
+    ants.sort(byY);
     for (const a of ants) drawAnt(c, a.x, a.y, Math.cos(a.heading) >= 0 ? 1 : -1, a.carry > 0);
 
     // Vignette in screen space.
