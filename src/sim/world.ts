@@ -28,6 +28,7 @@ const SENSE_FOOD = 10;
 const PICKUP_DIST = 1.5;
 const DEPOSIT = 0.5;
 const MAX_DT = 0.5;
+const WANDER_JITTER = 0.6; // full range of per-step heading noise (+-0.3 rad)
 const TWO_PI = Math.PI * 2;
 
 function wrapAngle(a: number): number {
@@ -117,7 +118,9 @@ export class World {
 
   private substep(): void {
     for (const ant of this.ants) this.updateAnt(ant);
-    this.ants = this.ants.filter((a) => a.age < a.lifespan);
+    let k = 0;
+    for (const a of this.ants) if (a.age < a.lifespan) this.ants[k++] = a;
+    this.ants.length = k;
     while (this.stock >= FOOD_PER_ANT && this.ants.length < MAX_ANTS) {
       this.stock -= FOOD_PER_ANT;
       this.spawnAnt();
@@ -169,8 +172,8 @@ export class World {
           f.piecesLeft--;
           ant.carry = FOOD_TABLE[f.kind].value;
           ant.state = 'carry';
-          if (f.piecesLeft <= 0) this.food = this.food.filter((o) => o !== f);
-          desired = Math.atan2(NEST.y - ant.y, NEST.x - ant.x);
+          pherWeight = 0;
+          if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
         }
       }
     }
@@ -178,7 +181,7 @@ export class World {
       desired = Math.atan2(NEST.y - ant.y, NEST.x - ant.x);
       this.pher.deposit(ant.x, ant.y, DEPOSIT);
     } else if (ant.state === 'wander') {
-      desired = ant.heading + (this.rng.next() - 0.5) * 0.6;
+      desired = ant.heading + (this.rng.next() - 0.5) * WANDER_JITTER;
       pherWeight = 0.15;
     }
 
@@ -216,7 +219,20 @@ export class World {
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
     const v = BASE_SPEED * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
-    ant.x = Math.max(0.5, Math.min(this.terrain.w - 0.5, ant.x + Math.cos(ant.heading) * v));
-    ant.y = Math.max(0.5, Math.min(this.terrain.h - 0.5, ant.y + Math.sin(ant.heading) * v));
+    let nx = ant.x + Math.cos(ant.heading) * v;
+    let ny = ant.y + Math.sin(ant.heading) * v;
+    const maxX = this.terrain.w - 0.5;
+    const maxY = this.terrain.h - 0.5;
+    // Reflect off the world edge instead of sliding along it.
+    if (nx < 0.5 || nx > maxX) {
+      nx = Math.max(0.5, Math.min(maxX, nx));
+      ant.heading = wrapAngle(Math.PI - ant.heading);
+    }
+    if (ny < 0.5 || ny > maxY) {
+      ny = Math.max(0.5, Math.min(maxY, ny));
+      ant.heading = wrapAngle(-ant.heading);
+    }
+    ant.x = nx;
+    ant.y = ny;
   }
 }
