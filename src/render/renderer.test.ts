@@ -54,14 +54,16 @@ describe('Renderer views', () => {
     const bg = at(330, 200);
     expect(lit[2]).toBeGreaterThan(lit[0] + 40);
     expect(Math.max(...bg)).toBeLessThan(60);
-    // No anti-aliased half-lit pixels: every pixel right of / below the cell is either fully lit or background.
+    // No anti-aliased half-lit pixels: every pixel right of / below the cell is either fully lit or dark. The dark
+    // side is the darkened fine-grid terrain, which is textured pixel by pixel, so it is "dark", not one flat colour.
     const dist = (a: number[], b: number[]): number => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+    const isDark = (p: number[]): boolean => Math.max(...p) < 60;
     for (const [sx, sy] of [[322, 200], [323, 200], [321, 202], [321, 203], [319, 200], [320, 199]]) {
       const p = at(sx, sy);
-      expect(Math.min(dist(p, lit), dist(p, bg))).toBeLessThan(12);
+      expect(dist(p, lit) < 12 || isDark(p), `${sx},${sy}: ${p}`).toBe(true);
     }
-    expect(dist(at(323, 200), bg)).toBeLessThan(12);
-    expect(dist(at(321, 203), bg)).toBeLessThan(12);
+    expect(isDark(at(323, 200))).toBe(true);
+    expect(isDark(at(321, 203))).toBe(true);
   });
 
   it('terrain view: a stone cell is reddish', () => {
@@ -117,5 +119,100 @@ describe('Renderer queen', () => {
     const big = px(100 + 7, 100 + 3);
     expect(Math.max(...big)).toBeLessThan(40);
     expect(big[0] + big[1] + big[2]).toBeLessThan(small[0] + small[1] + small[2]);
+  });
+});
+
+describe('Renderer fine-grid terrain', () => {
+  function fineSetup(zoom: number, camX: number, camY: number) {
+    const made: CanvasLike[] = [];
+    const rec = (w: number, h: number): CanvasLike => {
+      const c = make(w, h);
+      made.push(c);
+      return c;
+    };
+    const canvas = createCanvas(1, 1);
+    Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
+    const world = World.create(7);
+    const camera = new Camera(640, 400);
+    camera.zoom = zoom;
+    camera.x = camX;
+    camera.y = camY;
+    const r = new Renderer(canvas as unknown as HTMLCanvasElement, world, camera, rec);
+    const screen = (sx: number, sy: number): number[] =>
+      Array.from(canvas.getContext('2d').getImageData(sx, sy, 1, 1).data.slice(0, 3));
+    return { world, r, made, screen, camera };
+  }
+  const terrainPx = (c: CanvasLike, fx: number, fy: number): number[] =>
+    Array.from(c.getContext('2d')!.getImageData(fx, fy, 1, 1).data.slice(0, 3));
+
+  it('draws the 640x400 terrain canvas into world space: at zoom 2 every screen pixel is one fine pixel', () => {
+    const { r, made, screen } = fineSetup(2, 160, 100);
+    r.draw();
+    const t = made.find((c) => c.width === 640 && c.height === 400);
+    expect(t, 'terrain canvas of 640x400 was created through the injected factory').toBeDefined();
+    // inside the vignette's clear radius the output is the terrain, pixel for pixel
+    for (const [sx, sy] of [[320, 200], [300, 190], [341, 217], [250, 160], [400, 240]]) {
+      expect(screen(sx, sy), `${sx},${sy}`).toEqual(terrainPx(t!, sx, sy));
+    }
+  });
+
+  it('at zoom 4 one fine terrain pixel is a crisp 2x2 block of screen pixels', () => {
+    const { r, made, screen } = fineSetup(4, 100, 100);
+    r.draw();
+    const t = made.find((c) => c.width === 640 && c.height === 400)!;
+    // screen (320,200) = world (100,100) = fine (200,200); screen = 320 + (fine/2 - 100) * 4
+    const probes: [number, number][] = [[200, 200], [203, 198], [190, 207], [211, 193], [196, 204]];
+    for (const [fx, fy] of probes) {
+      const sx = 320 + (fx / 2 - 100) * 4;
+      const sy = 200 + (fy / 2 - 100) * 4;
+      const want = terrainPx(t, fx, fy);
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+        expect(screen(sx + dx, sy + dy), `fine ${fx},${fy} +${dx},${dy}`).toEqual(want);
+      }
+    }
+  });
+});
+
+describe('Renderer draw order', () => {
+  const food = (kind: 'berry', x: number, y: number) => ({ id: 99, kind, x, y, piecesLeft: 1 });
+
+  it('food is drawn above the terrain, the queen above food, ants above both', () => {
+    const { world, r, px } = setup();
+    world.food.push(food('berry', 150, 100));
+    r.draw();
+    const onBerry = px(150.5, 100.5);
+    expect(onBerry[0]).toBeGreaterThan(onBerry[1] + 60); // red berry, not ground
+    r.setQueen({ visible: true, x: 150, y: 100, digProgress: 0 });
+    r.draw();
+    const withQueen = px(150.5, 100.5);
+    expect(Math.max(...withQueen)).toBeLessThan(80); // black queen body hides the berry
+    r.setQueen(null);
+    const a = world.spawnAnt();
+    a.x = 150;
+    a.y = 100;
+    a.heading = 0;
+    r.draw();
+    // somewhere inside the ant footprint a black ant pixel hides the berry
+    let black = 0;
+    for (let dx = -3; dx <= 3; dx += 0.5) {
+      const p = px(150 + dx + 0.25, 100.25);
+      if (Math.max(...p) < 80) black++;
+    }
+    expect(black).toBeGreaterThan(2);
+  });
+
+  it('pheromone and terrain overlays still line up with the terrain: darkening covers the whole world rectangle', () => {
+    const { r, px } = setup();
+    r.setView('pheromone');
+    r.draw();
+    // far corners of the world rectangle (inside the screen at fit zoom) are darkened like the middle
+    for (const [wx, wy] of [[2, 2], [158, 98], [300, 190], [20, 180]]) {
+      expect(Math.max(...px(wx, wy)), `${wx},${wy}`).toBeLessThan(60);
+    }
+    r.setView('terrain');
+    r.draw();
+    for (const [wx, wy] of [[2, 2], [300, 190]]) {
+      expect(Math.max(...px(wx, wy)), `${wx},${wy}`).toBeLessThan(80);
+    }
   });
 });
