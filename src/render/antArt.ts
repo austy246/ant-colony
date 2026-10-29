@@ -31,6 +31,20 @@ export const ANT_RGBA: readonly (readonly [number, number, number, number])[] = 
   [10, 6, 3, 97], // rgba(10,6,3,.38)
 ];
 
+/**
+ * Callow (freshly hatched) ant: the same sprites in a lighter greyish brown, the chitin has not hardened and darkened yet.
+ * Same layout as ANT_RGBA; the crumb and the shadow are unchanged. Nothing red-dominant.
+ */
+export const CALLOW_RGBA: readonly (readonly [number, number, number, number])[] = [
+  [0, 0, 0, 0],
+  [0x4a, 0x40, 0x38, 255],
+  [0x5e, 0x53, 0x48, 255],
+  [0x40, 0x36, 0x2e, 255],
+  [0x30, 0x28, 0x22, 255],
+  [0xe8, 0xe0, 0xc8, 255],
+  [10, 6, 3, 97],
+];
+
 const N = ANT_SIZE;
 const C = ANT_CENTER;
 

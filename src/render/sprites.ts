@@ -31,7 +31,10 @@ function blit(c: Ctx2D, spr: Sprite, x: number, y: number): void {
 export class AntSprites {
   private cache: CanvasLike[] | null = null;
 
-  constructor(private make: CanvasFactory) {}
+  constructor(
+    private make: CanvasFactory,
+    private palette: readonly (readonly [number, number, number, number])[] = ANT_RGBA,
+  ) {}
 
   private build(): CanvasLike[] {
     const out: CanvasLike[] = [];
@@ -44,7 +47,7 @@ export class AntSprites {
             const img = ctx.createImageData(ANT_SIZE, ANT_SIZE);
             const px = antPixels(k, f, carrying);
             for (let i = 0; i < px.length; i++) {
-              const [r, g, b, a] = ANT_RGBA[px[i]];
+              const [r, g, b, a] = this.palette[px[i]];
               img.data[i * 4] = r;
               img.data[i * 4 + 1] = g;
               img.data[i * 4 + 2] = b;

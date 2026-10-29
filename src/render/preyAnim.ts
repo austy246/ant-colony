@@ -12,6 +12,8 @@
  *   - fly           8 directions x 4 poses: 0 folded, 1 fidget, 2/3 airborne wing-beat; WITHOUT shadow (see flyShadowPixels)
  *   - dead beetle   8 directions, on its back, curled legs
  *   - dead fly      8 directions, on its back, curled legs, splayed wings
+ *   - caterpillar   16 directions x 4 wave frames x {calm, fleeing}: seven green segments with a travelling body wave, tiny feet
+ *   - dead caterpillar  8 directions, curled on its side, dull colours, a few pale-yellow droplets
  */
 import { hash2, parseColor, type Rgba } from './raster';
 
@@ -21,6 +23,11 @@ export const BEETLE_DIRS = 16;
 export const BEETLE_FRAMES = 4;
 export const FLY_DIRS = 8;
 export const FLY_POSES = 4;
+export const CATERPILLAR_DIRS = 16;
+export const CATERPILLAR_FRAMES = 4;
+export const CATERPILLAR_CORPSE_DIRS = 8;
+/** Art pixels a calm caterpillar crawls per full body-wave cycle (a fleeing one runs the wave at twice the speed). */
+export const CATERPILLAR_STRIDE_ART_PX = 3;
 /** Apex height of a fly hop in art pixels. */
 export const FLY_LIFT_ART_PX = 8;
 /** Art pixels a beetle walks per full leg cycle. */
@@ -581,6 +588,137 @@ function buildDeadFly(dir: number): Uint8ClampedArray {
   return p.d;
 }
 
+
+// ---- caterpillar ------------------------------------------------------------------------------------------------------
+
+const CAT_RAMP = ramp(['#3a5a1a', '#4f7022', '#79a93a', '#8fc24a', '#c5e58a']);
+const CAT_HEAD_RAMP = ramp(['#3a1f0c', '#5a3416', '#7a4a22', '#9a6130', '#b57a44']);
+const CAT_SEGMENTS = 7;
+
+/**
+ * Living caterpillar: seven segments with a body wave running from the head to the tail (4 frames, one quarter of a cycle
+ * each). Every segment is shifted sideways by the wave and a little along the body (the hump travels), the tiny feet
+ * alternate. The fleeing set is stretched out (wider spacing, bigger swing).
+ */
+function buildCaterpillar(dir: number, frame: number, flee: boolean): Uint8ClampedArray {
+  const [cos, sin] = rotation(dir, CATERPILLAR_DIRS);
+  const p = new Pix(cos, sin, 0, 0);
+  const spacing = flee ? 4.3 : 3.9;
+  const amp = flee ? 1.9 : 1.4;
+  const ph = (frame * Math.PI) / 2;
+  const at = (i: number): { x: number; y: number } => ({
+    x: (i - 3) * spacing - 2.2 + 0.6 * Math.cos(i * 0.95 - ph),
+    y: amp * Math.sin(i * 0.95 - ph),
+  });
+  const FOOT = '#2c4212';
+  for (let i = 0; i < CAT_SEGMENTS; i++) {
+    const { x, y } = at(i);
+    const ry = 3.1 + 0.5 * Math.sin((Math.PI * i) / (CAT_SEGMENTS - 1));
+    // tiny feet on both flanks, the two sets swap with the wave
+    const fx = (i + frame) % 2 === 0 ? -1 : 1;
+    for (const s of [-1, 1]) {
+      p.dot(x + fx, y + s * (ry + 0.8), FOOT, ID_THIN);
+      p.dot(x + fx + 2, y + s * (ry + 0.8), FOOT, ID_THIN);
+    }
+    const cx = Math.round(x);
+    p.blob(x, y, 3.3, ry, CAT_RAMP, {
+      id: ID_BODY,
+      seed: 20 + i,
+      jitter: 0.06,
+      bias: i % 2 ? -0.2 : -0.1,
+      // the segment crease on the tail-side edge
+      deco: (mx, my) => (mx - cx <= -3 && Math.abs(my - Math.round(y)) < 4 ? ['#2f4a14', 0.9] : undefined),
+    });
+    p.dot(x - 0.5, y - 0.5, '#d9f0a0', ID_BODY, 0.9, ID_BODY);
+    p.dot(x + 0.5, y - 0.5, '#b4d870', ID_BODY, 0.9, ID_BODY);
+    if (i % 3 === 1) {
+      p.dot(x, y + 1, '#f0e27a', ID_BODY, 1, ID_BODY);
+      p.dot(x + 1, y + 1, '#f0e27a', ID_BODY, 1, ID_BODY);
+    }
+    p.dot(x + 1.5, y + ry * 0.55, FOOT, ID_BODY, 1, ID_BODY);
+  }
+  // head: brown dome, black eyes with a white speck, mandibles and two short feelers
+  const hx = at(CAT_SEGMENTS - 1).x + spacing + 0.6;
+  const hy = at(CAT_SEGMENTS).y * 0.8;
+  p.blob(hx, hy, 3.2, 3.2, CAT_HEAD_RAMP, { id: ID_HEAD, seed: 7, jitter: 0.06 });
+  for (const s of [-1, 1]) {
+    p.dot(hx + 1.6, hy + s * 1.7, '#14100c', ID_HEAD);
+    p.dot(hx + 1.1, hy + s * 1.9, '#f2ede0', ID_HEAD, 0.9, ID_HEAD);
+    p.dot(hx + 3, hy + s * 0.7, '#2a1a0c', ID_THIN);
+    p.stroke(
+      [
+        [hx + 1.5, hy + s * 3],
+        [hx + 3, hy + s * 4.5],
+      ],
+      '#2a1a0c',
+      ID_THIN,
+    );
+  }
+  p.shadow(2, 3, (1 << ID_BODY) | (1 << ID_HEAD));
+  return p.d;
+}
+
+const DEAD_CAT_RAMP = ramp(['#25271d', '#33362a', '#454839', '#5a5d48', '#706f58']);
+const DEAD_CAT_HEAD = ramp(['#1f1812', '#2e231a', '#42332a', '#574539']);
+const DEAD_CAT_RIM = ramp(['#14160f', '#1c1f15']);
+
+/** Dead caterpillar: curled on its side like a 'C', dull olive-grey, tiny pins of legs on the inner side, a few pale-yellow droplets. */
+function buildDeadCaterpillar(dir: number): Uint8ClampedArray {
+  const [cos, sin] = rotation(dir, CATERPILLAR_CORPSE_DIRS);
+  const p = new Pix(cos, sin, 0, 0);
+  const R = 7.6;
+  const a = (i: number): number => 0.6 + i * 0.66;
+  const xy = (i: number, r: number): [number, number] => [r * Math.cos(a(i)), r * Math.sin(a(i))];
+  // dull edge under the body first, then the segments
+  for (let i = 0; i < CAT_SEGMENTS; i++) {
+    const [x, y] = xy(i, R);
+    p.blob(x, y, 4.1, 4.1, DEAD_CAT_RIM, { id: ID_SHELL, seed: 50 + i });
+  }
+  for (let i = 0; i < CAT_SEGMENTS; i++) {
+    const [x, y] = xy(i, R);
+    const [ix, iy] = xy(i, R - 3.6);
+    p.blob(x, y, 3.4, 3.4, DEAD_CAT_RAMP, {
+      id: ID_BODY,
+      seed: 60 + i,
+      jitter: 0.08,
+      bias: -0.05,
+      deco: (mx, my) => {
+        // a dark crease across every segment (along the radius of the curl), dashed
+        const t = Math.abs((mx - x) * -Math.sin(a(i)) + (my - y) * Math.cos(a(i)));
+        return t < 0.55 && ((mx + my) & 1) === 0 ? ['#171910', 0.8] : undefined;
+      },
+    });
+    // two pins of legs on the inner side of the curl
+    p.dot(ix, iy, '#26281c', ID_THIN);
+    const [jx, jy] = xy(i, R - 4.6);
+    p.dot(jx, jy, '#1b1c14', ID_THIN);
+  }
+  const [hx, hy] = xy(CAT_SEGMENTS, R);
+  p.blob(hx, hy, 3.3, 3.3, DEAD_CAT_HEAD, { id: ID_HEAD, seed: 77 });
+  const [ex, ey] = xy(CAT_SEGMENTS, R - 1.3);
+  p.dot(ex, ey, '#0c0907', ID_HEAD);
+  // pale-yellow droplets: two bigger ones near the head and the middle, two single specks
+  const drop = (x: number, y: number, big: boolean): void => {
+    p.dot(x, y, '#e4d98a', ID_THIN);
+    if (big) {
+      p.dot(x + 1, y, '#e4d98a', ID_THIN);
+      p.dot(x, y + 1, '#e4d98a', ID_THIN);
+      p.dot(x + 1, y + 1, '#b8a85a', ID_THIN);
+      p.dot(x, y, '#fff3b0', ID_THIN);
+    }
+  };
+  const [d1x, d1y] = xy(CAT_SEGMENTS, R + 5.2);
+  drop(d1x, d1y, true);
+  const [d2x, d2y] = xy(3, R + 5);
+  drop(d2x, d2y, true);
+  const [d3x, d3y] = xy(5, R - 6.2);
+  drop(d3x, d3y, false);
+  const [d4x, d4y] = xy(1, R + 6.4);
+  drop(d4x, d4y, false);
+  p.shadow(2, 3, (1 << ID_SHELL) | (1 << ID_BODY) | (1 << ID_HEAD));
+  return p.d;
+}
+
 // ---- caches ---------------------------------------------------------------------------------------------------------------------
 
 const cache = new Map<number, Uint8ClampedArray>();
@@ -620,4 +758,17 @@ export function deadBeetlePixels(dir: number): Uint8ClampedArray {
 export function deadFlyPixels(dir: number): Uint8ClampedArray {
   const d = wrapDir(dir, FLY_DIRS);
   return cached(4000 + d, () => buildDeadFly(d));
+}
+
+/** RGBA of one living-caterpillar variant: direction (16), wave frame (4) and whether it is fleeing (stretched). Shared array. */
+export function caterpillarPixels(dir: number, frame: number, flee: boolean): Uint8ClampedArray {
+  const d = wrapDir(dir, CATERPILLAR_DIRS);
+  const f = wrapDir(frame, CATERPILLAR_FRAMES);
+  return cached(5000 + (flee ? 500 : 0) + d * 10 + f, () => buildCaterpillar(d, f, flee));
+}
+
+/** RGBA of the curled corpse of a caterpillar (8 directions). Shared array. */
+export function deadCaterpillarPixels(dir: number): Uint8ClampedArray {
+  const d = wrapDir(dir, CATERPILLAR_CORPSE_DIRS);
+  return cached(6000 + d, () => buildDeadCaterpillar(d));
 }

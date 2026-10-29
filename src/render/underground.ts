@@ -5,18 +5,18 @@
  */
 import { FOOD_PER_ANT, FOOD_PER_QUEEN, MAX_ANTS, MAX_QUEENS } from '../sim/constants';
 import type { World } from '../sim/world';
-import { ANT_FRAMES, antDirection } from './antArt';
+import { CALLOW_RGBA } from './antArt';
 import {
   drawText, larvaRaster, larvaSlots, LARVA_FRAMES, LARVA_GROW, LARVA_SIZE, LARVA_VARIANTS, MAX_CRUMBS, paintChamberInterior,
-  paintChamberRim, paintCrumbs, paintEggs, paintFlyRemains, paintTunnelInteriors, paintTunnelRims, paintedPoints, pantryCrumbs,
+  paintChamberRim, paintCrumbs, paintEggPile, paintFlyRemains, paintTunnelInteriors, paintTunnelRims, pantryCrumbs,
   renderBackdrop, textWidth, vignettePixels, VOID_COLOR, type Crumb,
 } from './nestArt';
+import { MOUTH_RISE, nestAntPose, type NestPose } from './nestChoreo';
 import {
-  MAX_SHOWN_LARVAE, nestLayout, NEST_H, NEST_W, smoothToward, type Chamber, type NestLayout, type Pt, type Tunnel,
+  MAX_SHOWN_LARVAE, nestLayout, NEST_H, NEST_W, smoothToward, type Chamber, type NestLayout,
 } from './nestLayout';
 import { queenSprite } from './preyArt';
 import { AntSprites, type Ctx2D } from './sprites';
-import { frameFor } from './stride';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
 
 const defaultMake: CanvasFactory = (w, h) => {
@@ -28,15 +28,10 @@ const defaultMake: CanvasFactory = (w, h) => {
 
 /** Chambers ease to their new size at this rate (1/s): about 1.5 s to settle. */
 export const GROW_RATE = 3.2;
-/** Walking speed of the cosmetic ants: 20 art px/s = 40 fine px/s. */
-export const WALK_SPEED = 40;
-const MAX_QUEUED_CARRIERS = 12;
-const CARRIER_GAP_S = 0.3;
-const MAX_HATCH_WALKERS = 6;
-const FINE_PER_CYCLE = 6;
+/** At most this many nest ants are drawn (the first ones by id); the rest of a big colony is implied. */
+export const MAX_DRAWN_NEST_ANTS = 60;
 const BOB = [0, 1, 0];
 const BOB_PERIOD = 2.7;
-const MOUTH_RISE = 5;
 
 export interface NestHud {
   line: string;
@@ -62,38 +57,6 @@ export function nestHud(world: World): NestHud {
   };
 }
 
-interface Walker {
-  kind: 'carrier' | 'hatched';
-  pts: Pt[];
-  /** cumulative length at the end of each point. */
-  cum: number[];
-  d: number;
-  x: number;
-  y: number;
-  dir: number;
-  phase: number;
-}
-
-function makeWalker(kind: Walker['kind'], pts: Pt[]): Walker {
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-  return { kind, pts, cum, d: 0, x: pts[0].x, y: pts[0].y, dir: 4, phase: 0 };
-}
-
-function placeWalker(w: Walker): void {
-  const total = w.cum[w.cum.length - 1];
-  const d = Math.min(w.d, total);
-  let i = 1;
-  while (i < w.cum.length - 1 && w.cum[i] < d) i++;
-  const a = w.pts[i - 1];
-  const b = w.pts[i];
-  const seg = w.cum[i] - w.cum[i - 1] || 1;
-  const t = Math.max(0, Math.min(1, (d - w.cum[i - 1]) / seg));
-  w.x = a.x + (b.x - a.x) * t;
-  w.y = a.y + (b.y - a.y) * t;
-  w.dir = antDirection(Math.atan2(b.y - a.y, b.x - a.x));
-}
-
 const finite = (v: number, def = 0): number => (Number.isFinite(v) ? v : def);
 
 export class UndergroundView {
@@ -115,11 +78,15 @@ export class UndergroundView {
   private crumbs: Crumb[] | null = null;
   private larvaSprites = new Map<number, CanvasLike>();
   private antSprites: AntSprites;
-  private walkers: Walker[] = [];
-  private pendingCarriers = 0;
-  private carrierCd = 0;
-  private lastDelivery: number;
-  private lastAnts: number;
+  private callowSprites: AntSprites;
+  /** Reused per frame: the poses of the drawn nest ants (at most MAX_DRAWN_NEST_ANTS), their draw order and the egg bookkeeping. */
+  private poses: NestPose[] = [];
+  private order: number[] = [];
+  private drawn = 0;
+  private eggsTaken: number[] = [];
+  private eggsShown: number[] = [];
+  /** The layout with the EASED chamber sizes, as the ants walk in what is drawn (one object reused every frame). */
+  private shownLayout: NestLayout | null = null;
   private layout: NestLayout | null = null;
 
   constructor(
@@ -135,8 +102,7 @@ export class UndergroundView {
     if (!sctx) throw new Error('2d context unavailable');
     this.sceneCtx = sctx;
     this.antSprites = new AntSprites(make);
-    this.lastDelivery = world.deliveryCount;
-    this.lastAnts = world.ants.length;
+    this.callowSprites = new AntSprites(make, CALLOW_RGBA);
     this.resize();
   }
 
@@ -145,12 +111,14 @@ export class UndergroundView {
     return { zoom: this.zoom, ox: this.ox, oy: this.oy, width: NEST_W, height: NEST_H };
   }
 
-  carrierCount(): number {
-    return this.walkers.filter((w) => w.kind === 'carrier').length;
+  /** Number of nest ants drawn by the last draw() (at most MAX_DRAWN_NEST_ANTS). */
+  walkerCount(): number {
+    return this.drawn;
   }
 
-  hatchedWalkerCount(): number {
-    return this.walkers.filter((w) => w.kind === 'hatched').length;
+  /** Eggs shown in the pile of queen `index` by the last draw() (after the ones nurses carry away). */
+  queenEggs(index: number): number {
+    return this.eggsShown[index] ?? 0;
   }
 
   /** Radii currently displayed for a chamber (they ease towards the layout's target sizes). */
@@ -177,12 +145,8 @@ export class UndergroundView {
     this.oy = Math.floor((this.ch - NEST_H * this.zoom) / 2);
   }
 
-  /** Call when the view is shown again: forgets what happened while it was hidden (no burst of carriers) and snaps sizes. */
+  /** Call when the view is shown again: snaps the chamber sizes (the ants need no catching up, they are a function of the time). */
   enter(): void {
-    this.lastDelivery = this.world.deliveryCount;
-    this.lastAnts = this.world.ants.length;
-    this.pendingCarriers = 0;
-    this.walkers = [];
     this.drawnOnce = false;
   }
 
@@ -212,7 +176,7 @@ export class UndergroundView {
     });
     this.drawnOnce = true;
 
-    this.updateWalkers(step, layout, shown);
+    this.placeNestAnts(layout, shown);
     this.compose(layout, shown);
     this.present();
   }
@@ -268,10 +232,7 @@ export class UndergroundView {
       else this.drawPantry(c, ch);
     }
     for (const ch of shown) this.drawLabel(c, ch);
-    for (const wk of this.walkers) {
-      const sprite = this.antSprites.get(wk.dir, frameFor(wk.phase, ANT_FRAMES), wk.kind === 'carrier');
-      c.drawImage(sprite as unknown as CanvasImageSource, Math.round(wk.x) - 12, Math.round(wk.y) - 12);
-    }
+    this.drawNestAnts(c);
     c.drawImage(this.vignette as unknown as CanvasImageSource, 0, 0);
   }
 
@@ -300,9 +261,10 @@ export class UndergroundView {
       for (let i = 0; i < r.length; i += 4) c.fillRect(r[i], r[i + 1], r[i + 2], r[i + 3]);
     }
     c.restore();
-    // eggs behind her; one more appears with the "laying" frame
+    // eggs behind her (fewer while nurses carry some away); one more appears with the "laying" frame
     const ex = flip ? Math.round(ch.cx + ch.rx * 0.28) : Math.round(ch.cx - ch.rx * 0.28 - 9);
-    paintEggs(c, ex, Math.round(ch.cy + ch.ry * 0.5), frame === 1);
+    const n = this.eggsShown[index] ?? 0;
+    paintEggPile(c, ex, Math.round(ch.cy + ch.ry * 0.5), n + (frame === 1 && n < 6 ? 1 : 0));
   }
 
   private larvaSprite(variant: number, frame: number, grow: number): CanvasLike {
@@ -362,56 +324,75 @@ export class UndergroundView {
     drawText(c, text, x, y + 2, '#ecdcb0', '#120a05');
   }
 
-  // ---- cosmetic ants ----------------------------------------------------------------------------------------------
+  // ---- the ants inside ------------------------------------------------------------------------------------------
 
-  private pathTo(layout: NestLayout, id: string): Pt[] | null {
-    const t: Tunnel | undefined = layout.tunnels.find((x) => x.to === id);
-    return t ? paintedPoints(t, layout.entrance.y - MOUTH_RISE) : null;
+  /** Eggs in the pile of one queen before the nurses take any: grows with the number of queens and the hatch progress (2..6). */
+  private baseEggs(queens: number): number {
+    const frac = Math.max(0, Math.min(1, finite(this.world.hatchFraction)));
+    return 2 + Math.min(2, Math.floor(queens / 3)) + Math.floor(frac * 1.99);
   }
 
-  private updateWalkers(dt: number, layout: NestLayout, shown: Chamber[]): void {
+  /** Poses of the first MAX_DRAWN_NEST_ANTS ants whose state is 'nest', sorted by y; counts the eggs nurses carry away. */
+  private placeNestAnts(layout: NestLayout, shown: Chamber[]): void {
     const w = this.world;
-    // a delivery sends one more carrier down to the pantry (queued, a few per second)
-    if (w.deliveryCount < this.lastDelivery) this.lastDelivery = w.deliveryCount;
-    if (w.deliveryCount > this.lastDelivery) {
-      this.pendingCarriers = Math.min(MAX_QUEUED_CARRIERS, this.pendingCarriers + (w.deliveryCount - this.lastDelivery));
-      this.lastDelivery = w.deliveryCount;
+    const sl = (this.shownLayout ??= { ...layout, chambers: shown });
+    sl.entrance = layout.entrance;
+    sl.tunnels = layout.tunnels;
+    sl.chambers = shown;
+    const queens = shown.reduce((n, c) => n + (c.kind === 'queen' ? 1 : 0), 0);
+    this.eggsTaken.length = queens;
+    this.eggsTaken.fill(0);
+    let n = 0;
+    const time = finite(w.time);
+    for (const a of w.ants) {
+      if (a.state !== 'nest') continue;
+      if (n >= MAX_DRAWN_NEST_ANTS) break;
+      const pose = (this.poses[n] ??= { x: 0, y: 0, dir16: 0, frame: 0, carrying: null, pose: 'stand', callow: false, queen: -1 });
+      nestAntPose(a, sl, time, pose);
+      if (pose.carrying === 'egg' && pose.pose === 'walk' && pose.queen >= 0 && pose.queen < queens) this.eggsTaken[pose.queen]++;
+      n++;
     }
-    // a hatched ant walks from the larvae chamber out to the surface
-    const ants = w.ants.length;
-    if (ants > this.lastAnts) {
-      const path = this.pathTo(layout, 'larvae');
-      for (let i = this.lastAnts; i < ants && path && this.hatchedWalkerCount() < MAX_HATCH_WALKERS; i++) {
-        this.walkers.push(makeWalker('hatched', path.slice().reverse()));
+    this.drawn = n;
+    // draw order: by y (insertion sort of a handful of indices, nothing allocated)
+    const order = this.order;
+    order.length = n;
+    for (let i = 0; i < n; i++) {
+      let j = i;
+      while (j > 0 && this.poses[order[j - 1]].y > this.poses[i].y) {
+        order[j] = order[j - 1];
+        j--;
       }
+      order[j] = i;
     }
-    this.lastAnts = ants;
+    const base = this.baseEggs(queens);
+    this.eggsShown.length = queens;
+    for (let i = 0; i < queens; i++) this.eggsShown[i] = Math.max(0, base - this.eggsTaken[i]);
+  }
 
-    this.carrierCd -= dt;
-    if (this.pendingCarriers > 0 && this.carrierCd <= 0) {
-      const path = this.pathTo(layout, 'pantry');
-      if (path) {
-        this.walkers.push(makeWalker('carrier', path));
-        this.pendingCarriers--;
-        this.carrierCd = CARRIER_GAP_S;
-      }
+  private drawNestAnts(c: Ctx2D): void {
+    for (let k = 0; k < this.drawn; k++) {
+      const p = this.poses[this.order[k]];
+      const sprites = p.callow ? this.callowSprites : this.antSprites;
+      const x = Math.round(p.x);
+      const y = Math.round(p.y);
+      c.drawImage(sprites.get(p.dir16, p.frame, p.carrying === 'crumb') as unknown as CanvasImageSource, x - 12, y - 12);
+      if (p.carrying === 'egg') this.drawCarriedEgg(c, p, x, y);
     }
+  }
 
-    const pantry = shown.find((c) => c.kind === 'pantry');
-    for (const wk of this.walkers) {
-      wk.d += WALK_SPEED * dt;
-      wk.phase += (WALK_SPEED * dt) / FINE_PER_CYCLE;
-      wk.phase -= Math.floor(wk.phase);
-      placeWalker(wk);
-    }
-    this.walkers = this.walkers.filter((wk) => {
-      if (wk.d >= wk.cum[wk.cum.length - 1]) return false;
-      if (wk.kind === 'carrier' && pantry) {
-        const nx = (wk.x - pantry.cx) / pantry.rx;
-        const ny = (wk.y - pantry.cy) / pantry.ry;
-        if (nx * nx + ny * ny < 0.45) return false;
-      }
-      return true;
-    });
+  /** A small cream egg (2 x 3 fine px, 3 x 2 when the ant walks sideways) held in the jaws, in front of the head. */
+  private drawCarriedEgg(c: Ctx2D, p: NestPose, x: number, y: number): void {
+    const a = (p.dir16 * Math.PI) / 8;
+    const ex = x + Math.round(Math.cos(a) * 7);
+    const ey = y + Math.round(Math.sin(a) * 7);
+    const wide = Math.abs(Math.cos(a)) > Math.abs(Math.sin(a));
+    const w = wide ? 3 : 2;
+    const h = wide ? 2 : 3;
+    c.fillStyle = '#efe6c9';
+    c.fillRect(ex - 1, ey - 1, w, h);
+    c.fillStyle = '#b9a67c';
+    c.fillRect(ex - 1, ey - 1 + h - 1, w, 1);
+    c.fillStyle = '#fffaf0';
+    c.fillRect(ex - 1, ey - 1, 1, 1);
   }
 }

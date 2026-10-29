@@ -1,7 +1,8 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { World } from '../sim/world';
-import { nestHud, UndergroundView } from './underground';
+import { World, type Ant } from '../sim/world';
+import { nestAntPose } from './nestChoreo';
+import { MAX_DRAWN_NEST_ANTS, nestHud, UndergroundView } from './underground';
 import type { CanvasLike } from './terrainRender';
 import type { NestLayout } from './nestLayout';
 
@@ -132,53 +133,187 @@ describe('UndergroundView pictures', () => {
     expect(two.count('queen0', black)).toBeGreaterThan(300);
   });
 
-  it('shows the carried crumb of a carrier (cream pixels in the tunnel) after a delivery', () => {
+  it('has no cosmetic carriers or walkers any more: nothing is drawn for a delivery or a new ant by itself', () => {
     const w = colony(3, 10);
+    w.ants.forEach((a) => {
+      a.state = 'wander'; // everybody on the surface
+      delete a.nestKind;
+    });
     const t = setup(w);
     t.settle(2);
-    expect(t.view.carrierCount()).toBe(0);
-    w.deliveryCount += 1;
-    t.view.draw(0.05);
-    t.view.draw(0.4);
-    expect(t.view.carrierCount()).toBe(1);
-  });
-
-  it('carriers are queued (max 12), released a few per second, and vanish at the pantry', () => {
-    const w = colony(3, 10);
-    const t = setup(w);
-    t.settle(2);
-    w.deliveryCount += 50;
-    t.view.draw(0.05);
-    expect(t.view.carrierCount()).toBe(1);
-    t.settle(20); // 1 s
-    expect(t.view.carrierCount()).toBeGreaterThanOrEqual(3);
-    expect(t.view.carrierCount()).toBeLessThanOrEqual(4);
-    t.settle(400); // 20 s: everybody arrived, the queue is empty
-    expect(t.view.carrierCount()).toBe(0);
-  });
-
-  it('a hatched ant walks from the larvae chamber to the entrance and disappears', () => {
-    const w = colony(2, 20);
-    const t = setup(w);
-    t.settle(2);
-    expect(t.view.hatchedWalkerCount()).toBe(0);
+    t.view.draw(0);
+    const before = t.pixels();
+    w.deliveryCount += 5;
     w.spawnAnt();
-    t.view.draw(0.05);
-    expect(t.view.hatchedWalkerCount()).toBe(1);
-    t.settle(300);
-    expect(t.view.hatchedWalkerCount()).toBe(0);
+    w.ants[w.ants.length - 1].state = 'wander';
+    t.view.draw(0);
+    expect(t.view.walkerCount()).toBe(0);
+    const after = t.pixels();
+    let diff = 0;
+    for (let i = 0; i < before.length; i++) if (before[i] !== after[i]) diff++;
+    expect(diff).toBe(0);
   });
 
-  it('enter() forgets what happened while the view was hidden', () => {
-    const w = colony(2, 20);
+  it('enter() snaps the chambers again and keeps drawing the ants that are inside', () => {
+    const w = nestWorld([{ kind: 'hatch', timer: 20 }, { kind: 'nurse', timer: 0 }]);
     const t = setup(w);
     t.settle(2);
-    w.deliveryCount += 9;
-    w.spawnAnt();
     t.view.enter();
     t.view.draw(0.05);
-    expect(t.view.carrierCount()).toBe(0);
-    expect(t.view.hatchedWalkerCount()).toBe(0);
+    expect(t.view.walkerCount()).toBe(2);
+  });
+});
+
+/** A world with a started colony whose ants are all underground, one per entry (ids 1, 2, ...). */
+function nestWorld(specs: { kind: 'hatch' | 'unload' | 'nurse'; timer: number }[], queens = 1, stock = 30): World {
+  const w = colony(0, stock, queens);
+  w.ants.length = 0;
+  specs.forEach((s, i) => {
+    w.ants.push({
+      id: i + 1,
+      x: 40,
+      y: 150,
+      heading: 0,
+      state: 'nest',
+      age: 0,
+      carry: 0,
+      targetFood: null,
+      timer: s.timer,
+      nestKind: s.kind,
+      role: s.kind === 'nurse' ? 'nurse' : 'forager',
+    } as Ant);
+  });
+  w.time = 12.3;
+  return w;
+}
+
+const pixelDiff = (a: Uint8ClampedArray, b: Uint8ClampedArray): number => {
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 30) n++;
+  return n;
+};
+
+describe('UndergroundView nest ants', () => {
+  it('shows the real nest ants: the picture differs from the one with no ants inside, per ant', () => {
+    const none = setup(nestWorld([]));
+    none.settle(4);
+    const base = none.pixels();
+    let prev = 0;
+    for (const n of [1, 3, 6]) {
+      const specs = [
+        { kind: 'nurse' as const, timer: 0 },
+        { kind: 'nurse' as const, timer: 0 },
+        { kind: 'hatch' as const, timer: 20 },
+        { kind: 'unload' as const, timer: 3 },
+        { kind: 'nurse' as const, timer: 0 },
+        { kind: 'hatch' as const, timer: 3 },
+      ].slice(0, n);
+      const t = setup(nestWorld(specs));
+      t.settle(4);
+      const d = pixelDiff(base, t.pixels());
+      expect(d, `n ${n}`).toBeGreaterThan(prev + 20);
+      prev = d;
+      expect(t.view.walkerCount()).toBe(n);
+    }
+  });
+
+  it('ants on the surface are not drawn underground', () => {
+    const w = nestWorld([{ kind: 'nurse', timer: 0 }]);
+    const t = setup(w);
+    t.settle(3);
+    const one = t.pixels();
+    w.ants.push({ ...w.ants[0], id: 2, state: 'wander', nestKind: undefined, role: 'forager' } as Ant);
+    w.ants.push({ ...w.ants[0], id: 3, state: 'carry', nestKind: undefined, role: 'forager', carry: 1 } as Ant);
+    t.view.draw(0);
+    expect(t.view.walkerCount()).toBe(1);
+    expect(pixelDiff(one, t.pixels())).toBe(0);
+  });
+
+  it('draws at most 60 walkers (the first 60 by id) however many ants are inside', () => {
+    const specs = Array.from({ length: 150 }, (_, i) => ({
+      kind: (i % 3 === 0 ? 'nurse' : i % 3 === 1 ? 'hatch' : 'unload') as 'nurse' | 'hatch' | 'unload',
+      timer: 3 + (i % 20),
+    }));
+    const w = nestWorld(specs, 8, 400);
+    const t = setup(w);
+    t.settle(3);
+    expect(t.view.walkerCount()).toBe(MAX_DRAWN_NEST_ANTS);
+    expect(MAX_DRAWN_NEST_ANTS).toBe(60);
+    const sixty = t.pixels();
+    // ants beyond the 60th change nothing
+    w.ants.length = 60;
+    t.view.draw(0);
+    expect(pixelDiff(sixty, t.pixels())).toBe(0);
+    // a 300 ant colony is still fast
+    const many = nestWorld(Array.from({ length: 300 }, () => ({ kind: 'nurse' as const, timer: 0 })), 8, 500);
+    const f = setup(many);
+    f.settle(2);
+    const t0 = performance.now();
+    for (let i = 0; i < 30; i++) f.view.draw(1 / 30);
+    expect(performance.now() - t0).toBeLessThan(3000);
+  });
+
+  it('is deterministic and driven by the simulation time (same time, same picture; later time, other picture)', () => {
+    const specs = [{ kind: 'nurse' as const, timer: 0 }, { kind: 'nurse' as const, timer: 0 }, { kind: 'hatch' as const, timer: 12 }];
+    const a = setup(nestWorld(specs));
+    const b = setup(nestWorld(specs));
+    a.settle(5);
+    b.settle(5);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBe(0);
+    const wb = (b.view as unknown as { world: World }).world;
+    wb.time += 3.3;
+    b.view.draw(0);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBeGreaterThan(20);
+  });
+
+  it('a hatchling is drawn in the lighter callow colours, a nurse in the black worker colours', () => {
+    const callowBody = (r: number, g: number, b: number): boolean => Math.abs(r - 0x4a) < 8 && Math.abs(g - 0x40) < 8 && Math.abs(b - 0x38) < 8;
+    const none = setup(nestWorld([]));
+    none.settle(4);
+    const base = none.count('larvae', callowBody);
+    const young = setup(nestWorld([{ kind: 'hatch', timer: 20 }]));
+    young.settle(4);
+    expect(young.count('larvae', callowBody) - base).toBeGreaterThanOrEqual(12);
+    // a nurse does not paint callow pixels anywhere near that many
+    const old = setup(nestWorld([{ kind: 'nurse', timer: 0 }]));
+    old.settle(4);
+    expect(old.count('larvae', callowBody) - base).toBeLessThan(6);
+  });
+
+  it('a nurse carrying an egg takes it from the pile of her queen: one egg fewer while the egg is on its way', () => {
+    const w = nestWorld([{ kind: 'nurse', timer: 0 }]);
+    const probe = setup(w);
+    probe.settle(2);
+    const layout = probe.view.currentLayout!;
+    let tEgg = -1;
+    let tNone = -1;
+    for (let t = 0; t < 24 && (tEgg < 0 || tNone < 0); t += 0.1) {
+      const p = nestAntPose(w.ants[0], layout, t);
+      if (p.carrying === 'egg' && p.pose === 'walk' && tEgg < 0) tEgg = t;
+      if (p.carrying === null && p.pose === 'walk' && tNone < 0) tNone = t;
+    }
+    expect(tEgg).toBeGreaterThanOrEqual(0);
+    w.time = tNone;
+    probe.view.draw(0);
+    const full = probe.view.queenEggs(0);
+    expect(full).toBeGreaterThanOrEqual(2);
+    w.time = tEgg;
+    probe.view.draw(0);
+    expect(probe.view.queenEggs(0)).toBe(full - 1);
+  });
+
+  it('the egg piles of the queens grow with the number of queens and the hatch progress', () => {
+    const count = (queens: number, frac: number): number => {
+      const w = nestWorld([], queens, 30);
+      w.hatchProgress = w.hatchInterval * frac;
+      const t = setup(w);
+      t.settle(2);
+      return t.view.queenEggs(0);
+    };
+    expect(count(1, 0)).toBeGreaterThanOrEqual(1);
+    expect(count(1, 0.95)).toBeGreaterThan(count(1, 0));
+    expect(count(8, 0.5)).toBeGreaterThan(count(1, 0.5));
+    expect(count(8, 0.95)).toBeLessThanOrEqual(6);
   });
 });
 

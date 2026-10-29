@@ -1,10 +1,15 @@
-import { isAlive, type FoodItem } from '../sim/food';
+import type { FoodItem } from '../sim/food';
 import { FINE } from './fine';
 import {
   BEETLE_DIRS,
   BEETLE_FRAMES,
   beetlePixels,
+  CATERPILLAR_CORPSE_DIRS,
+  CATERPILLAR_DIRS,
+  CATERPILLAR_FRAMES,
+  caterpillarPixels,
   deadBeetlePixels,
+  deadCaterpillarPixels,
   deadFlyPixels,
   FLY_DIRS,
   FLY_POSES,
@@ -45,6 +50,8 @@ export class PreySprites {
   private shadow: CanvasLike | null = null;
   private deadBeetles: CanvasLike[] | null = null;
   private deadFlies: CanvasLike[] | null = null;
+  private caterpillars: CanvasLike[] | null = null;
+  private deadCaterpillars: CanvasLike[] | null = null;
 
   constructor(private make: CanvasFactory) {}
 
@@ -70,6 +77,24 @@ export class PreySprites {
     return this.shadow as CanvasLike;
   }
 
+  /** Living caterpillar: 16 directions x 4 wave frames x {calm, fleeing}, built together on first use. */
+  caterpillar(dir: number, frame: number, flee: boolean): CanvasLike {
+    if (!this.caterpillars) {
+      this.caterpillars = [];
+      for (const fl of [false, true]) {
+        for (let d = 0; d < CATERPILLAR_DIRS; d++) {
+          for (let f = 0; f < CATERPILLAR_FRAMES; f++) this.caterpillars.push(toCanvas(this.make, caterpillarPixels(d, f, fl)));
+        }
+      }
+    }
+    return this.caterpillars[((flee ? CATERPILLAR_DIRS : 0) + dir) * CATERPILLAR_FRAMES + frame];
+  }
+
+  deadCaterpillar(dir: number): CanvasLike {
+    this.deadCaterpillars ??= Array.from({ length: CATERPILLAR_CORPSE_DIRS }, (_, d) => toCanvas(this.make, deadCaterpillarPixels(d)));
+    return this.deadCaterpillars[dir];
+  }
+
   deadBeetle(dir: number): CanvasLike {
     this.deadBeetles ??= Array.from({ length: FLY_DIRS }, (_, d) => toCanvas(this.make, deadBeetlePixels(d)));
     return this.deadBeetles[dir];
@@ -87,18 +112,26 @@ function blitPrey(c: Ctx2D, cv: CanvasLike, x: number, y: number): void {
   c.drawImage(cv as unknown as CanvasImageSource, snap(x) - PREY_CENTER / FINE, snap(y) - PREY_CENTER / FINE, PREY_SIZE / FINE, PREY_SIZE / FINE);
 }
 
+/** A living prey creature as the renderer sees it: beetle, fly or caterpillar (independent of which kinds the simulation lets live). */
+export const isLiving = (f: FoodItem): boolean => f.alive === true && (f.kind === 'beetle' || f.kind === 'fly' || f.kind === 'caterpillar');
+
+/** Fleeing = a living caterpillar with seconds of flight left (a transient simulation field). */
+export const isFleeing = (f: FoodItem): boolean => f.kind === 'caterpillar' && ((f as FoodItem & { fleeT?: number }).fleeT ?? 0) > 0;
+
 /** True while a fly is in the air (drawn in a second pass, over everything else). */
-export const isHopping = (f: FoodItem): boolean => f.hop !== undefined && isAlive(f);
+export const isHopping = (f: FoodItem): boolean => f.hop !== undefined && isLiving(f);
 
 /**
- * Draws one food item: living beetle (walking sprite, `beetleFrame` from the renderer's stride state), living fly (idle
+ * Draws one food item: living beetle or caterpillar (walking sprite, `beetleFrame` = gait / wave frame from the renderer's stride state), living fly (idle
  * fidget or airborne with the lift applied and its shadow left on the ground), corpses of those two, and every other
  * kind through the static sprites. `time` is the simulation time (drives the fly's fidget).
  */
 export function drawPreyItem(c: Ctx2D, spr: PreySprites, f: FoodItem, beetleFrame: number, time: number): void {
-  if (isAlive(f)) {
+  if (isLiving(f)) {
     if (f.kind === 'beetle') {
       blitPrey(c, spr.beetle(preyDirection(f.heading, BEETLE_DIRS), beetleFrame), f.x, f.y);
+    } else if (f.kind === 'caterpillar') {
+      blitPrey(c, spr.caterpillar(preyDirection(f.heading, CATERPILLAR_DIRS), beetleFrame, isFleeing(f)), f.x, f.y);
     } else {
       const dir = preyDirection(f.heading, FLY_DIRS);
       blitPrey(c, spr.flyShadow(), f.x, f.y);
@@ -113,7 +146,8 @@ export function drawPreyItem(c: Ctx2D, spr: PreySprites, f: FoodItem, beetleFram
   }
   if (f.kind === 'carrion' && f.corpseOf) {
     const dir = preyDirection(f.heading, FLY_DIRS);
-    blitPrey(c, f.corpseOf === 'beetle' ? spr.deadBeetle(dir) : spr.deadFly(dir), f.x, f.y);
+    const corpse: string = f.corpseOf;
+    blitPrey(c, corpse === 'beetle' ? spr.deadBeetle(dir) : corpse === 'caterpillar' ? spr.deadCaterpillar(dir) : spr.deadFly(dir), f.x, f.y);
     return;
   }
   drawFood(c, f.kind, f.x, f.y);

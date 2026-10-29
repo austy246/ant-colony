@@ -4,8 +4,8 @@ import { isAlive } from '../sim/food';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
 import { ANT_FRAMES, antDirection } from './antArt';
-import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX } from './preyAnim';
-import { drawPreyItem, drawPuff, isHopping, PreySprites } from './preySprites';
+import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
+import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { AntSprites, drawAnt, drawQueen } from './sprites';
 import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
@@ -135,7 +135,11 @@ export class Renderer {
 
       const ants = this.sorted;
       ants.length = 0;
-      for (const a of this.world.ants) ants.push(a);
+      for (const a of this.world.ants) {
+        // an ant underground is not on the surface; it has no stride entry either, so it comes out with a fresh gait
+        if (a.state === 'nest') this.strides.delete(a.id);
+        else ants.push(a);
+      }
       ants.sort(byY);
       const sprites = (this.antSprites ??= new AntSprites(this.make));
       const gen = ++this.strideGen;
@@ -183,11 +187,14 @@ export class Renderer {
         continue;
       }
       let frame = 0;
-      if (isAlive(f) && f.kind === 'beetle') {
-        const st = advanceStride(this.foodStrides.get(f.id), f.x, f.y, BEETLE_STRIDE_ART_PX);
+      if (isLiving(f) && (f.kind === 'beetle' || f.kind === 'caterpillar')) {
+        // distance-driven animation: a beetle's legs, a caterpillar's body wave (twice as fast per distance while it flees)
+        const cat = f.kind === 'caterpillar';
+        const stride = cat ? (isFleeing(f) ? CATERPILLAR_STRIDE_ART_PX / 2 : CATERPILLAR_STRIDE_ART_PX) : BEETLE_STRIDE_ART_PX;
+        const st = advanceStride(this.foodStrides.get(f.id), f.x, f.y, stride);
         st.gen = gen;
         this.foodStrides.set(f.id, st);
-        frame = frameFor(st.phase, BEETLE_FRAMES);
+        frame = frameFor(st.phase, cat ? CATERPILLAR_FRAMES : BEETLE_FRAMES);
         beetles++;
       }
       drawPreyItem(c, spr, f, frame, time);
@@ -272,6 +279,7 @@ export class Renderer {
 
     c.fillStyle = '#ffffff';
     for (const a of this.world.ants) {
+      if (a.state === 'nest') continue;
       const ax = Math.round(a.x);
       const ay = Math.round(a.y);
       c.fillRect(ax - 1, ay, 3, 1);
@@ -291,6 +299,6 @@ export class Renderer {
     c.globalAlpha = 1;
 
     c.fillStyle = 'rgba(127,209,255,.9)';
-    for (const a of this.world.ants) c.fillRect(Math.round(a.x), Math.round(a.y), 1, 1);
+    for (const a of this.world.ants) if (a.state !== 'nest') c.fillRect(Math.round(a.x), Math.round(a.y), 1, 1);
   }
 }

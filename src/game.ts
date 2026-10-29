@@ -1,3 +1,4 @@
+import { hudParts } from './hud';
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
 import { nestHud, UndergroundView } from './render/underground';
@@ -58,13 +59,19 @@ export async function startGame(): Promise<void> {
   const input = new Input(canvas, camera, world, () => tool);
 
   const hud = el('div', 'hud', '', ui);
+  const hudMain = el('span', '', '', hud);
+  const hudSmall = el('span', 'hud-small', '', hud);
+  const hudRest = el('span', '', '', hud);
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
   let skipBtn: HTMLButtonElement | null = null;
 
   const updateHud = (): void => {
-    hud.textContent = `Mravenci: ${world.ants.length} · Zásoba: ${world.stock.toFixed(1)}`;
+    const p = hudParts(world);
+    if (hudMain.textContent !== p.before) hudMain.textContent = p.before;
+    if (hudSmall.textContent !== p.small) hudSmall.textContent = p.small;
+    if (hudRest.textContent !== p.after) hudRest.textContent = p.after;
   };
 
   // --- underground ("Podzemí") ---

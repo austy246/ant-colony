@@ -540,6 +540,25 @@ export function paintEggs(c: Ctx2D, x: number, y: number, extra: boolean): void 
   if (extra) egg(x + 2, y - 3);
 }
 
+/** Fixed positions (fine px) of the eggs of a pile, in the order they appear. */
+const EGG_SLOTS: readonly (readonly [number, number])[] = [[0, 0], [4, 1], [8, 0], [2, -3], [6, -3], [10, -2]];
+
+/** A pile of `count` eggs (0..6) at (x, y); the first slots are always the same ones, so a pile only ever loses its last egg. */
+export function paintEggPile(c: Ctx2D, x: number, y: number, count: number): void {
+  const n = Math.max(0, Math.min(EGG_SLOTS.length, Math.floor(Number.isFinite(count) ? count : 0)));
+  for (let i = 0; i < n; i++) {
+    const [dx, dy] = EGG_SLOTS[i];
+    const ex = x + dx;
+    const ey = y + dy;
+    c.fillStyle = '#efe6c9';
+    c.fillRect(ex, ey, 2, 2);
+    c.fillStyle = '#b9a67c';
+    c.fillRect(ex, ey + 2, 2, 1);
+    c.fillStyle = '#fffaf0';
+    c.fillRect(ex, ey, 1, 1);
+  }
+}
+
 // ---- vignette -------------------------------------------------------------------------------------------------------
 
 /** RGBA pixels (w x h) of a faint, quantised dark vignette (no grid, a handful of alpha steps). */
