@@ -1,7 +1,6 @@
 import { MAX_PHEROMONE, NEST } from './constants';
 
 const HALF_LIFE_S = 25;
-const DIFFUSION = 0.02;
 const MIN_VALUE = 0.01;
 const GLOW_RADIUS = 40;
 
@@ -9,13 +8,11 @@ export class PheromoneField {
   readonly w: number;
   readonly h: number;
   readonly data: Float32Array;
-  private scratch: Float32Array;
 
   constructor(w: number, h: number) {
     this.w = w;
     this.h = h;
     this.data = new Float32Array(w * h);
-    this.scratch = new Float32Array(w * h);
   }
 
   private index(x: number, y: number): number {
@@ -38,27 +35,29 @@ export class PheromoneField {
     return i < 0 ? 0 : this.data[i];
   }
 
-  step(dt: number): void {
-    const { w, h, data, scratch } = this;
-    const decay = Math.exp((-dt * Math.LN2) / HALF_LIFE_S);
-    const share = DIFFUSION / 4;
-    for (let y = 0; y < h; y++) {
-      const row = y * w;
-      for (let x = 0; x < w; x++) {
-        const i = row + x;
-        const v = data[i];
-        // Out-of-map neighbours return their share to the cell: total is conserved.
-        const l = x > 0 ? data[i - 1] : v;
-        const r = x < w - 1 ? data[i + 1] : v;
-        const u = y > 0 ? data[i - w] : v;
-        const d = y < h - 1 ? data[i + w] : v;
-        let n = (v * (1 - DIFFUSION) + share * (l + r + u + d)) * decay;
-        if (n < MIN_VALUE) n = 0;
-        else if (n > MAX_PHEROMONE) n = MAX_PHEROMONE;
-        scratch[i] = n;
+  /** Max cell value within integer radius around floor(x), floor(y); out-of-range counts as 0. */
+  sampleMax(x: number, y: number, radius: number): number {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return 0;
+    const cx = Math.floor(x);
+    const cy = Math.floor(y);
+    const r = Math.max(0, Math.floor(radius));
+    let max = 0;
+    for (let yy = Math.max(0, cy - r); yy <= Math.min(this.h - 1, cy + r); yy++) {
+      for (let xx = Math.max(0, cx - r); xx <= Math.min(this.w - 1, cx + r); xx++) {
+        const v = this.data[yy * this.w + xx];
+        if (v > max) max = v;
       }
     }
-    data.set(scratch);
+    return max;
+  }
+
+  step(dt: number): void {
+    const data = this.data;
+    const decay = Math.exp((-dt * Math.LN2) / HALF_LIFE_S);
+    for (let i = 0; i < data.length; i++) {
+      const n = data[i] * decay;
+      data[i] = n < MIN_VALUE ? 0 : n;
+    }
   }
 }
 

@@ -41,16 +41,34 @@ describe('PheromoneField', () => {
     expect(f.sample(5, 5)).toBe(0);
   });
 
-  it('diffusion spreads to neighbour but conserves roughly total', () => {
+  it('single pixel halves in 25 s and does not spread', () => {
     const f = new PheromoneField(10, 10);
-    f.deposit(5, 5, 4);
-    const before = f.data.reduce((s, v) => s + v, 0);
-    f.step(0);
-    expect(f.sample(6, 5)).toBeGreaterThan(0);
-    expect(f.sample(5, 4)).toBeGreaterThan(0);
-    expect(f.sample(5, 5)).toBeLessThan(4);
-    const after = f.data.reduce((s, v) => s + v, 0);
-    expect(after).toBeCloseTo(before, 3);
+    f.deposit(5, 5, 1);
+    for (let i = 0; i < 25 * 30; i++) f.step(STEP_S);
+    expect(f.sample(5, 5)).toBeGreaterThan(0.475);
+    expect(f.sample(5, 5)).toBeLessThan(0.525);
+    for (const [x, y] of [[4, 5], [6, 5], [5, 4], [5, 6]]) expect(f.sample(x, y)).toBe(0);
+  });
+
+  it('a line keeps width 1 and halves in 25 s', () => {
+    const f = new PheromoneField(30, 10);
+    for (let x = 5; x < 25; x++) f.deposit(x, 5, 1);
+    for (let i = 0; i < 25 * 30; i++) f.step(STEP_S);
+    for (let x = 5; x < 25; x++) {
+      expect(f.sample(x, 5)).toBeGreaterThan(0.475);
+      expect(f.sample(x, 5)).toBeLessThan(0.525);
+      expect(f.sample(x, 4)).toBe(0);
+      expect(f.sample(x, 6)).toBe(0);
+    }
+  });
+
+  it('sampleMax finds neighbour within radius only', () => {
+    const f = new PheromoneField(10, 10);
+    f.deposit(5, 5, 2);
+    expect(f.sampleMax(7, 5, 2)).toBe(2);
+    expect(f.sampleMax(8, 5, 2)).toBe(0);
+    expect(f.sampleMax(NaN, 5, 2)).toBe(0);
+    expect(f.sampleMax(0, 0, 3)).toBe(0);
   });
 
   it('sample outside returns 0', () => {
