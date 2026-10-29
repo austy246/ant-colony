@@ -21,3 +21,11 @@ export const STEP_S = 1 / 30;
 export const GNAW_S = 4;
 /** Speed multiplier of an ant carrying a piece of food. */
 export const CARRY_SPEED_MUL = 0.8;
+/** Walking speed of a living beetle in px/s (times the ground speed factor). */
+export const BEETLE_SPEED = 4;
+/** An ant (wander / toFood) touches a living creature when it is closer than this many px. */
+export const TOUCH_DIST = 2.5;
+/** Seconds a living creature cannot be touched again after a touch. */
+export const TOUCH_COOLDOWN_S = 0.8;
+/** Seconds a startled fly spends in the air during one hop. */
+export const HOP_DUR = 0.35;

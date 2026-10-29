@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
 } from './constants';
-import { FOOD_TABLE } from './food';
+import { FOOD_TABLE, type FoodItem } from './food';
 import { Surface } from './terrain';
 import { World } from './world';
 
@@ -21,6 +21,18 @@ function flatWorld(seed = 1): World {
  */
 function delivered(w: World, initial: number): number {
   return w.stock + (w.ants.length - initial) * FOOD_PER_ANT;
+}
+
+/**
+ * A creature that is already dead: plain carrion with the meat of a beetle / fly (the placed beetle and fly are alive now
+ * and cannot be gnawed until two ants have touched them; prey.test.ts covers that).
+ */
+function deadFood(w: World, kind: 'beetle' | 'fly', x: number, y: number): FoodItem | null {
+  const f = w.placeFood('carrion', x, y);
+  if (!f) return null;
+  f.corpseOf = kind;
+  f.piecesLeft = FOOD_TABLE[kind].pieces;
+  return f;
 }
 
 /** A started colony (ants that live forever, wandering with no food in sight) on flat ground with the given stock. */
@@ -89,7 +101,7 @@ describe('World', () => {
     let success = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const w = flatWorld(seed);
-      w.placeFood('beetle', NEST.x + 30, NEST.y);
+      deadFood(w, 'beetle', NEST.x + 30, NEST.y);
       for (let i = 0; i < 8; i++) w.spawnAnt();
       run(w, 120);
       if (delivered(w, 8) > 0) success++;
@@ -111,7 +123,7 @@ describe('World', () => {
 
   it('piece count reaching 0 removes the food, and a multi-piece item is carried on repeated trips', () => {
     const w = flatWorld(2);
-    const f = w.placeFood('fly', NEST.x + 20, NEST.y)!;
+    const f = deadFood(w, 'fly', NEST.x + 20, NEST.y)!;
     const a = w.spawnAnt();
     a.state = 'toFood';
     a.targetFood = f.id;
@@ -176,12 +188,12 @@ describe('World', () => {
     expect(w.hatchProgress).toBe(0);
   });
 
-  it('ants do not die of old age: after 2000 s the ant is alive, age counts up and has no lifespan', () => {
+  it('ants do not die of old age: after 800 s (past the old maximum lifespan) the ant is alive, age counts up and has no lifespan', () => {
     const w = flatWorld(6);
     const a = w.spawnAnt();
-    run(w, 2000, 0.5);
+    run(w, 800, 0.5);
     expect(w.ants).toEqual([a]);
-    expect(a.age).toBeGreaterThan(1999);
+    expect(a.age).toBeGreaterThan(799);
     expect('lifespan' in a).toBe(false);
   });
 
@@ -386,7 +398,7 @@ describe('World', () => {
   it('dt of 3600 s is clamped and does not produce NaN positions', () => {
     const w = World.create(8);
     for (let i = 0; i < 5; i++) w.spawnAnt();
-    w.placeFood('fly', NEST.x + 30, NEST.y);
+    deadFood(w, 'fly', NEST.x + 30, NEST.y);
     const t0 = w.time;
     const start = w.ants.map((a) => ({ x: a.x, y: a.y }));
     w.step(3600);
@@ -421,7 +433,7 @@ describe('World', () => {
     for (let seed = 1; seed <= 30; seed++) {
       const w = flatWorld(seed);
       const ang = ((seed * 37) % 360) * (Math.PI / 180);
-      w.placeFood('beetle', NEST.x + Math.cos(ang) * 40, NEST.y + Math.sin(ang) * 40);
+      deadFood(w, 'beetle', NEST.x + Math.cos(ang) * 40, NEST.y + Math.sin(ang) * 40);
       w.spawnAnt();
       w.started = false;
       run(w, 60);
@@ -453,11 +465,9 @@ describe('World', () => {
 
   it('trail forms: pheromone along the food-nest line exceeds the sum 15 px off the line', () => {
     const w = flatWorld(9);
-    const food = w.placeFood('beetle', NEST.x + 60, NEST.y);
+    const food = deadFood(w, 'beetle', NEST.x + 60, NEST.y);
     expect(food).not.toBeNull();
-    for (let i = 0; i < 5; i++) {
-      const a = w.spawnAnt();
-    }
+    for (let i = 0; i < 5; i++) w.spawnAnt();
     // With the 6 s half-life the trail only lives while ants keep carrying (beetle is eaten up by ~35 s; 90 s
     // would measure an already evaporated trail). At 30 s measured: on-line sum ~59 vs 0 off the line.
     run(w, 30);
@@ -501,7 +511,7 @@ describe('World', () => {
 
   it('trail evaporates when food is gone', () => {
     const w = flatWorld(12);
-    w.placeFood('beetle', NEST.x + 50, NEST.y);
+    deadFood(w, 'beetle', NEST.x + 50, NEST.y);
     for (let i = 0; i < 5; i++) w.spawnAnt();
     run(w, 60);
     const sum = () => w.pher.data.reduce((s, v) => s + v, 0);
@@ -523,7 +533,7 @@ describe('World', () => {
 
   it('moveFood relocates a piece, removeFood deletes it', () => {
     const w = flatWorld(14);
-    const f = w.placeFood('fly', 150, 100)!;
+    const f = deadFood(w, 'fly', 150, 100)!;
     expect(f.piecesLeft).toBe(6);
     expect(w.moveFood(f.id, 200, 60)).toBe(true);
     expect(f.x).toBe(200);
@@ -543,7 +553,7 @@ describe('World', () => {
       run(w, 1);
       expect(w.ants).toHaveLength(0);
       expect(w.stock).toBe(0);
-      w.placeFood('fly', NEST.x + 25, NEST.y);
+      deadFood(w, 'fly', NEST.x + 25, NEST.y);
       for (let i = 0; i < 8; i++) {
         const n = w.spawnAnt();
         expect(n.id).not.toBe(a.id);
@@ -593,7 +603,7 @@ describe('World', () => {
 
     it('the piece is taken only when the bite ends: piecesLeft--, carry = value, state carry, timer 0', () => {
       const w = flatWorld(22);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       const a = antAt(w, f);
       w.step(STEP_S);
       expect(a.state).toBe('gnaw');
@@ -611,7 +621,7 @@ describe('World', () => {
 
     it('a gnawing ant does not move or turn, and its timer counts down in seconds', () => {
       const w = flatWorld(23);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       const a = antAt(w, f);
       a.x -= 1; // within pickup distance, but not exactly on the food
       a.heading = 1.234;
@@ -629,7 +639,7 @@ describe('World', () => {
 
     it('an ant walking to food stops and starts gnawing when it arrives', () => {
       const w = flatWorld(24);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       const a = antAt(w, f);
       a.x = f.x - 15;
       a.heading = 0;
@@ -643,7 +653,7 @@ describe('World', () => {
 
     it('food removed while gnawing sends the ant to wander (no piece, no carry)', () => {
       const w = flatWorld(25);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       const ants = [antAt(w, f), antAt(w, f)];
       run(w, 1);
       expect(ants.every((a) => a.state === 'gnaw')).toBe(true);
@@ -660,7 +670,7 @@ describe('World', () => {
 
     it('food that vanishes from the array while gnawing also sends the ant to wander on the next step', () => {
       const w = flatWorld(26);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       const a = antAt(w, f);
       run(w, 1);
       expect(a.state).toBe('gnaw');
@@ -673,7 +683,7 @@ describe('World', () => {
 
     it('the last piece taken mid-gnaw sends the other gnawers to wander; they get nothing', () => {
       const w = flatWorld(27);
-      const f = w.placeFood('beetle', 150, 100)!;
+      const f = deadFood(w, 'beetle', 150, 100)!;
       f.piecesLeft = 1;
       const [first, second, third] = [antAt(w, f), antAt(w, f), antAt(w, f)];
       w.step(STEP_S); // all three start gnawing

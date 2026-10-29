@@ -18,10 +18,21 @@ export interface SaveV1 {
   /** `timer` is optional (absent in older saves): seconds of gnawing left, 0 when not gnawing. */
   /** `lifespan` is optional and ignored (removed: ants no longer die of old age; older saves still hold it). */
   ants: (Omit<Ant, 'timer'> & { timer?: number; lifespan?: number })[];
+  /** Living-creature fields (`alive`, `touches`, `heading`, `corpseOf`) are optional; transient ones (cooldown, hop, wanderT) are never saved. */
   food: FoodItem[];
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
   pheromone: string;
   camera: { x: number; y: number; zoom: number };
+}
+
+/** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
+function foodToSave(f: FoodItem): FoodItem {
+  const o: FoodItem = { id: f.id, kind: f.kind, x: f.x, y: f.y, piecesLeft: f.piecesLeft };
+  if (f.alive !== undefined) o.alive = f.alive;
+  if (f.touches !== undefined) o.touches = f.touches;
+  if (f.heading !== undefined) o.heading = f.heading;
+  if (f.corpseOf !== undefined) o.corpseOf = f.corpseOf;
+  return o;
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -58,7 +69,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     nextId: w.nextId,
     introDone: extra.introDone,
     ants: w.ants.map((a) => ({ ...a })),
-    food: w.food.map((f) => ({ ...f })),
+    food: w.food.map(foodToSave),
     pheromone: bytesToBase64(bytes),
     camera: { ...extra.camera },
   };
@@ -84,7 +95,7 @@ export function worldFromSave(s: SaveV1): World {
     w.ants.push({ ...rest, timer: a.timer ?? 0 });
   }
   w.food.length = 0;
-  for (const f of s.food) w.food.push({ ...f });
+  for (const f of s.food) w.food.push(foodToSave(f));
   for (let i = 0; i < bytes.length; i++) w.pher.data[i] = (bytes[i] / 255) * MAX_PHEROMONE;
   return w;
 }
@@ -117,7 +128,11 @@ function validFood(f: unknown): boolean {
   return (
     isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) &&
     isInt(o.piecesLeft) && o.piecesLeft >= 0 && o.piecesLeft <= MAX_PIECES &&
-    typeof o.kind === 'string' && Object.prototype.hasOwnProperty.call(FOOD_TABLE, o.kind)
+    typeof o.kind === 'string' && Object.prototype.hasOwnProperty.call(FOOD_TABLE, o.kind) &&
+    (o.alive === undefined || typeof o.alive === 'boolean') &&
+    (o.touches === undefined || (isInt(o.touches) && o.touches >= 0 && o.touches <= 2)) &&
+    (o.heading === undefined || isNum(o.heading)) &&
+    (o.corpseOf === undefined || o.corpseOf === 'beetle' || o.corpseOf === 'fly')
   );
 }
 

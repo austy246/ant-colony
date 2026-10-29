@@ -1,7 +1,7 @@
 import {
-  CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
+  BEETLE_SPEED, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST,
 } from './constants';
-import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
+import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import { generateTerrain, speedAt, type Terrain } from './terrain';
@@ -37,6 +37,21 @@ const TETHER_SPAN = 60;
 const TETHER_K = 0.15;
 const TETHER_MAX = 0.6;
 const PICKUP_DIST = 1.5;
+/** Beetle heading noise per substep (full range, rad): much calmer than an ant. */
+const BEETLE_JITTER = 0.15;
+/** Chance per second that a walking beetle stops; it then pauses BEETLE_PAUSE_MIN_S..MAX_S. */
+const BEETLE_PAUSE_RATE = 0.2;
+const BEETLE_PAUSE_MIN_S = 0.5;
+const BEETLE_PAUSE_MAX_S = 2;
+/** How far ahead (px) a beetle looks for stone, big twigs, the nest and the map edge. */
+const BEETLE_LOOKAHEAD = 3;
+/** Turns (rad) a beetle tries, in this order and both ways, when something is in its way. */
+const BEETLE_TURNS = [0.5, 1, 1.6, 2.3, Math.PI];
+/** Hop length range (px) of a startled fly, and how many random headings it tries per length scale. */
+const HOP_MIN = 20;
+const HOP_MAX = 35;
+const HOP_TRIES = 8;
+const HOP_SCALES = [1, 0.5, 0.25];
 const DEPOSIT = 0.5;
 const MAX_DT = 0.5;
 const WANDER_JITTER = 0.3; // full range of per-step heading noise (+-0.15 rad): ants keep a heading and scout
@@ -67,6 +82,8 @@ export class World {
   hatchProgress = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
+  /** Ants killed so far by a defending beetle (transient: not saved, 0 after a load). */
+  antsKilled = 0;
   /** Number of carried-food deliveries to the nest (transient: not saved, 0 after a load). */
   deliveryCount = 0;
   time = 0;
@@ -131,6 +148,12 @@ export class World {
     const p = resolvePlacement(this.terrain, x, y);
     if (!p) return null;
     const item: FoodItem = { id: this.nextId++, kind, x: p.x, y: p.y, piecesLeft: FOOD_TABLE[kind].pieces };
+    if (kind === 'beetle' || kind === 'fly') {
+      // A placed beetle / fly is a living creature until two ants have touched it.
+      item.alive = true;
+      item.touches = 0;
+      item.heading = this.rng.next() * TWO_PI - Math.PI;
+    }
     this.food.push(item);
     return item;
   }
@@ -142,6 +165,7 @@ export class World {
     if (!p) return false;
     item.x = p.x;
     item.y = p.y;
+    delete item.hop; // dragging cancels a hop in the air (and is not a touch)
     return true;
   }
 
@@ -166,10 +190,140 @@ export class World {
 
   private substep(): void {
     for (const ant of this.ants) this.updateAnt(ant);
+    this.updateCreatures();
+    this.resolveTouches();
     this.hatch();
     this.rescue();
     this.pher.step(STEP_S);
     this.time += STEP_S;
+  }
+
+  /** Living creatures: cooldowns tick, hopping flies fly, beetles walk. */
+  private updateCreatures(): void {
+    for (const f of this.food) {
+      if (!isAlive(f)) continue;
+      if (f.cooldown !== undefined && f.cooldown > 0) f.cooldown = Math.max(0, f.cooldown - STEP_S);
+      if (f.hop) {
+        const hop = f.hop;
+        hop.t += STEP_S;
+        const k = Math.min(1, hop.t / hop.dur);
+        f.x = hop.fromX + (hop.toX - hop.fromX) * k;
+        f.y = hop.fromY + (hop.toY - hop.fromY) * k;
+        if (hop.t >= hop.dur - 1e-9) {
+          f.x = hop.toX;
+          f.y = hop.toY;
+          delete f.hop;
+        }
+      } else if (f.kind === 'beetle') {
+        this.walkBeetle(f);
+      }
+    }
+  }
+
+  /** A beetle ambles with little heading noise, pauses now and then and turns away from obstacles; it never steps onto a blocked spot. */
+  private walkBeetle(f: FoodItem): void {
+    const rng = this.rng;
+    if (f.wanderT !== undefined && f.wanderT > 0) {
+      f.wanderT -= STEP_S;
+      return;
+    }
+    if (rng.next() < BEETLE_PAUSE_RATE * STEP_S) {
+      f.wanderT = BEETLE_PAUSE_MIN_S + (BEETLE_PAUSE_MAX_S - BEETLE_PAUSE_MIN_S) * rng.next();
+      return;
+    }
+    let h = (f.heading ?? 0) + (rng.next() - 0.5) * BEETLE_JITTER;
+    const t = this.terrain;
+    const freeAhead = (a: number): boolean =>
+      isFreeSpot(t, f.x + Math.cos(a) * BEETLE_LOOKAHEAD, f.y + Math.sin(a) * BEETLE_LOOKAHEAD);
+    if (!freeAhead(h)) {
+      const sign = rng.next() < 0.5 ? 1 : -1;
+      let turned = false;
+      for (const k of BEETLE_TURNS) {
+        if (freeAhead(h + sign * k)) {
+          h += sign * k;
+          turned = true;
+        } else if (freeAhead(h - sign * k)) {
+          h -= sign * k;
+          turned = true;
+        }
+        if (turned) break;
+      }
+      if (!turned) {
+        f.wanderT = 1; // boxed in: wait a moment
+        return;
+      }
+    }
+    f.heading = wrapAngle(h);
+    const v = BEETLE_SPEED * speedAt(t, f.x, f.y) * STEP_S;
+    const nx = f.x + Math.cos(f.heading) * v;
+    const ny = f.y + Math.sin(f.heading) * v;
+    if (isFreeSpot(t, nx, ny)) {
+      f.x = nx;
+      f.y = ny;
+    }
+  }
+
+  /** Each living creature that is touchable and has an ant (wander / toFood) within TOUCH_DIST gets exactly one touch per substep. */
+  private resolveTouches(): void {
+    if (this.ants.length === 0) return;
+    for (const f of this.food) {
+      if (!isAlive(f) || f.hop || (f.cooldown ?? 0) > 1e-9) continue;
+      for (const ant of this.ants) {
+        if (ant.state !== 'wander' && ant.state !== 'toFood') continue;
+        if (Math.hypot(ant.x - f.x, ant.y - f.y) > TOUCH_DIST) continue;
+        this.touch(f, ant);
+        break;
+      }
+    }
+  }
+
+  private touch(f: FoodItem, ant: Ant): void {
+    f.touches = (f.touches ?? 0) + 1;
+    f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
+    if (f.touches >= 2) {
+      // Second touch: the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
+      const was = f.kind as PreyKind;
+      f.alive = false;
+      f.kind = 'carrion';
+      f.corpseOf = was;
+      f.piecesLeft = FOOD_TABLE[was].pieces;
+      delete f.cooldown;
+      delete f.hop;
+      delete f.wanderT;
+      ant.state = 'toFood';
+      ant.targetFood = f.id;
+      ant.timer = 0;
+      return;
+    }
+    if (f.kind === 'beetle') {
+      // First touch of a beetle: the touching ant dies (removed in place, so the array identity stays).
+      const i = this.ants.indexOf(ant);
+      if (i >= 0) this.ants.splice(i, 1);
+      this.antsKilled++;
+      return;
+    }
+    // First touch of a fly: it hops away and the ant keeps chasing it.
+    this.startHop(f);
+    ant.state = 'toFood';
+    ant.targetFood = f.id;
+    ant.timer = 0;
+  }
+
+  /** Hop 20-35 px in a random direction to a free spot (8 headings, then shorter hops); stays put if nothing is free. */
+  private startHop(f: FoodItem): void {
+    const rng = this.rng;
+    for (const scale of HOP_SCALES) {
+      for (let i = 0; i < HOP_TRIES; i++) {
+        const h = rng.next() * TWO_PI - Math.PI;
+        const d = (HOP_MIN + (HOP_MAX - HOP_MIN) * rng.next()) * scale;
+        const tx = f.x + Math.cos(h) * d;
+        const ty = f.y + Math.sin(h) * d;
+        if (!isFreeSpot(this.terrain, tx, ty)) continue;
+        f.hop = { fromX: f.x, fromY: f.y, toX: tx, toY: ty, t: 0, dur: HOP_DUR };
+        f.heading = h;
+        return;
+      }
+    }
   }
 
   /** One hatching cycle per effective interval (HATCH_INTERVAL_S / queens) while there is food and room; at most one hatch per substep. */
@@ -244,6 +398,8 @@ export class World {
         desired = Math.atan2(f.y - ant.y, f.x - ant.x);
         pherWeight = 0.3;
         if (Math.hypot(f.x - ant.x, f.y - ant.y) <= PICKUP_DIST) {
+          // Nothing can be taken from a living creature: stand and wait for the touch.
+          if (isAlive(f)) return;
           // Arrived: stand still and gnaw for a while before taking a piece.
           ant.state = 'gnaw';
           ant.timer = GNAW_S * (0.75 + 0.5 * this.rng.next());
@@ -285,7 +441,7 @@ export class World {
   /** A gnawing ant stands still; when its bite ends it takes a piece, unless the food is gone or used up meanwhile. */
   private gnaw(ant: Ant): void {
     const f = this.findFood(ant.targetFood);
-    if (!f || f.piecesLeft <= 0) {
+    if (!f || f.piecesLeft <= 0 || isAlive(f)) {
       ant.state = 'wander';
       ant.targetFood = null;
       ant.timer = 0;

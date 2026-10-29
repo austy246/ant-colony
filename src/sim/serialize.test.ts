@@ -10,7 +10,9 @@ const EXTRA = { introDone: true, camera: { x: 10, y: 20, zoom: 2 } };
 function busyWorld(): World {
   const w = World.create(1234);
   for (let i = 0; i < 12; i++) w.spawnAnt();
-  w.placeFood('beetle', 80, 140);
+  const dead = w.placeFood('carrion', 80, 140)!; // a dead beetle: living creatures hold transient state that is not saved
+  dead.corpseOf = 'beetle';
+  dead.piecesLeft = FOOD_TABLE.beetle.pieces;
   w.placeFood('berry', 120, 100);
   w.stock = 12; // enough for an ant, so hatchProgress keeps running (1 s * 3 = 3.25 s after the loop below)
   w.hatchProgress = 0.25;
@@ -244,6 +246,108 @@ describe('validateSave', () => {
     expect(w.queens).toBe(2);
     expect(w.hatchProgress).toBeLessThan(5);
     expect(w.hatchFraction).toBeLessThan(1);
+  });
+  describe('living prey', () => {
+    function preyWorld(): { w: World; beetle: ReturnType<World['placeFood']>; corpse: ReturnType<World['placeFood']> } {
+      const w = World.create(99);
+      const beetle = w.placeFood('beetle', 150, 100)!;
+      beetle.touches = 1;
+      beetle.cooldown = 0.5; // transient
+      beetle.wanderT = 1.5; // transient
+      const fly = w.placeFood('fly', 200, 100)!;
+      fly.hop = { fromX: 200, fromY: 100, toX: 220, toY: 100, t: 0.1, dur: 0.35 }; // transient
+      const corpse = w.placeFood('carrion', 100, 60)!;
+      corpse.corpseOf = 'fly';
+      corpse.piecesLeft = 5;
+      return { w, beetle, corpse };
+    }
+
+    it('an alive beetle with touches 1 and a corpse round-trip; transient fields are not saved', () => {
+      const { w, beetle, corpse } = preyWorld();
+      const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
+      expect(validateSave(s)).not.toBeNull();
+      const sb = s.food.find((f) => f.id === beetle!.id)!;
+      expect(sb).toEqual({ id: beetle!.id, kind: 'beetle', x: beetle!.x, y: beetle!.y, piecesLeft: 18, alive: true, touches: 1, heading: beetle!.heading });
+      for (const f of s.food) {
+        expect('cooldown' in f).toBe(false);
+        expect('hop' in f).toBe(false);
+        expect('wanderT' in f).toBe(false);
+      }
+      const r = worldFromSave(validateSave(s)!);
+      const rb = r.food.find((f) => f.id === beetle!.id)!;
+      expect(rb.alive).toBe(true);
+      expect(rb.touches).toBe(1);
+      expect(rb.heading).toBe(beetle!.heading);
+      expect(rb.cooldown).toBeUndefined();
+      expect(rb.wanderT).toBeUndefined();
+      const rc = r.food.find((f) => f.id === corpse!.id)!;
+      expect(rc.kind).toBe('carrion');
+      expect(rc.corpseOf).toBe('fly');
+      expect(rc.piecesLeft).toBe(5);
+      expect(rc.alive).toBeUndefined();
+      expect(r.food.find((f) => f.kind === 'fly')!.hop).toBeUndefined();
+    });
+
+    it('a restored living beetle keeps living: it walks, and the second touch still kills it', () => {
+      const { w, beetle } = preyWorld();
+      const r = worldFromSave(validateSave(JSON.parse(JSON.stringify(worldToSave(w, EXTRA))))!);
+      const rb = r.food.find((f) => f.id === beetle!.id)!;
+      const { x, y } = rb;
+      for (let i = 0; i < 300; i++) r.step(STEP_S);
+      expect(Math.hypot(rb.x - x, rb.y - y)).toBeGreaterThan(1);
+      expect(rb.touches).toBe(1);
+      const a = r.spawnAnt();
+      a.x = rb.x + 2;
+      a.y = rb.y;
+      for (let i = 0; i < 3; i++) r.step(STEP_S);
+      expect(rb.alive).toBe(false);
+      expect(rb.corpseOf).toBe('beetle');
+    });
+
+    it('the validator checks the optional creature fields', () => {
+      const g = good();
+      const food = (g.food as Record<string, unknown>[])[0];
+      const ok: Record<string, unknown>[] = [
+        { alive: true, touches: 0, heading: 1.5 },
+        { alive: true, touches: 2, heading: -3 },
+        { alive: false, corpseOf: 'beetle' },
+        { corpseOf: 'fly' },
+      ];
+      for (const patch of ok) expect(validateSave({ ...g, food: [{ ...food, ...patch }] }), JSON.stringify(patch)).not.toBeNull();
+      const bad: Record<string, unknown>[] = [
+        { touches: 5 },
+        { touches: 3 },
+        { touches: -1 },
+        { touches: 1.5 },
+        { touches: '1' },
+        { alive: 'yes' },
+        { alive: 1 },
+        { alive: null },
+        { heading: NaN },
+        { heading: Infinity },
+        { heading: '1' },
+        { corpseOf: 'cat' },
+        { corpseOf: 'carrion' },
+        { corpseOf: true },
+      ];
+      for (const patch of bad) expect(validateSave({ ...g, food: [{ ...food, ...patch }] }), JSON.stringify(patch)).toBeNull();
+    });
+
+    it('old saves without the creature fields load: a beetle without `alive` is plain, gnawable food', () => {
+      const g = good();
+      const food = (g.food as Record<string, unknown>[]).map((f) => ({ ...f }));
+      for (const f of food) {
+        delete f.alive;
+        delete f.touches;
+        delete f.heading;
+        delete f.corpseOf;
+      }
+      const r = worldFromSave(validateSave({ ...g, food })!);
+      expect(r.food.length).toBeGreaterThan(0);
+      for (const f of r.food) expect(f.alive).toBeUndefined();
+      const beetle = r.food.find((f) => f.kind === 'beetle');
+      if (beetle) expect(beetle.piecesLeft).toBeGreaterThan(0);
+    });
   });
   it('rejects non-string pheromone and non-boolean introDone', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();
