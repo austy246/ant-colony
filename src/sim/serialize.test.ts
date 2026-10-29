@@ -65,6 +65,8 @@ describe('serialize', () => {
   it('restored world evolves identically to the original', () => {
     const w = busyWorld();
     const r = worldFromSave(worldToSave(w, EXTRA));
+    // The explored grid is transient (not saved): copy it so the ants decide exactly as in the original.
+    r.explored.set(w.explored);
     // 300 substeps = 10 s: crosses the hatch at 10 s (progress 3.25 + 10 > 10), so hatching after restore is covered too.
     for (let i = 0; i < 300; i++) {
       w.step(STEP_S);

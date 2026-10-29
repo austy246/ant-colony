@@ -1,5 +1,5 @@
 import {
-  BEETLE_SPEED, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST,
+  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { PheromoneField } from './pheromone';
@@ -30,12 +30,27 @@ const LOOKAHEAD = 3;
 const PHER_LOOKAHEAD = 4;
 /** Radius within which a wandering ant notices food (pickup distance is separate and unchanged). Raised 16 -> 32 so bold, straight-heading scouts still find food. */
 const SENSE_FOOD = 32;
-/** Home tether for wandering ants: beyond TETHER_R px from the nest the desired heading is blended toward home... */
-const TETHER_R = 120;
-/** ...with weight TETHER_K * (distance - TETHER_R) / TETHER_SPAN, clamped to [0, TETHER_MAX]. */
-const TETHER_SPAN = 60;
-const TETHER_K = 0.15;
-const TETHER_MAX = 0.6;
+/**
+ * A young ant (the colony's first scouts) searches the neighbourhood of the nest first: until its range
+ * YOUNG_R0 + YOUNG_GROW * age (px) exceeds the whole world it is blended back toward home beyond that range. The range
+ * grows with the ant's age (about 80 s later it covers every corner), so it is NOT a permanent radius and old ants roam freely.
+ */
+const YOUNG_R0 = 100;
+const YOUNG_GROW = 1.5;
+const YOUNG_SPAN = 60;
+const YOUNG_K = 0.15;
+const YOUNG_MAX = 0.6;
+/** Cells of the explored grid (EXPLORE_CELL px each). */
+const EXPLORE_W = Math.ceil(WORLD_W / EXPLORE_CELL);
+const EXPLORE_H = Math.ceil(WORLD_H / EXPLORE_CELL);
+/** Per-substep decay factor of the explored grid (half-life EXPLORE_HALF_LIFE_S). */
+const EXPLORE_DECAY = Math.exp((-STEP_S * Math.LN2) / EXPLORE_HALF_LIFE_S);
+/** Explored value a wandering ant adds to its cell per second spent there. */
+const EXPLORE_RATE = 1;
+/** Score penalty per unit of explored value in the cell a candidate heading points at (a detected trail or food always outweighs it). */
+const EXPLORE_WEIGHT = 0.1;
+/** How far ahead (px) a wanderer reads the explored grid. */
+const EXPLORE_LOOKAHEAD = 16;
 const PICKUP_DIST = 1.5;
 /** Beetle heading noise per substep (full range, rad): much calmer than an ant. */
 const BEETLE_JITTER = 0.15;
@@ -90,6 +105,13 @@ export class World {
   nextId = 1;
   rng: Rng;
   seed: number;
+  /**
+   * Coarse "where have ants been" map (EXPLORE_W x EXPLORE_H cells of EXPLORE_CELL px, row-major): wandering ants add
+   * to their cell, values decay with half-life EXPLORE_HALF_LIFE_S and are capped at EXPLORE_CAP; wanderers prefer
+   * headings toward less explored ground. TRANSIENT: never saved, empty after a load (it refills within a minute).
+   * Treat as read-only outside the world (tests may poke values to arrange a situation).
+   */
+  readonly explored = new Float32Array(EXPLORE_W * EXPLORE_H);
   private acc = 0;
   /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
   private rescueTimer = 0;
@@ -189,6 +211,8 @@ export class World {
   }
 
   private substep(): void {
+    const ex = this.explored;
+    for (let i = 0; i < ex.length; i++) ex[i] *= EXPLORE_DECAY;
     for (const ant of this.ants) this.updateAnt(ant);
     this.updateCreatures();
     this.resolveTouches();
@@ -415,11 +439,14 @@ export class World {
       const homeD = Math.hypot(ant.x - NEST.x, ant.y - NEST.y);
       if (homeD < OUTBOUND_R) {
         desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
-      } else if (homeD > TETHER_R) {
-        const w = Math.min(TETHER_MAX, (TETHER_K * (homeD - TETHER_R)) / TETHER_SPAN);
+      }
+      const range = YOUNG_R0 + YOUNG_GROW * ant.age;
+      if (homeD > range && range < WORLD_W + WORLD_H) {
+        const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
       pherWeight = 0.15;
+      this.markExplored(ant.x, ant.y);
     }
 
     this.move(ant, desired, pherWeight);
@@ -456,10 +483,23 @@ export class World {
     if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
   }
 
-  /** Pick the best of three candidate headings around `desired`, turn smoothly toward it and advance. */
+  /** Cell index of the explored grid under (x, y), clamped to the world. */
+  private exploreIndex(x: number, y: number): number {
+    const cx = Math.max(0, Math.min(EXPLORE_W - 1, Math.floor(x / EXPLORE_CELL)));
+    const cy = Math.max(0, Math.min(EXPLORE_H - 1, Math.floor(y / EXPLORE_CELL)));
+    return cy * EXPLORE_W + cx;
+  }
+
+  private markExplored(x: number, y: number): void {
+    const i = this.exploreIndex(x, y);
+    this.explored[i] = Math.min(EXPLORE_CAP, this.explored[i] + STEP_S * EXPLORE_RATE);
+  }
+
+  /** Pick the best of the candidate headings candidate headings around `desired`, turn smoothly toward it and advance. */
   private move(ant: Ant, desired: number, pherWeight: number): void {
     let best = desired;
     let bestScore = -Infinity;
+    const wander = ant.state === 'wander';
     for (const turn of FAN_TURNS) {
       const h = desired + turn;
       const c = Math.cos(h);
@@ -468,6 +508,7 @@ export class World {
       if (pherWeight > 0) {
         score += pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, 1);
       }
+      if (wander) score -= EXPLORE_WEIGHT * this.explored[this.exploreIndex(ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)];
       if (score > bestScore) {
         bestScore = score;
         best = h;

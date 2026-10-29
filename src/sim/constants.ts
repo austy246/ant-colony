@@ -29,3 +29,9 @@ export const TOUCH_DIST = 2.5;
 export const TOUCH_COOLDOWN_S = 0.8;
 /** Seconds a startled fly spends in the air during one hop. */
 export const HOP_DUR = 0.35;
+/** Side (art px) of one cell of the coarse "explored" grid wandering ants avoid revisiting (40 x 25 cells on 320 x 200). */
+export const EXPLORE_CELL = 8;
+/** Half-life (s) of the explored-grid values: ground nobody walked for a while counts as new again. */
+export const EXPLORE_HALF_LIFE_S = 90;
+/** Upper bound of a cell value of the explored grid. */
+export const EXPLORE_CAP = 6;
