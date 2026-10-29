@@ -1,4 +1,4 @@
-import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
+import { FOOD_PER_ANT, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import { World, type Ant } from './world';
 
@@ -8,6 +8,8 @@ export interface SaveV1 {
   rngState: number;
   time: number;
   stock: number;
+  /** Optional (absent in older saves): food delivered in total; derived as stock + ants * FOOD_PER_ANT when missing. */
+  totalDelivered?: number;
   hatchProgress: number;
   /** Optional (absent in older saves): whether the first ant has appeared. */
   started?: boolean;
@@ -50,6 +52,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     rngState: w.rng.state,
     time: w.time,
     stock: w.stock,
+    totalDelivered: w.totalDelivered,
     hatchProgress: w.hatchProgress,
     started: w.started,
     nextId: w.nextId,
@@ -69,8 +72,9 @@ export function worldFromSave(s: SaveV1): World {
   w.rng.state = s.rngState;
   w.time = s.time;
   w.stock = s.stock;
-  // Old saves (colony floor) may hold up to LEGACY_MAX_HATCH_PROGRESS seconds: clamp into the new cycle range.
-  w.hatchProgress = Math.max(0, Math.min(HATCH_INTERVAL_S - STEP_S, s.hatchProgress));
+  w.totalDelivered = s.totalDelivered ?? s.stock + s.ants.length * FOOD_PER_ANT;
+  // Old saves (colony floor) may hold up to LEGACY_MAX_HATCH_PROGRESS seconds: clamp into the effective cycle range.
+  w.hatchProgress = Math.max(0, Math.min(w.hatchInterval - STEP_S, s.hatchProgress));
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
@@ -132,6 +136,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (!isNum(o.seed) || !isNum(o.rngState)) return null;
   if (!inRange(o.hatchProgress, 0, LEGACY_MAX_HATCH_PROGRESS)) return null;
   if (!isNum(o.time) || o.time < 0 || !isNum(o.stock) || o.stock < 0 || !isInt(o.nextId)) return null;
+  if (o.totalDelivered !== undefined && (!isNum(o.totalDelivered) || o.totalDelivered < 0)) return null;
   if (o.started !== undefined && typeof o.started !== 'boolean') return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;

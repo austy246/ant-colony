@@ -224,6 +224,27 @@ describe('validateSave', () => {
     expect((worldToSave(w, EXTRA).ants[0] as Record<string, unknown>).lifespan).toBeUndefined();
     expect(validateSave(good())).not.toBeNull();
   });
+  it('totalDelivered round-trips; an old save without it derives stock + ants * FOOD_PER_ANT', () => {
+    const w = busyWorld();
+    w.totalDelivered = 234.5;
+    const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
+    expect(s.totalDelivered).toBe(234.5);
+    expect(worldFromSave(validateSave(s)!).totalDelivered).toBe(234.5);
+    expect(worldFromSave(validateSave(s)!).queens).toBe(3);
+    const old = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+    delete old.totalDelivered;
+    const r = worldFromSave(validateSave(old)!);
+    expect(r.totalDelivered).toBeCloseTo(w.stock + w.ants.length * 5, 9);
+    for (const bad of [-1, NaN, Infinity, '5', null]) {
+      expect(validateSave({ ...(JSON.parse(JSON.stringify(s)) as object), totalDelivered: bad }), String(bad)).toBeNull();
+    }
+  });
+  it('hatchProgress is clamped to the effective interval on restore (2 queens: below 5 s)', () => {
+    const w = worldFromSave(validateSave({ ...good(), totalDelivered: 100, hatchProgress: 9 })!);
+    expect(w.queens).toBe(2);
+    expect(w.hatchProgress).toBeLessThan(5);
+    expect(w.hatchFraction).toBeLessThan(1);
+  });
   it('rejects non-string pheromone and non-boolean introDone', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();
     expect(validateSave({ ...good(), introDone: 'yes' })).toBeNull();

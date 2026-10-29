@@ -6,6 +6,10 @@ export const NEST = { x: 40, y: 150, r: 6 } as const;
 export const FOOD_PER_ANT = 5;
 /** Seconds of one hatching cycle: the queen hatches one ant per cycle while she has FOOD_PER_ANT food. */
 export const HATCH_INTERVAL_S = 10;
+/** Every FOOD_PER_QUEEN of food delivered to the nest in total adds another queen (hatching speeds up proportionally). */
+export const FOOD_PER_QUEEN = 100;
+/** Upper bound of the number of queens. */
+export const MAX_QUEENS = 8;
 /** Food the queen starts with (enough for two ants once the colony has started). */
 export const STARTER_STOCK = 10;
 /** A started colony with no ants and too little food for one gets a free ant after this many seconds. */

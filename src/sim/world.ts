@@ -1,5 +1,5 @@
 import {
-  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
+  CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
 } from './constants';
 import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
 import { PheromoneField } from './pheromone';
@@ -43,6 +43,8 @@ const WANDER_JITTER = 0.3; // full range of per-step heading noise (+-0.15 rad):
 /** Wanderers closer than OUTBOUND_R px to the nest are pushed outward (blend OUTBOUND_K) so they do not mill around the crater. */
 const OUTBOUND_R = 50;
 const OUTBOUND_K = 0.2;
+/** Tolerance when comparing the fractional stock (pieces of 2/3) with FOOD_PER_ANT. */
+const STOCK_EPS = 1e-6;
 const TWO_PI = Math.PI * 2;
 const FAN_TURNS = [-FAN, 0, FAN];
 
@@ -59,7 +61,9 @@ export class World {
   food: FoodItem[] = [];
   /** The queen's food. Every FOOD_PER_ANT of it is a fed larva waiting to hatch. */
   stock = STARTER_STOCK;
-  /** Seconds of the current hatching cycle, in [0, HATCH_INTERVAL_S); 0 while no cycle runs. */
+  /** Food value delivered to the nest in total (stock only grows from it and shrinks by hatching); drives `queens`. */
+  totalDelivered = 0;
+  /** Seconds of the current hatching cycle, in [0, effective hatch interval); 0 while no cycle runs. */
   hatchProgress = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
@@ -85,14 +89,24 @@ export class World {
     return new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
   }
 
-  /** Fed larvae waiting to hatch. */
+  /** Fed larvae waiting to hatch (stock is fractional, hence the epsilon). */
   get larvae(): number {
-    return Math.floor(this.stock / FOOD_PER_ANT);
+    return Math.floor((this.stock + STOCK_EPS) / FOOD_PER_ANT);
+  }
+
+  /** Number of queens: one, plus one per FOOD_PER_QUEEN delivered in total, at most MAX_QUEENS. */
+  get queens(): number {
+    return Math.min(MAX_QUEENS, 1 + Math.floor(this.totalDelivered / FOOD_PER_QUEEN));
+  }
+
+  /** Seconds between two hatches: each queen lays on her own HATCH_INTERVAL_S cycle. */
+  get hatchInterval(): number {
+    return HATCH_INTERVAL_S / this.queens;
   }
 
   /** Progress of the current hatching cycle in [0, 1]. */
   get hatchFraction(): number {
-    return Math.max(0, Math.min(1, this.hatchProgress / HATCH_INTERVAL_S));
+    return Math.max(0, Math.min(1, this.hatchProgress / this.hatchInterval));
   }
 
   spawnAnt(): Ant {
@@ -158,15 +172,15 @@ export class World {
     this.time += STEP_S;
   }
 
-  /** One hatching cycle per HATCH_INTERVAL_S while the queen has food and there is room; at most one hatch per substep. */
+  /** One hatching cycle per effective interval (HATCH_INTERVAL_S / queens) while there is food and room; at most one hatch per substep. */
   private hatch(): void {
-    if (!this.started || this.stock < FOOD_PER_ANT || this.ants.length >= MAX_ANTS) {
+    if (!this.started || this.stock + STOCK_EPS < FOOD_PER_ANT || this.ants.length >= MAX_ANTS) {
       this.hatchProgress = 0;
       return;
     }
     this.hatchProgress += STEP_S;
-    if (this.hatchProgress >= HATCH_INTERVAL_S - 1e-9) {
-      this.stock -= FOOD_PER_ANT;
+    if (this.hatchProgress >= this.hatchInterval - 1e-9) {
+      this.stock = Math.max(0, Math.round((this.stock - FOOD_PER_ANT) * 1e6) / 1e6);
       this.spawnAnt();
       this.hatchProgress = 0;
     }
@@ -174,7 +188,7 @@ export class World {
 
   /** Never soft-lock: an empty, foodless started colony gets one free ant after RESCUE_AFTER_S. */
   private rescue(): void {
-    if (!this.started || this.ants.length > 0 || this.stock >= FOOD_PER_ANT) {
+    if (!this.started || this.ants.length > 0 || this.stock + STOCK_EPS >= FOOD_PER_ANT) {
       this.rescueTimer = 0;
       return;
     }
@@ -256,6 +270,7 @@ export class World {
 
     if (ant.state === 'carry' && Math.hypot(ant.x - NEST.x, ant.y - NEST.y) <= NEST.r) {
       this.stock += ant.carry;
+      this.totalDelivered += ant.carry;
       ant.carry = 0;
       this.deliveryCount++;
       if (this.findFood(ant.targetFood)) {
