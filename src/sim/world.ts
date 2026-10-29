@@ -1,12 +1,16 @@
 import {
-  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, WORLD_H, WORLD_W,
+  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import { generateTerrain, speedAt, type Terrain } from './terrain';
 
-export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry';
+/** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
+export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry' | 'nest';
+/** Why an ant in state 'nest' is inside: freshly hatched, resting after a delivery, or a permanent nest worker. */
+export type NestKind = 'hatch' | 'unload' | 'nurse';
+export type AntRole = 'forager' | 'nurse';
 
 export interface Ant {
   id: number;
@@ -18,8 +22,11 @@ export interface Ant {
   age: number;
   carry: number;
   targetFood: number | null;
-  /** Seconds of gnawing left while state is 'gnaw'; 0 otherwise. */
+  /** Seconds of gnawing left while state is 'gnaw', seconds left inside while state is 'nest' (hatch / unload); 0 otherwise. */
   timer: number;
+  /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
+  nestKind?: NestKind;
+  role: AntRole;
 }
 
 const BASE_SPEED = 12;
@@ -148,7 +155,25 @@ export class World {
     return Math.max(0, Math.min(1, this.hatchProgress / this.hatchInterval));
   }
 
-  spawnAnt(): Ant {
+  /** Ants on the surface (everything but state 'nest'). */
+  get antsOnSurface(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.state !== 'nest') n++;
+    return n;
+  }
+
+  /** Ants underground (state 'nest'): hatchlings, unloading foragers and nurses. They count in `ants.length` too. */
+  get antsInNest(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.state === 'nest') n++;
+    return n;
+  }
+
+  /**
+   * A new ant. `inNest = false` (default): it appears on the surface at the entrance at once (intro's first ant,
+   * rescue ant). `inNest = true`: a hatchling, underground for HATCH_STAY_S * (0.85 + 0.3 * random) seconds.
+   */
+  spawnAnt(inNest = false): Ant {
     const rng = this.rng;
     const ant: Ant = {
       id: this.nextId++,
@@ -160,7 +185,13 @@ export class World {
       carry: 0,
       targetFood: null,
       timer: 0,
+      role: 'forager',
     };
+    if (inNest) {
+      ant.state = 'nest';
+      ant.nestKind = 'hatch';
+      ant.timer = HATCH_STAY_S * (0.85 + 0.3 * rng.next());
+    }
     this.ants.push(ant);
     this.started = true;
     return ant;
@@ -197,6 +228,7 @@ export class World {
     for (const a of this.ants) {
       if (a.targetFood !== id) continue;
       a.targetFood = null;
+      if (a.state === 'nest') continue; // an unloading ant keeps its clock; it wanders on emerging
       if (a.state === 'toFood' || a.state === 'gnaw') a.state = 'wander';
       a.timer = 0;
     }
@@ -359,7 +391,7 @@ export class World {
     this.hatchProgress += STEP_S;
     if (this.hatchProgress >= this.hatchInterval - 1e-9) {
       this.stock = Math.max(0, Math.round((this.stock - FOOD_PER_ANT) * 1e6) / 1e6);
-      this.spawnAnt();
+      this.spawnAnt(true);
       this.hatchProgress = 0;
     }
   }
@@ -395,8 +427,37 @@ export class World {
     return best;
   }
 
+  /** Puts the ant back on the surface at the entrance (small random offset). */
+  private emerge(ant: Ant, state: 'wander' | 'toFood'): void {
+    const rng = this.rng;
+    ant.x = NEST.x + (rng.next() - 0.5) * 4;
+    ant.y = NEST.y + (rng.next() - 0.5) * 4;
+    ant.state = state;
+    ant.timer = 0;
+    delete ant.nestKind;
+    if (state === 'wander') ant.targetFood = null;
+  }
+
+  /** An ant underground: only its clock runs. Hatchlings and unloaded foragers emerge when it reaches 0, nurses never do. */
+  private updateNestAnt(ant: Ant): void {
+    if (ant.nestKind === 'nurse') return;
+    ant.timer -= STEP_S;
+    if (ant.timer > 1e-9) return;
+    const f = ant.nestKind === 'unload' ? this.findFood(ant.targetFood) : undefined;
+    if (f && f.piecesLeft > 0) {
+      this.emerge(ant, 'toFood');
+      ant.heading = Math.atan2(f.y - ant.y, f.x - ant.x);
+    } else {
+      this.emerge(ant, 'wander');
+    }
+  }
+
   private updateAnt(ant: Ant): void {
     ant.age += STEP_S;
+    if (ant.state === 'nest') {
+      this.updateNestAnt(ant);
+      return;
+    }
 
     if (ant.state === 'wander') {
       const f = this.nearestFood(ant.x, ant.y);
@@ -456,12 +517,14 @@ export class World {
       this.totalDelivered += ant.carry;
       ant.carry = 0;
       this.deliveryCount++;
-      if (this.findFood(ant.targetFood)) {
-        ant.state = 'toFood';
-      } else {
-        ant.state = 'wander';
-        ant.targetFood = null;
-      }
+      // The forager goes down into the nest to unload and rest; it keeps its food target if that food still exists.
+      const f = this.findFood(ant.targetFood);
+      if (!f || f.piecesLeft <= 0) ant.targetFood = null;
+      ant.state = 'nest';
+      ant.nestKind = 'unload';
+      ant.timer = UNLOAD_S * (0.8 + 0.4 * this.rng.next());
+      ant.x = NEST.x + (this.rng.next() - 0.5) * 4;
+      ant.y = NEST.y + (this.rng.next() - 0.5) * 4;
     }
   }
 

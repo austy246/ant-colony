@@ -35,3 +35,13 @@ export const EXPLORE_CELL = 8;
 export const EXPLORE_HALF_LIFE_S = 90;
 /** Upper bound of a cell value of the explored grid. */
 export const EXPLORE_CAP = 6;
+/** Seconds a freshly hatched ant stays in the nest before it emerges at the entrance (each ant: HATCH_STAY_S * (0.85 + 0.3 * random)). */
+export const HATCH_STAY_S = 30;
+/** Seconds a forager that delivered food rests in the nest before it goes out again (each delivery: UNLOAD_S * (0.8 + 0.4 * random)). */
+export const UNLOAD_S = 5;
+/** Nurses (permanent nest workers: feed the queen, carry eggs): wanted per queen, plus one per LARVAE_PER_NURSE waiting larvae, at most NURSE_MAX_FRACTION of all ants. */
+export const NURSES_PER_QUEEN = 2;
+export const LARVAE_PER_NURSE = 5;
+export const NURSE_MAX_FRACTION = 0.3;
+/** The wanted nurse count is re-evaluated every NURSE_EVAL_S of simulated time (not every substep). */
+export const NURSE_EVAL_S = 2;

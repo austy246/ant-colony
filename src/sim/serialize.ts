@@ -1,6 +1,6 @@
 import { FOOD_PER_ANT, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
-import { World, type Ant } from './world';
+import { World, type Ant, type AntRole } from './world';
 
 export interface SaveV1 {
   version: 1;
@@ -15,9 +15,12 @@ export interface SaveV1 {
   started?: boolean;
   nextId: number;
   introDone: boolean;
-  /** `timer` is optional (absent in older saves): seconds of gnawing left, 0 when not gnawing. */
-  /** `lifespan` is optional and ignored (removed: ants no longer die of old age; older saves still hold it). */
-  ants: (Omit<Ant, 'timer'> & { timer?: number; lifespan?: number })[];
+  /**
+   * `timer` is optional (absent in older saves): seconds of gnawing left (or seconds left inside the nest), 0 otherwise.
+   * `role` is optional (absent in older saves = 'forager'); `nestKind` is optional (absent = 'hatch' for an ant in state 'nest').
+   * `lifespan` is optional and ignored (removed: ants no longer die of old age; older saves still hold it).
+   */
+  ants: (Omit<Ant, 'timer' | 'role'> & { timer?: number; role?: AntRole; lifespan?: number })[];
   /** Living-creature fields (`alive`, `touches`, `heading`, `corpseOf`) are optional; transient ones (cooldown, hop, wanderT) are never saved. */
   food: FoodItem[];
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
@@ -92,7 +95,10 @@ export function worldFromSave(s: SaveV1): World {
   for (const a of s.ants) {
     // `lifespan` was removed (ants no longer die of old age); old saves may still carry it: drop it.
     const { lifespan: _lifespan, ...rest } = a;
-    w.ants.push({ ...rest, timer: a.timer ?? 0 });
+    const ant: Ant = { ...rest, timer: a.timer ?? 0, role: a.role ?? 'forager' };
+    if (ant.state === 'nest') ant.nestKind = a.nestKind ?? 'hatch';
+    else delete ant.nestKind;
+    w.ants.push(ant);
   }
   w.food.length = 0;
   for (const f of s.food) w.food.push(foodToSave(f));
@@ -103,7 +109,9 @@ export function worldFromSave(s: SaveV1): World {
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
 const inRange = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
-const ANT_STATES = ['wander', 'toFood', 'gnaw', 'carry'];
+const ANT_STATES = ['wander', 'toFood', 'gnaw', 'carry', 'nest'];
+const NEST_KINDS = ['hatch', 'unload', 'nurse'];
+const ANT_ROLES = ['forager', 'nurse'];
 /** Saves from the old colony-floor rules stored up to 15 s here; they still load (clamped on restore). */
 const LEGACY_MAX_HATCH_PROGRESS = 15;
 const MAX_ENTRIES = 2000;
@@ -118,7 +126,9 @@ function validAnt(a: unknown): boolean {
     isNum(o.age) && o.age >= 0 && isNum(o.carry) &&
     typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
     (o.targetFood === null || isNum(o.targetFood)) &&
-    (o.timer === undefined || (isNum(o.timer) && o.timer >= 0))
+    (o.timer === undefined || (isNum(o.timer) && o.timer >= 0)) &&
+    (o.nestKind === undefined || (typeof o.nestKind === 'string' && NEST_KINDS.includes(o.nestKind))) &&
+    (o.role === undefined || (typeof o.role === 'string' && ANT_ROLES.includes(o.role)))
   );
 }
 

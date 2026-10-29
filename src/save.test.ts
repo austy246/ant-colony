@@ -60,6 +60,21 @@ describe('save/load', () => {
     expect(await loadGame()).toBeNull();
   });
 
+  it('ants inside the nest (hatch / unload / nurse, with role) survive saveGame/loadGame', async () => {
+    const s = sample();
+    s.ants[0] = { ...s.ants[0], state: 'nest', nestKind: 'hatch', timer: 12.5, role: 'forager' };
+    s.ants[1] = { ...s.ants[1], state: 'nest', nestKind: 'unload', timer: 3.5, role: 'forager' };
+    s.ants[2] = { ...s.ants[2], state: 'nest', nestKind: 'nurse', timer: 0, role: 'nurse' };
+    await saveGame(s);
+    const loaded = await loadGame();
+    expect(loaded).toEqual(s);
+    expect(loaded!.ants.slice(0, 3).map((x) => [x.state, x.nestKind, x.role])).toEqual([
+      ['nest', 'hatch', 'forager'], ['nest', 'unload', 'forager'], ['nest', 'nurse', 'nurse'],
+    ]);
+    localStorage.setItem(KEY, JSON.stringify({ ...s, ants: [{ ...s.ants[0], nestKind: 'sleep' }] }));
+    expect(await loadGame()).toBeNull();
+  });
+
   it('invalid JSON returns null', async () => {
     localStorage.setItem(KEY, '{not json');
     expect(await loadGame()).toBeNull();

@@ -18,6 +18,7 @@ function flatWorld(seed = 1): World {
 /**
  * Food delivered to the nest = stock plus the food spent on hatched ants (beyond `initial` ants).
  * Valid for flatWorld worlds (stock 0) in which no ant dies and the free rescue ant never triggers.
+ * Ants inside the nest (hatchlings, unloading foragers) are part of `ants.length`, so the formula holds unchanged.
  */
 function delivered(w: World, initial: number): number {
   return w.stock + (w.ants.length - initial) * FOOD_PER_ANT;
@@ -129,7 +130,8 @@ describe('World', () => {
     a.targetFood = f.id;
     let deliveries = 0;
     let wasCarrying = false;
-    for (let i = 0; i < 600; i++) {
+    // Every trip now ends with ~5 s of unloading inside the nest (6 trips ~ 75 s), so run 120 s instead of the former 60 s.
+    for (let i = 0; i < 1200; i++) {
       w.step(0.1);
       const carrying = a.carry > 0;
       if (wasCarrying && !carrying) deliveries++;
@@ -173,6 +175,8 @@ describe('World', () => {
     expect(w.stock).toBe(0);
     const a = w.ants[1];
     expect(a.age).toBeLessThan(1);
+    expect(a.state).toBe('nest'); // hatched ants spend HATCH_STAY_S underground first
+    expect(a.nestKind).toBe('hatch');
   });
 
   it('ants never exceed MAX_ANTS (300 ants, stock 50: nothing hatches, stock untouched, progress resets to 0)', () => {
