@@ -36,6 +36,11 @@ canvas.addEventListener('pointermove', (e) => {
   camera.panBy(e.clientX - drag.x, e.clientY - drag.y);
   drag = { x: e.clientX, y: e.clientY };
 });
+window.addEventListener('keydown', (e) => {
+  if (e.key === '1') renderer.setView('normal');
+  else if (e.key === '2') renderer.setView('pheromone');
+  else if (e.key === '3') renderer.setView('terrain');
+});
 canvas.addEventListener('pointerup', () => (drag = null));
 
 let last = performance.now();
