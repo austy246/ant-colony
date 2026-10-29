@@ -20,7 +20,7 @@ function setup() {
     const d = canvas.getContext('2d').getImageData(Math.floor(s.x), Math.floor(s.y), 1, 1).data;
     return [d[0], d[1], d[2]];
   };
-  return { world, r, px };
+  return { world, r, px, canvas, camera };
 }
 
 beforeEach(() => vi.stubGlobal('window', { devicePixelRatio: 1, innerWidth: 640, innerHeight: 400 }));
@@ -37,6 +37,31 @@ describe('Renderer views', () => {
     expect(hit[2]).toBeGreaterThan(hit[0] + 40);
     expect(hit[0] + hit[1] + hit[2]).toBeGreaterThan(near[0] + near[1] + near[2] + 100);
     expect(Math.max(...near)).toBeLessThan(60);
+  });
+
+  it('pheromone view at fractional zoom: the lit cell is crisp and its neighbours stay dark', () => {
+    const { world, r, canvas, camera } = setup();
+    camera.zoom = 2.5;
+    camera.x = 200;
+    camera.y = 40;
+    world.pher.deposit(200.5, 40.5, 5);
+    r.setView('pheromone');
+    r.draw();
+    // The cell (200,40) spans screen x 320..322.5, y 200..202.5.
+    const at = (sx: number, sy: number): number[] =>
+      Array.from(canvas.getContext('2d').getImageData(sx, sy, 1, 1).data.slice(0, 3));
+    const lit = at(320, 200);
+    const bg = at(330, 200);
+    expect(lit[2]).toBeGreaterThan(lit[0] + 40);
+    expect(Math.max(...bg)).toBeLessThan(60);
+    // No anti-aliased half-lit pixels: every pixel right of / below the cell is either fully lit or background.
+    const dist = (a: number[], b: number[]): number => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+    for (const [sx, sy] of [[322, 200], [323, 200], [321, 202], [321, 203], [319, 200], [320, 199]]) {
+      const p = at(sx, sy);
+      expect(Math.min(dist(p, lit), dist(p, bg))).toBeLessThan(12);
+    }
+    expect(dist(at(323, 200), bg)).toBeLessThan(12);
+    expect(dist(at(321, 203), bg)).toBeLessThan(12);
   });
 
   it('terrain view: a stone cell is reddish', () => {

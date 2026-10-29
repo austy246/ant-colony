@@ -43,6 +43,9 @@ function shadow(c: Ctx2D, x: number, y: number, rx: number, ry: number): void {
 
 /** Black ant, about 11x7 art pixels. `facing` 1 = right, -1 = left. */
 export function drawAnt(c: Ctx2D, x: number, y: number, facing: 1 | -1, carrying: boolean): void {
+  // Snap to the art-pixel grid so the sprite does not wobble while the ant moves sub-pixel.
+  x = Math.round(x);
+  y = Math.round(y);
   const s = facing;
   const L = '#1a1410';
   shadow(c, x, y, 5, 1.8);
@@ -211,6 +214,8 @@ function mushroom(c: Ctx2D, x: number, y: number): void {
 }
 
 export function drawFood(c: Ctx2D, kind: FoodKind, x: number, y: number): void {
+  x = Math.round(x);
+  y = Math.round(y);
   switch (kind) {
     case 'beetle':
       return beetle(c, x, y);

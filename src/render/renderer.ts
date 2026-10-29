@@ -7,10 +7,10 @@ import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRen
 import {
   buildHomeGlowCanvas,
   buildSurfaceOverlayCanvas,
+  pheromoneAlpha,
   PHEROMONE_DARK,
   TERRAIN_DARK,
-  TRAIL_STYLES,
-  trailLevel,
+  TRAIL_RGB,
 } from './views';
 
 const defaultMake: CanvasFactory = (w, h) => {
@@ -45,6 +45,9 @@ export class Renderer {
   private overlayCanvas: CanvasLike | null = null;
   private overlayRef: Terrain | null = null;
   private queen: QueenState | null = null;
+  /** Offscreen WORLD_W x WORLD_H canvas + reused pixel buffer for the pheromone trail (one pixel per cell). */
+  private trailCanvas: CanvasLike | null = null;
+  private trailImage: ImageData | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -147,18 +150,30 @@ export class Renderer {
     const x1 = Math.min(w - 1, Math.ceil(camX + halfW));
     const y0 = Math.max(0, Math.floor(camY - halfH));
     const y1 = Math.min(h - 1, Math.ceil(camY + halfH));
-    let last = 0;
-    for (let y = y0; y <= y1; y++) {
-      const row = y * w;
-      for (let x = x0; x <= x1; x++) {
-        const lvl = trailLevel(data[row + x]);
-        if (lvl === 0) continue;
-        if (lvl !== last) {
-          c.fillStyle = TRAIL_STYLES[lvl];
-          last = lvl;
+    if (!this.trailCanvas) {
+      this.trailCanvas = this.make(WORLD_W, WORLD_H);
+      this.trailImage = null;
+    }
+    const tc = this.trailCanvas.getContext('2d');
+    if (tc) {
+      this.trailImage ??= tc.createImageData(WORLD_W, WORLD_H);
+      const buf = this.trailImage.data;
+      buf.fill(0);
+      for (let y = y0; y <= y1; y++) {
+        const row = y * w;
+        for (let x = x0; x <= x1; x++) {
+          const a = pheromoneAlpha(data[row + x]);
+          if (a === 0) continue;
+          const o = (row + x) * 4;
+          buf[o] = TRAIL_RGB[0];
+          buf[o + 1] = TRAIL_RGB[1];
+          buf[o + 2] = TRAIL_RGB[2];
+          buf[o + 3] = Math.round(a * 255);
         }
-        c.fillRect(x, y, 1, 1);
       }
+      tc.putImageData(this.trailImage, 0, 0);
+      c.imageSmoothingEnabled = false;
+      c.drawImage(this.trailCanvas as unknown as CanvasImageSource, 0, 0);
     }
 
     for (const f of this.world.food) {

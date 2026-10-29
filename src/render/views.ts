@@ -27,19 +27,8 @@ export function surfaceOverlayColor(s: number): string | null {
   }
 }
 
-const LEVELS = 32;
-
-/** 32 pre-built fillStyle strings for alpha-quantised trail cells; index 0 is unused (no draw). */
-export const TRAIL_STYLES: readonly string[] = Array.from(
-  { length: LEVELS + 1 },
-  (_, i) => `rgba(127,209,255,${(i / LEVELS).toFixed(3)})`,
-);
-
-/** Quantised style index for a pheromone value, 0 = skip. */
-export function trailLevel(value: number): number {
-  const a = pheromoneAlpha(value);
-  return a > 0 ? Math.max(1, Math.round(a * LEVELS)) : 0;
-}
+/** Straight (non-premultiplied) RGB of a trail cell; alpha comes from pheromoneAlpha. */
+export const TRAIL_RGB = [127, 209, 255] as const;
 
 /** Soft orange radial glow around the nest, WORLD_W x WORLD_H, built from homeGlow. */
 export function buildHomeGlowCanvas(make: CanvasFactory): CanvasLike {
