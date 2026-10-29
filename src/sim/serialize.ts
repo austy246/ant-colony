@@ -9,6 +9,8 @@ export interface SaveV1 {
   time: number;
   stock: number;
   hatchProgress: number;
+  /** Optional (absent in older saves): whether the first ant has appeared. */
+  started?: boolean;
   nextId: number;
   introDone: boolean;
   ants: Ant[];
@@ -47,6 +49,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     time: w.time,
     stock: w.stock,
     hatchProgress: w.hatchProgress,
+    started: w.started,
     nextId: w.nextId,
     introDone: extra.introDone,
     ants: w.ants.map((a) => ({ ...a })),
@@ -65,6 +68,7 @@ export function worldFromSave(s: SaveV1): World {
   w.time = s.time;
   w.stock = s.stock;
   w.hatchProgress = s.hatchProgress;
+  w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
   for (const a of s.ants) w.ants.push({ ...a });
@@ -116,6 +120,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.version !== 1) return null;
   if (!isNum(o.seed) || !isNum(o.rngState) || !isNum(o.hatchProgress)) return null;
   if (!isNum(o.time) || o.time < 0 || !isNum(o.stock) || o.stock < 0 || !isInt(o.nextId)) return null;
+  if (o.started !== undefined && typeof o.started !== 'boolean') return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;

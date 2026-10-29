@@ -1,4 +1,4 @@
-import { FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S } from './constants';
+import { COLONY_FLOOR, FLOOR_HATCH_S, FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S } from './constants';
 import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
@@ -24,12 +24,19 @@ const FAN = 0.6;
 const TURN_PENALTY = 0.05;
 const LOOKAHEAD = 3;
 const PHER_LOOKAHEAD = 4;
-const SENSE_FOOD = 10;
+/** Radius within which a wandering ant notices food (pickup distance is separate and unchanged). */
+const SENSE_FOOD = 16;
+/** Home tether for wandering ants: beyond TETHER_R px from the nest the desired heading is blended toward home... */
+const TETHER_R = 60;
+/** ...with weight TETHER_K * (distance - TETHER_R) / TETHER_R, clamped to [0, TETHER_MAX]. */
+const TETHER_K = 0.15;
+const TETHER_MAX = 0.6;
 const PICKUP_DIST = 1.5;
 const DEPOSIT = 0.5;
 const MAX_DT = 0.5;
 const WANDER_JITTER = 0.6; // full range of per-step heading noise (+-0.3 rad)
 const TWO_PI = Math.PI * 2;
+const FAN_TURNS = [-FAN, 0, FAN];
 
 function wrapAngle(a: number): number {
   a = (a + Math.PI) % TWO_PI;
@@ -43,8 +50,10 @@ export class World {
   ants: Ant[] = [];
   food: FoodItem[] = [];
   stock = 0;
-  /** Reserved for save compatibility; unused. */
+  /** Seconds accumulated toward the next colony-floor egg (0 while the colony is at or above the floor). */
   hatchProgress = 0;
+  /** True once the first ant has appeared (set by spawnAnt); the colony floor only applies from then on. */
+  started = false;
   time = 0;
   nextId = 1;
   rng: Rng;
@@ -77,6 +86,7 @@ export class World {
       targetFood: null,
     };
     this.ants.push(ant);
+    this.started = true;
     return ant;
   }
 
@@ -125,8 +135,22 @@ export class World {
       this.stock -= FOOD_PER_ANT;
       this.spawnAnt();
     }
+    this.layFloorEgg();
     this.pher.step(STEP_S);
     this.time += STEP_S;
+  }
+
+  /** The queen keeps laying a few eggs: below COLONY_FLOOR ants a new one hatches every FLOOR_HATCH_S. */
+  private layFloorEgg(): void {
+    if (!this.started || this.ants.length >= COLONY_FLOOR) {
+      this.hatchProgress = 0;
+      return;
+    }
+    this.hatchProgress += STEP_S;
+    if (this.hatchProgress >= FLOOR_HATCH_S - 1e-9) {
+      this.hatchProgress = 0;
+      if (this.ants.length < MAX_ANTS) this.spawnAnt();
+    }
   }
 
   private findFood(id: number | null): FoodItem | undefined {
@@ -182,6 +206,11 @@ export class World {
       this.pher.deposit(ant.x, ant.y, DEPOSIT);
     } else if (ant.state === 'wander') {
       desired = ant.heading + (this.rng.next() - 0.5) * WANDER_JITTER;
+      const homeD = Math.hypot(ant.x - NEST.x, ant.y - NEST.y);
+      if (homeD > TETHER_R) {
+        const w = Math.min(TETHER_MAX, (TETHER_K * (homeD - TETHER_R)) / TETHER_R);
+        desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
+      }
       pherWeight = 0.15;
     }
 
@@ -203,7 +232,7 @@ export class World {
   private move(ant: Ant, desired: number, pherWeight: number): void {
     let best = desired;
     let bestScore = -Infinity;
-    for (const turn of [-FAN, 0, FAN]) {
+    for (const turn of FAN_TURNS) {
       const h = desired + turn;
       const c = Math.cos(h);
       const s = Math.sin(h);

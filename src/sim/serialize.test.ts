@@ -100,6 +100,30 @@ describe('validateSave', () => {
     expect(validateSave({ ...g, food: [{ ...(g.food as object[])[0], kind: 'pizza' }] })).toBeNull();
     expect(validateSave({ ...g, food: [{ id: 1 }] })).toBeNull();
   });
+  it('roundtrip keeps the started flag; old saves without it default from ants/time', () => {
+    const w = busyWorld();
+    expect(w.started).toBe(true);
+    const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
+    expect(s.started).toBe(true);
+    expect(worldFromSave(s).started).toBe(true);
+
+    const fresh = World.create(3);
+    const fs = JSON.parse(JSON.stringify(worldToSave(fresh, EXTRA))) as SaveV1;
+    expect(fs.started).toBe(false);
+    expect(worldFromSave(fs).started).toBe(false);
+
+    // Old save format: no `started` field at all.
+    const old = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+    delete old.started;
+    expect(validateSave(old)).not.toBeNull();
+    expect(worldFromSave(validateSave(old)!).started).toBe(true); // has ants
+    const oldEmptyEarly = JSON.parse(JSON.stringify(fs)) as Record<string, unknown>;
+    delete oldEmptyEarly.started;
+    expect(worldFromSave(validateSave(oldEmptyEarly)!).started).toBe(false); // no ants, time 0
+    const oldEmptyLate = { ...oldEmptyEarly, time: 100 };
+    expect(worldFromSave(validateSave(oldEmptyLate)!).started).toBe(true); // time > 30
+    expect(validateSave({ ...s, started: 'yes' })).toBeNull();
+  });
   it('rejects non-string pheromone and non-boolean introDone', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();
     expect(validateSave({ ...good(), introDone: 'yes' })).toBeNull();

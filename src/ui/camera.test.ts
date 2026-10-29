@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Camera, MAX_ZOOM } from './camera';
+import { Camera, MAX_ZOOM, easeCameraTo } from './camera';
 import { WORLD_W, WORLD_H, SCALE } from '../sim/constants';
 
 describe('Camera', () => {
@@ -126,5 +126,29 @@ describe('Camera', () => {
     expect(tl.y).toBeLessThanOrEqual(0 + 1e-9);
     expect(br.x).toBeGreaterThanOrEqual(WORLD_W - 1e-9);
     expect(br.y).toBeGreaterThanOrEqual(WORLD_H - 1e-9);
+  });
+});
+
+describe('easeCameraTo', () => {
+  const from = { x: 40, y: 150, zoom: 10 };
+  const to = { x: 100, y: 120, zoom: 4 };
+  it('starts at from, ends at to and clamps progress', () => {
+    expect(easeCameraTo(from, to, 0)).toEqual(from);
+    const end = easeCameraTo(from, to, 1);
+    expect(end.x).toBeCloseTo(to.x, 9);
+    expect(end.y).toBeCloseTo(to.y, 9);
+    expect(end.zoom).toBeCloseTo(to.zoom, 9);
+    expect(easeCameraTo(from, to, -3)).toEqual(from);
+    expect(easeCameraTo(from, to, 7).zoom).toBeCloseTo(4, 9);
+    expect(easeCameraTo(from, to, NaN).zoom).toBeCloseTo(4, 9);
+  });
+  it('moves monotonically in between', () => {
+    let prev = easeCameraTo(from, to, 0);
+    for (let i = 1; i <= 10; i++) {
+      const p = easeCameraTo(from, to, i / 10);
+      expect(p.zoom).toBeLessThanOrEqual(prev.zoom + 1e-12);
+      expect(p.x).toBeGreaterThanOrEqual(prev.x - 1e-12);
+      prev = p;
+    }
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S, WORLD_H, WORLD_W } from './constants';
+import { COLONY_FLOOR, FLOOR_HATCH_S, FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S, WORLD_H, WORLD_W } from './constants';
 import { Surface } from './terrain';
 import { World } from './world';
 
@@ -88,7 +88,7 @@ describe('World', () => {
     a.lifespan = 1e6;
     a.state = 'toFood';
     a.targetFood = f.id;
-    run(w, 30);
+    run(w, 12); // shorter than FLOOR_HATCH_S, so no floor egg muddies the delivery accounting
     expect(delivered(w, 1)).toBe(3);
     expect(w.food).toHaveLength(0);
   });
@@ -171,13 +171,75 @@ describe('World', () => {
     expect(w.ants).toHaveLength(0);
   });
 
-  it('queen survives: world with no ants and no food keeps running 1000 s without throwing', () => {
+  it('queen survives: a world that never started stays empty and keeps running 1000 s without throwing', () => {
     const w = World.create(7);
+    expect(w.started).toBe(false);
     expect(() => {
       for (let i = 0; i < 2000; i++) w.step(0.5);
     }).not.toThrow();
     expect(w.ants).toHaveLength(0);
     expect(w.time).toBeGreaterThan(900);
+  });
+
+  it('queen survives: a started colony with zero ants and zero stock recovers to the floor', () => {
+    const w = flatWorld(7);
+    w.spawnAnt().lifespan = 0.01;
+    run(w, 1);
+    expect(w.started).toBe(true);
+    expect(w.ants).toHaveLength(0);
+    expect(w.stock).toBe(0);
+    expect(() => run(w, 200)).not.toThrow();
+    expect(w.ants).toHaveLength(COLONY_FLOOR);
+  });
+
+  describe('colony floor (queen keeps laying a few eggs)', () => {
+    function startedEmpty(seed = 21): World {
+      const w = flatWorld(seed);
+      w.spawnAnt().lifespan = 0.01;
+      run(w, 0.5);
+      expect(w.ants).toHaveLength(0);
+      expect(w.hatchProgress).toBeLessThan(1);
+      w.hatchProgress = 0;
+      return w;
+    }
+
+    it('spawnAnt marks the colony as started', () => {
+      const w = World.create(1);
+      expect(w.started).toBe(false);
+      w.spawnAnt();
+      expect(w.started).toBe(true);
+    });
+
+    it('hatches one ant after FLOOR_HATCH_S and five after about five times that, then stops', () => {
+      expect(FLOOR_HATCH_S).toBe(15);
+      expect(COLONY_FLOOR).toBe(5);
+      const w = startedEmpty();
+      run(w, FLOOR_HATCH_S - 1);
+      expect(w.ants).toHaveLength(0);
+      run(w, 2);
+      expect(w.ants).toHaveLength(1);
+      run(w, 15);
+      expect(w.ants).toHaveLength(2);
+      run(w, 15 * 3 + 1);
+      expect(w.ants).toHaveLength(5);
+      run(w, 150);
+      expect(w.ants).toHaveLength(5);
+      expect(w.hatchProgress).toBe(0);
+    });
+
+    it('does not run for a world that has not started', () => {
+      const w = flatWorld(22);
+      run(w, 100);
+      expect(w.ants).toHaveLength(0);
+      expect(w.hatchProgress).toBe(0);
+    });
+
+    it('respects MAX_ANTS', () => {
+      const w = startedEmpty(23);
+      for (let i = 0; i < MAX_ANTS; i++) w.spawnAnt();
+      run(w, 60);
+      expect(w.ants.length).toBeLessThanOrEqual(MAX_ANTS);
+    });
   });
 
   it('dt of 3600 s is clamped and does not produce NaN positions', () => {
@@ -207,6 +269,25 @@ describe('World', () => {
     w.step(Infinity);
     expect(w.time).toBe(before);
   });
+
+  // First-minute discovery (seeds 1-30, flat ground, one beetle 40 px from the nest at a fixed angle, ONE ant, 60 s).
+  // The colony floor is switched off (started = false) so only the ant's own sensing/tether is measured.
+  // Reviewer's 100-seed measurement at 40 px / 70 px: before sense 10, no tether: 1 ant 35 % / 10 %, 5 ants 95 % / 39 %.
+  // After (sense 16 + tether, floor off): 1 ant 72 % / 25 %, 5 ants 100 % / 46 %; with the colony floor on, 1 ant 98 % / 42 %.
+  // ("found" = some ant left wander within 60 s; this test counts actual deliveries, 13/30 before, and requires >= 15/30.)
+  it('a single ant delivers food placed 40 px from the nest in at least half of 30 seeds within 60 s', () => {
+    let success = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const w = flatWorld(seed);
+      const ang = ((seed * 37) % 360) * (Math.PI / 180);
+      w.placeFood('beetle', NEST.x + Math.cos(ang) * 40, NEST.y + Math.sin(ang) * 40);
+      w.spawnAnt().lifespan = 1e6;
+      w.started = false;
+      run(w, 60);
+      if (delivered(w, 1) > 0) success++;
+    }
+    expect(success).toBeGreaterThanOrEqual(15);
+  }, 30_000);
 
   it('trail forms: pheromone along the food-nest line exceeds the sum 15 px off the line', () => {
     const w = flatWorld(9);

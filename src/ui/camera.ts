@@ -4,6 +4,23 @@ export const MAX_ZOOM = 16;
 
 const ok = (n: number): boolean => Number.isFinite(n);
 
+export interface CameraPose {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/** Smoothstep-eased pose between `from` and `to` for progress `u` (clamped to 0..1); zoom is interpolated geometrically. */
+export function easeCameraTo(from: CameraPose, to: CameraPose, u: number): CameraPose {
+  const t = Number.isFinite(u) ? Math.min(1, Math.max(0, u)) : 1;
+  const k = t * t * (3 - 2 * t);
+  return {
+    x: from.x + (to.x - from.x) * k,
+    y: from.y + (to.y - from.y) * k,
+    zoom: from.zoom * Math.pow(to.zoom / from.zoom, k),
+  };
+}
+
 /**
  * Pure camera logic. `x`,`y` = view centre in world pixels,
  * `zoom` = screen pixels per world pixel.

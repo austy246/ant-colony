@@ -1,15 +1,17 @@
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
 import { clearSave, loadGame, saveGame } from './save';
+import { NEST, SCALE } from './sim/constants';
 import { worldFromSave, worldToSave } from './sim/serialize';
 import { World } from './sim/world';
-import { Camera } from './ui/camera';
+import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
 import { buildToolbar } from './ui/toolbar';
 
 const AUTOSAVE_MS = 10_000;
 const HUD_MS = 250;
 const MAX_DT = 0.25;
+const SETTLE_S = 1;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -65,20 +67,42 @@ export async function startGame(): Promise<void> {
 
   // --- saving ---
   let saving = false;
+  let pendingSave = false;
   let resetting = false;
-  const autosave = async (): Promise<void> => {
-    if (!introDone || resetting || saving) return;
-    saving = true;
-    try {
-      await saveGame(
-        worldToSave(world, { introDone, camera: { x: camera.x, y: camera.y, zoom: camera.zoom } }),
-      );
-    } catch (err) {
-      console.warn('Autosave failed', err);
-    } finally {
-      saving = false;
+  let inFlight: Promise<void> = Promise.resolve();
+  /** Never rejects. A save requested while one is running is remembered and run once more afterwards. */
+  const autosave = (): Promise<void> => {
+    if (!introDone || resetting) return Promise.resolve();
+    if (saving) {
+      pendingSave = true;
+      return inFlight;
     }
+    saving = true;
+    inFlight = (async () => {
+      try {
+        await saveGame(
+          worldToSave(world, { introDone, camera: { x: camera.x, y: camera.y, zoom: camera.zoom } }),
+        );
+      } catch (err) {
+        console.warn('Autosave failed', err);
+      } finally {
+        saving = false;
+        if (pendingSave) {
+          pendingSave = false;
+          void autosave();
+        }
+      }
+    })();
+    return inFlight;
   };
+
+  /** After the intro the camera eases to the default zoom (SCALE) centred on the nest. */
+  let settle: { from: CameraPose; to: CameraPose; t: number } | null = null;
+  const cancelSettle = (): void => {
+    settle = null;
+  };
+  canvas.addEventListener('wheel', cancelSettle, { passive: true });
+  canvas.addEventListener('pointerdown', cancelSettle);
 
   const finishIntro = (): void => {
     introDone = true;
@@ -91,6 +115,11 @@ export async function startGame(): Promise<void> {
       (v) => renderer.setView(v),
     );
     renderer.setQueen(null);
+    settle = {
+      from: { x: camera.x, y: camera.y, zoom: camera.zoom },
+      to: { x: NEST.x, y: NEST.y, zoom: SCALE },
+      t: 0,
+    };
     hud.hidden = false;
     panel.hidden = false;
     updateHud();
@@ -116,7 +145,8 @@ export async function startGame(): Promise<void> {
   newGameBtn.addEventListener('click', () => {
     if (!window.confirm('Opravdu začít novou hru? Uložený postup se smaže.')) return;
     resetting = true;
-    void clearSave().then(() => location.reload());
+    // Wait for any in-flight save so it cannot write the old game back after clearSave().
+    void inFlight.then(() => clearSave()).then(() => location.reload());
   });
 
   // --- events ---
@@ -137,7 +167,7 @@ export async function startGame(): Promise<void> {
 
   // --- loop ---
   let hudAcc = 0;
-  const frame = (now: number): void => {
+  const step = (now: number): void => {
     const dt = Math.max(0, Math.min((now - last) / 1000, MAX_DT));
     last = now;
     if (intro && !introDone) {
@@ -153,13 +183,30 @@ export async function startGame(): Promise<void> {
     }
     world.step(dt);
     if (intro && !introDone && intro.done) finishIntro();
+    if (settle) {
+      settle.t += dt;
+      const p = easeCameraTo(settle.from, settle.to, settle.t / SETTLE_S);
+      camera.x = p.x;
+      camera.y = p.y;
+      camera.zoom = p.zoom;
+      camera.clamp();
+      if (settle.t >= SETTLE_S) settle = null;
+    }
     renderer.draw();
     hudAcc += dt;
     if (hudAcc >= HUD_MS / 1000) {
       hudAcc = 0;
       if (introDone) updateHud();
     }
+  };
+  const frame = (now: number): void => {
+    // Schedule first so one exception can never freeze the loop.
     requestAnimationFrame(frame);
+    try {
+      step(now);
+    } catch (err) {
+      console.error('Frame failed', err);
+    }
   };
   requestAnimationFrame(frame);
 }
