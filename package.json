@@ -1,0 +1,29 @@
+{
+  "name": "ant-colony",
+  "version": "0.1.0",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/austy246/ant-colony.git"
+  },
+  "bugs": {
+    "url": "https://github.com/austy246/ant-colony/issues"
+  },
+  "homepage": "https://github.com/austy246/ant-colony#readme",
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.6",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "private": true,
+  "type": "module"
+}

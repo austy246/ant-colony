@@ -1,0 +1,9 @@
+export const WORLD_W = 320;
+export const WORLD_H = 200;
+export const SCALE = 4;
+export const NEST = { x: 40, y: 150, r: 6 } as const;
+export const FOOD_PER_ANT = 3;
+export const MAX_ANTS = 300;
+export const LIFESPAN_S = 600;
+export const MAX_PHEROMONE = 5;
+export const STEP_S = 1 / 30;
