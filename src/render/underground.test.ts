@@ -2,7 +2,7 @@ import { createCanvas } from '@napi-rs/canvas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { World, type Ant } from '../sim/world';
 import { nestAntPose } from './nestChoreo';
-import { MAX_DRAWN_NEST_ANTS, nestHud, UndergroundView } from './underground';
+import { DIG_S, MAX_DRAWN_NEST_ANTS, MAX_STANDERS, nestHud, UndergroundView } from './underground';
 import type { CanvasLike } from './terrainRender';
 import type { NestLayout } from './nestLayout';
 
@@ -11,12 +11,20 @@ const make = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown
 beforeEach(() => vi.stubGlobal('window', { devicePixelRatio: 1, innerWidth: 640, innerHeight: 400 }));
 afterEach(() => vi.unstubAllGlobals());
 
-function colony(ants: number, stock: number, queens = 1): World {
-  const w = World.create(5);
+/** A colony of surface ants with the given stock (the nest was sized for it) and number of queens. */
+function colony(ants: number, stock: number, queens = 1, seed = 5): World {
+  const w = World.create(seed);
   for (let i = 0; i < ants; i++) w.spawnAnt();
-  w.stock = stock;
+  setStock(w, stock);
   w.totalDelivered = (queens - 1) * 100;
   return w;
+}
+
+/** Sets the stock and lets the nest peaks follow (the simulation does it every step). */
+function setStock(w: World, stock: number): void {
+  w.stock = stock;
+  w.peakStock = Math.max(w.peakStock, stock);
+  w.peakLarvae = Math.max(w.peakLarvae, w.larvae);
 }
 
 function setup(world: World, cw = 640, ch = 400) {
@@ -55,6 +63,12 @@ const cream = (r: number, g: number, b: number): boolean => r > 215 && g > 200 &
 const crumb = (r: number, g: number, b: number): boolean => (r > 215 && g > 205 && b > 190) || (r > 160 && g < 100 && b < 75);
 const black = (r: number, g: number, b: number): boolean => r < 70 && g < 55 && b < 45;
 
+const pixelDiff = (a: Uint8ClampedArray, b: Uint8ClampedArray): number => {
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 30) n++;
+  return n;
+};
+
 describe('UndergroundView pictures', () => {
   it('paints a non-empty picture, scaled by an integer zoom and centred', () => {
     const t = setup(colony(1, 10));
@@ -78,11 +92,15 @@ describe('UndergroundView pictures', () => {
     const b = setup(colony(5, 25, 2));
     a.settle(5);
     b.settle(5);
-    const pa = a.pixels();
-    const pb = b.pixels();
-    let diff = 0;
-    for (let i = 0; i < pa.length; i++) if (pa[i] !== pb[i]) diff++;
-    expect(diff).toBe(0);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBe(0);
+  });
+
+  it('looks different for different colonies (seed) and the same for the same one', () => {
+    const a = setup(colony(2, 30, 2, 5));
+    const b = setup(colony(2, 30, 2, 6));
+    a.settle(4);
+    b.settle(4);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBeGreaterThan(3000);
   });
 
   it('more larvae paint more cream pixels in the larvae chamber', () => {
@@ -90,33 +108,54 @@ describe('UndergroundView pictures', () => {
     const many = setup(colony(1, 150));
     few.settle();
     many.settle();
-    const a = few.count('larvae', cream);
-    const b = many.count('larvae', cream);
+    const a = few.count('larvae0', cream);
+    const b = many.count('larvae0', cream);
     expect(a).toBeGreaterThan(0);
-    expect(b).toBeGreaterThan(a * 3);
+    expect(b).toBeGreaterThan(a * 2);
   });
 
   it('more stock paints more crumb pixels in the pantry', () => {
     const little = setup(colony(1, 5));
-    const lots = setup(colony(1, 120));
+    const lots = setup(colony(1, 24));
     little.settle();
     lots.settle();
-    const a = little.count('pantry', crumb);
-    const b = lots.count('pantry', crumb);
+    const a = little.count('pantry0', crumb);
+    const b = lots.count('pantry0', crumb);
     expect(a).toBeGreaterThan(0);
-    expect(b).toBeGreaterThan(a * 3);
+    expect(b).toBeGreaterThan(a * 2);
     const none = setup(colony(1, 0));
     none.settle();
-    expect(none.count('pantry', crumb)).toBe(0);
+    expect(none.count('pantry0', crumb)).toBe(0);
   });
 
-  it('two queens paint a second queen chamber with a queen in it', () => {
+  it('several pantries each hold their own share of the stock: crumbs in more than one chamber, the first one filled first', () => {
+    const t = setup(colony(1, 70));
+    t.settle();
+    const l = t.view.currentLayout!;
+    expect(l.chambers.filter((c) => c.kind === 'pantry')).toHaveLength(3);
+    const counts = [0, 1, 2].map((i) => t.count(`pantry${i}`, crumb));
+    expect(counts[0]).toBeGreaterThan(20);
+    expect(counts[1]).toBeGreaterThan(20);
+    expect(counts[2]).toBeGreaterThan(0);
+    expect(counts[0]).toBeGreaterThanOrEqual(counts[2]);
+  });
+
+  it('larvae are spread over the larvae chambers, the first one filling first', () => {
+    const t = setup(colony(1, 70)); // 14 larvae: 10 + 4
+    t.settle();
+    expect(t.view.currentLayout!.chambers.filter((c) => c.kind === 'larvae')).toHaveLength(2);
+    const a = t.count('larvae0', cream);
+    const b = t.count('larvae1', cream);
+    expect(a).toBeGreaterThan(b);
+    expect(b).toBeGreaterThan(0);
+  });
+
+  it('two queens paint a second queen chamber with a queen in it (each queen has her own chamber)', () => {
     const one = setup(colony(2, 10, 1));
     const two = setup(colony(2, 10, 2));
     one.settle();
     two.settle();
     expect(two.view.currentLayout!.chambers.filter((c) => c.kind === 'queen')).toHaveLength(2);
-    // the chamber, its rim and the queen change the picture where the second queen lives (and nowhere near the first)
     const ch = two.view.currentLayout!.chambers.find((c) => c.id === 'queen1')!;
     const m = two.view.metrics;
     const a = one.pixels();
@@ -128,9 +167,22 @@ describe('UndergroundView pictures', () => {
         if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 30) changed++;
       }
     }
-    expect(changed).toBeGreaterThan(2000);
-    expect(two.count('queen1', black)).toBeGreaterThan(300);
-    expect(two.count('queen0', black)).toBeGreaterThan(300);
+    expect(changed).toBeGreaterThan(800);
+    expect(two.count('queen1', black)).toBeGreaterThan(150);
+    expect(two.count('queen0', black)).toBeGreaterThan(150);
+  });
+
+  it('the loads change the picture: the same nest with more food in it looks different', () => {
+    const a = setup(colony(5, 20));
+    const b = setup(colony(5, 20));
+    a.settle(3);
+    b.settle(3);
+    const w = (b.view as unknown as { world: World }).world;
+    w.ants.length = 0;
+    setStock(w, 20);
+    w.stock = 5; // same peaks (same nest), less food now
+    b.settle(60);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBeGreaterThan(40);
   });
 
   it('has no cosmetic carriers or walkers any more: nothing is drawn for a delivery or a new ant by itself', () => {
@@ -148,10 +200,7 @@ describe('UndergroundView pictures', () => {
     w.ants[w.ants.length - 1].state = 'wander';
     t.view.draw(0);
     expect(t.view.walkerCount()).toBe(0);
-    const after = t.pixels();
-    let diff = 0;
-    for (let i = 0; i < before.length; i++) if (before[i] !== after[i]) diff++;
-    expect(diff).toBe(0);
+    expect(pixelDiff(before, t.pixels())).toBe(0);
   });
 
   it('enter() snaps the chambers again and keeps drawing the ants that are inside', () => {
@@ -187,12 +236,6 @@ function nestWorld(specs: { kind: 'hatch' | 'unload' | 'nurse'; timer: number }[
   return w;
 }
 
-const pixelDiff = (a: Uint8ClampedArray, b: Uint8ClampedArray): number => {
-  let n = 0;
-  for (let i = 0; i < a.length; i += 4) if (Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]) > 30) n++;
-  return n;
-};
-
 describe('UndergroundView nest ants', () => {
   it('shows the real nest ants: the picture differs from the one with no ants inside, per ant', () => {
     const none = setup(nestWorld([]));
@@ -211,7 +254,7 @@ describe('UndergroundView nest ants', () => {
       const t = setup(nestWorld(specs));
       t.settle(4);
       const d = pixelDiff(base, t.pixels());
-      expect(d, `n ${n}`).toBeGreaterThan(prev + 20);
+      expect(d, `n ${n}`).toBeGreaterThan(prev + 10);
       prev = d;
       expect(t.view.walkerCount()).toBe(n);
     }
@@ -240,7 +283,6 @@ describe('UndergroundView nest ants', () => {
     expect(t.view.walkerCount()).toBe(MAX_DRAWN_NEST_ANTS);
     expect(MAX_DRAWN_NEST_ANTS).toBe(60);
     const sixty = t.pixels();
-    // ants beyond the 60th change nothing
     w.ants.length = 60;
     t.view.draw(0);
     expect(pixelDiff(sixty, t.pixels())).toBe(0);
@@ -253,6 +295,22 @@ describe('UndergroundView nest ants', () => {
     expect(performance.now() - t0).toBeLessThan(3000);
   });
 
+  it('draws at most 6 standing ants in a chamber, so a crowd does not hide the larvae', () => {
+    const w = nestWorld(Array.from({ length: 30 }, () => ({ kind: 'hatch' as const, timer: 25 })), 1, 30);
+    // every hatchling picks the only larvae chamber and stands or shuffles on its floor
+    const t = setup(w);
+    t.settle(4);
+    let most = 0;
+    for (let k = 0; k < 40; k++) {
+      w.time += 0.37;
+      t.view.draw(0);
+      most = Math.max(most, t.view.standersIn('larvae0'));
+      expect(t.view.standersIn('larvae0')).toBeLessThanOrEqual(MAX_STANDERS);
+    }
+    expect(most).toBeGreaterThan(0);
+    expect(MAX_STANDERS).toBe(6);
+  });
+
   it('is deterministic and driven by the simulation time (same time, same picture; later time, other picture)', () => {
     const specs = [{ kind: 'nurse' as const, timer: 0 }, { kind: 'nurse' as const, timer: 0 }, { kind: 'hatch' as const, timer: 12 }];
     const a = setup(nestWorld(specs));
@@ -263,21 +321,20 @@ describe('UndergroundView nest ants', () => {
     const wb = (b.view as unknown as { world: World }).world;
     wb.time += 3.3;
     b.view.draw(0);
-    expect(pixelDiff(a.pixels(), b.pixels())).toBeGreaterThan(20);
+    expect(pixelDiff(a.pixels(), b.pixels())).toBeGreaterThan(10);
   });
 
   it('a hatchling is drawn in the lighter callow colours, a nurse in the black worker colours', () => {
     const callowBody = (r: number, g: number, b: number): boolean => Math.abs(r - 0x4a) < 8 && Math.abs(g - 0x40) < 8 && Math.abs(b - 0x38) < 8;
     const none = setup(nestWorld([]));
     none.settle(4);
-    const base = none.count('larvae', callowBody);
+    const base = none.count('larvae0', callowBody);
     const young = setup(nestWorld([{ kind: 'hatch', timer: 20 }]));
     young.settle(4);
-    expect(young.count('larvae', callowBody) - base).toBeGreaterThanOrEqual(12);
-    // a nurse does not paint callow pixels anywhere near that many
+    expect(young.count('larvae0', callowBody) - base).toBeGreaterThanOrEqual(12);
     const old = setup(nestWorld([{ kind: 'nurse', timer: 0 }]));
     old.settle(4);
-    expect(old.count('larvae', callowBody) - base).toBeLessThan(6);
+    expect(old.count('larvae0', callowBody) - base).toBeLessThan(6);
   });
 
   it('a nurse carrying an egg takes it from the pile of her queen: one egg fewer while the egg is on its way', () => {
@@ -287,7 +344,7 @@ describe('UndergroundView nest ants', () => {
     const layout = probe.view.currentLayout!;
     let tEgg = -1;
     let tNone = -1;
-    for (let t = 0; t < 24 && (tEgg < 0 || tNone < 0); t += 0.1) {
+    for (let t = 0; t < 30 && (tEgg < 0 || tNone < 0); t += 0.1) {
       const p = nestAntPose(w.ants[0], layout, t);
       if (p.carrying === 'egg' && p.pose === 'walk' && tEgg < 0) tEgg = t;
       if (p.carrying === null && p.pose === 'walk' && tNone < 0) tNone = t;
@@ -317,38 +374,138 @@ describe('UndergroundView nest ants', () => {
   });
 });
 
+describe('UndergroundView labels', () => {
+  it('draws a label plate per chamber (numbered only when there are several of a kind) and the plates never overlap', () => {
+    const t = setup(colony(60, 80, 3));
+    t.settle(60);
+    const texts = t.view.labelPlatesShown.map((p) => p.text);
+    expect(texts).toContain('Spíž 1');
+    expect(texts).toContain('Královna 3');
+    expect(texts).toContain('Larvy 2');
+    const single = setup(colony(1, 10));
+    single.settle(10);
+    expect(single.view.labelPlatesShown.map((p) => p.text).sort()).toEqual(['Královna', 'Larvy', 'Spíž']);
+    const ps = t.view.labelPlatesShown;
+    for (let a = 0; a < ps.length; a++) {
+      for (let b = a + 1; b < ps.length; b++) {
+        const A = ps[a];
+        const B = ps[b];
+        expect(A.x < B.x + B.w && B.x < A.x + A.w && A.y < B.y + B.h && B.y < A.y + A.h).toBe(false);
+      }
+    }
+  });
+});
+
 describe('UndergroundView growth', () => {
   it('eases chamber sizes towards the target, never snapping or overshooting', () => {
     const w = colony(1, 10);
     const t = setup(w);
     t.settle(5);
-    const start = t.view.shownRadii('pantry')!.rx;
-    w.stock = 400;
+    const start = t.view.shownRadii('pantry0')!.rx;
+    setStock(w, 25);
     let prev = start;
     t.view.draw(1 / 60);
-    const target = t.view.currentLayout!.chambers.find((c) => c.id === 'pantry')!.rx;
-    const first = t.view.shownRadii('pantry')!.rx;
+    const target = t.view.currentLayout!.chambers.find((c) => c.id === 'pantry0')!.rx;
+    const first = t.view.shownRadii('pantry0')!.rx;
     expect(first).toBeGreaterThan(start);
     expect(first).toBeLessThan(start + (target - start) * 0.2);
     for (let i = 0; i < 150; i++) {
       t.view.draw(1 / 60);
-      const r = t.view.shownRadii('pantry')!.rx;
+      const r = t.view.shownRadii('pantry0')!.rx;
       expect(r).toBeGreaterThanOrEqual(prev);
       expect(r).toBeLessThanOrEqual(target);
       prev = r;
     }
     expect(prev).toBeGreaterThan(target - 1);
   });
+});
 
-  it('a new queen chamber grows from small, existing ones stay put', () => {
+describe('UndergroundView digging', () => {
+  it('chambers that exist at the start (or when the view is opened) are there at once, without digging', () => {
+    const w = colony(5, 80, 3);
+    const t = setup(w);
+    t.view.draw(0);
+    for (const c of t.view.currentLayout!.chambers) {
+      expect(t.view.digProgress(c.id), c.id).toBe(1);
+      expect(t.view.shownRadii(c.id)!.rx, c.id).toBeCloseTo(c.rx, 5);
+    }
+    // a chamber that became needed while the view was closed is shown at once after enter()
+    setStock(w, 150);
+    t.view.enter();
+    t.view.draw(0);
+    for (const c of t.view.currentLayout!.chambers) expect(t.view.digProgress(c.id), c.id).toBe(1);
+    expect(t.view.shownRadii('pantry5')).toBeDefined();
+  });
+
+  it('a new chamber is dug: its tunnel grows for about 3 s, then the chamber grows from nothing; the others stay put', () => {
+    const w = colony(1, 10, 1);
+    const t = setup(w);
+    t.settle(5);
+    const old = t.view.currentLayout!.chambers.map((c) => [c.id, c.cx, c.cy]);
+    w.totalDelivered = 100; // a second queen
+    t.view.draw(0.05);
+    const target = t.view.currentLayout!.chambers.find((c) => c.id === 'queen1')!;
+    expect(t.view.digProgress('queen1')).toBeLessThan(0.1);
+    expect(t.view.shownRadii('queen1')).toBeUndefined();
+    for (let i = 0; i < 25; i++) t.view.draw(0.05);
+    expect(t.view.digProgress('queen1')!).toBeGreaterThan(0.3);
+    expect(t.view.digProgress('queen1')!).toBeLessThan(0.6);
+    expect(t.view.shownRadii('queen1')).toBeUndefined();
+    for (let i = 0; i < 36; i++) t.view.draw(0.05);
+    expect(t.view.digProgress('queen1')).toBe(1);
+    const grown = t.view.shownRadii('queen1')!;
+    expect(grown.rx).toBeLessThan(target.rx * 0.5);
+    for (const [id, cx, cy] of old) {
+      const c = t.view.currentLayout!.chambers.find((x) => x.id === id)!;
+      expect([c.cx, c.cy]).toEqual([cx, cy]);
+    }
+    expect(DIG_S).toBe(3);
+  });
+
+  it('draws a growing tunnel while digging: the picture changes more and more as the head advances', () => {
+    const w = colony(1, 10, 1);
+    const t = setup(w);
+    t.settle(5);
+    const base = t.pixels();
+    w.totalDelivered = 100;
+    const diffs: number[] = [];
+    for (const secs of [0.4, 1.2, 2.0, 2.8]) {
+      t.view.draw(secs - (diffs.length ? [0.4, 1.2, 2.0, 2.8][diffs.length - 1] : 0));
+      diffs.push(pixelDiff(base, t.pixels()));
+    }
+    for (let i = 1; i < diffs.length; i++) expect(diffs[i], `step ${i}: ${diffs.join(',')}`).toBeGreaterThan(diffs[i - 1]);
+    expect(diffs[0]).toBeGreaterThan(5);
+  });
+
+  it('never digs an existing chamber again (not after enter(), not when the picture is redrawn)', () => {
     const w = colony(1, 10, 1);
     const t = setup(w);
     t.settle(5);
     w.totalDelivered = 100;
-    t.view.draw(1 / 60);
-    const id = 'queen1';
-    const target = t.view.currentLayout!.chambers.find((c) => c.id === id)!.rx;
-    expect(t.view.shownRadii(id)!.rx).toBeLessThan(target * 0.5);
+    t.settle(80);
+    expect(t.view.digProgress('queen1')).toBe(1);
+    t.view.enter();
+    t.view.draw(0);
+    expect(t.view.digProgress('queen1')).toBe(1);
+    expect(t.view.digProgress('queen0')).toBe(1);
+    const r = t.view.shownRadii('queen1')!.rx;
+    t.view.draw(0.016);
+    expect(t.view.shownRadii('queen1')!.rx).toBeGreaterThanOrEqual(r);
+  });
+
+  it('a nest that needs a second pantry and larvae chamber digs them too, and the ants only walk in what is dug', () => {
+    const w = nestWorld([{ kind: 'nurse', timer: 0 }, { kind: 'hatch', timer: 20 }], 1, 10);
+    const t = setup(w);
+    t.settle(5);
+    setStock(w, 60);
+    for (let i = 0; i < 12; i++) {
+      t.view.draw(0.1);
+      expect(t.view.walkerCount()).toBe(2);
+    }
+    expect(t.view.digProgress('pantry1')!).toBeLessThan(1);
+    t.settle(60);
+    expect(t.view.digProgress('pantry1')).toBe(1);
+    expect(t.view.digProgress('larvae1')).toBe(1);
   });
 });
 

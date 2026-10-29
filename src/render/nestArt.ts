@@ -4,9 +4,9 @@
  * Nothing here touches the world; underground.ts composes it every frame.
  */
 import { createRng } from '../sim/rng';
-import { hash2, Raster, shade, vnoise } from './raster';
+import { hash2, parseColor, Raster, shade, vnoise } from './raster';
 import type { Ctx2D } from './sprites';
-import { nestLayout, type Chamber, type Pt, type Tunnel } from './nestLayout';
+import { FLOOR, insideChamber, nestLayout, type Blob, type Lobe, type Pt, type Tunnel } from './nestLayout';
 
 // ---- palette (consistent with the surface: same soil / stone / needle / moss families) ---------------------------------
 
@@ -20,26 +20,40 @@ const NEEDLE = ['#c9822f', '#9b5d22'];
 const ROOT = { dark: '#3a2517', mid: '#6b4a2c', lit: '#8a6339' };
 const CREAM = { body: '#f1e6c4', light: '#faf3da', seg: '#d9c79a', under: '#bda677', head: '#d4a65e', eye: '#4a3524' };
 
+// ---- per-colony tint ---------------------------------------------------------------------------------------------------
+
+export type Tint = (col: string) => string;
+const IDENTITY: Tint = (c) => c;
+export const NO_TINT: Tint = IDENTITY;
+
+/** A colony's own shade of the soil: +-6 % brightness and a little warmer or cooler, the same for every colour of the picture. */
+export function colonyTint(seed: number): Tint {
+  const br = 1 + (hash2(seed, 1, 77) - 0.5) * 0.12;
+  const hue = (hash2(seed, 2, 78) - 0.5) * 0.12;
+  const cache = new Map<string, string>();
+  return (col) => {
+    let v = cache.get(col);
+    if (v === undefined) {
+      const [r, g, b] = parseColor(col);
+      const h = (n: number): string => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+      v = `#${h(r * br * (1 + hue * 0.5))}${h(g * br)}${h(b * br * (1 - hue * 0.5))}`;
+      cache.set(col, v);
+    }
+    return v;
+  };
+}
+
 // ---- backdrop ---------------------------------------------------------------------------------------------------------
 
-/** Rough clearance map (true = free): stones, pebbles and roots keep away from every tunnel and from the smallest chambers. */
-function clearance(): (x: number, y: number, r: number) => boolean {
-  const l = nestLayout({ ants: 0, stock: 0, larvae: 0, queens: 8, width: 320, height: 200 });
-  const segs: { a: Pt; b: Pt; w: number }[] = [];
-  for (const t of l.tunnels) for (let i = 0; i + 1 < t.points.length; i++) segs.push({ a: t.points[i], b: t.points[i + 1], w: t.width });
+/** Rough clearance map (true = free): stones, pebbles and roots keep away from every tunnel and from every chamber at its largest size. */
+function clearance(seed: number): (x: number, y: number, r: number) => boolean {
+  const l = nestLayout({ seed, queens: 8, pantries: 6, larvaeChambers: 4, loads: { ants: 0, pantry: [], larvae: [] }, width: 320, height: 200 });
+  const rooms = l.chambers.map((c) => ({ ...c, rx: c.rxMax, ry: c.ryMax }));
+  const pts: { x: number; y: number; w: number }[] = [];
+  for (const t of l.tunnels) t.points.forEach((p, i) => pts.push({ x: p.x, y: p.y, w: t.widths[i] }));
   return (x, y, r) => {
-    for (const c of l.chambers) {
-      const nx = (x - c.cx) / (c.rx + r + 3);
-      const ny = (y - c.cy) / (c.ry + r + 3);
-      if (nx * nx + ny * ny < 1) return false;
-    }
-    for (const s of segs) {
-      const dx = s.b.x - s.a.x;
-      const dy = s.b.y - s.a.y;
-      const L2 = dx * dx + dy * dy || 1;
-      const t = Math.max(0, Math.min(1, ((x - s.a.x) * dx + (y - s.a.y) * dy) / L2));
-      if (Math.hypot(x - (s.a.x + dx * t), y - (s.a.y + dy * t)) < s.w / 2 + r + 2) return false;
-    }
+    for (const c of rooms) if (insideChamber(c, x, y, r + 3)) return false;
+    for (const p of pts) if (Math.hypot(x - p.x, y - p.y) < p.w / 2 + r + 2) return false;
     return true;
   };
 }
@@ -60,7 +74,8 @@ function setRgb(R: Raster, x: number, y: number, col: string): void {
 
 export function renderBackdrop(w: number, h: number, seed: number): Raster {
   const R = new Raster(w, h);
-  const free = clearance();
+  const free = clearance(seed);
+  const T = colonyTint(seed);
   const rng = createRng((seed ^ 0x5eed) >>> 0);
   const gy: number[] = [];
   for (let x = 0; x < w; x++) gy.push(groundY(x, seed));
@@ -84,7 +99,7 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
       if (n > 0.955) k = Math.max(0, k - 1);
       else if (n < 0.04) k = Math.min(SOIL.length - 1, k + 1);
       // dark humus right under the grass
-      setRgb(R, x, y, d < 2 ? '#3e2c1d' : d < 4 && n < 0.5 ? '#4a3524' : SOIL[k]);
+      setRgb(R, x, y, T(d < 2 ? '#3e2c1d' : d < 4 && n < 0.5 ? '#4a3524' : SOIL[k]));
     }
   }
 
@@ -108,11 +123,11 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
     const y = Math.floor(GROUND_Y + 6 + rng() * (h - GROUND_Y - 8));
     if (!free(x, y, 2)) continue;
     p++;
-    const c = PEBBLE[Math.floor(rng() * PEBBLE.length)];
+    const c = T(PEBBLE[Math.floor(rng() * PEBBLE.length)]);
     R.px(x, y, c);
     R.px(x + 1, y, c);
-    if (rng() < 0.5) R.px(x, y + 1, PEBBLE[0]);
-    if (rng() < 0.35) R.px(x, y - 1, PEBBLE[3]);
+    if (rng() < 0.5) R.px(x, y + 1, T(PEBBLE[0]));
+    if (rng() < 0.35) R.px(x, y - 1, T(PEBBLE[3]));
   }
 
   // 4. roots hanging from the surface, wiggling down and branching
@@ -129,10 +144,10 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
       y += Math.cos(dir) * 0.9 + 0.35;
       if (!free(x, y, 1)) break;
       const thick = i < len * 0.45 ? 2 : 1;
-      R.px(x, y, ROOT.mid);
+      R.px(x, y, T(ROOT.mid));
       if (thick === 2) {
-        R.px(x + 1, y, ROOT.dark);
-        R.px(x - 1, y, ROOT.lit);
+        R.px(x + 1, y, T(ROOT.dark));
+        R.px(x - 1, y, T(ROOT.lit));
       }
       if (i > 8 && i % 11 === 0 && rng() < 0.7) {
         // side root
@@ -143,7 +158,7 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
           bx += Math.sin(bd + (rng() - 0.5) * 0.5);
           by += Math.cos(bd) * 0.5 + 0.3;
           if (!free(bx, by, 1)) break;
-          R.px(bx, by, j % 3 === 0 ? ROOT.lit : ROOT.mid);
+          R.px(bx, by, T(j % 3 === 0 ? ROOT.lit : ROOT.mid));
         }
       }
     }
@@ -190,7 +205,7 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
   // 7. the nest mound: soil crumbs on its flanks (the shaft itself is carved by the tunnel layer)
   for (let x = 160 - 24; x <= 160 + 24; x++) {
     const g = gy[x];
-    for (let j = 0; j < 3; j++) setRgb(R, x, g + j, j === 0 ? '#7d6244' : j === 1 ? '#6b5238' : '#5f4a33');
+    for (let j = 0; j < 3; j++) setRgb(R, x, g + j, T(j === 0 ? '#7d6244' : j === 1 ? '#6b5238' : '#5f4a33'));
     if (hash2(x, 41, seed) < 0.25) setRgb(R, x, g - 1, '#8d7152');
   }
   return R;
@@ -198,18 +213,52 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
 
 // ---- painting helpers (fillRect based; the context is in fine pixels) ------------------------------------------------
 
-export function ellipseRows(cx: number, cy: number, rx: number, ry: number, cb: (y: number, x0: number, w: number) => void): void {
-  if (!(rx > 0 && ry > 0)) return;
-  const y0 = Math.floor(cy - ry);
-  const y1 = Math.ceil(cy + ry);
-  for (let y = y0; y < y1; y++) {
-    const ny = (y + 0.5 - cy) / ry;
-    if (ny <= -1 || ny >= 1) continue;
-    const half = rx * Math.sqrt(1 - ny * ny);
-    const a = Math.round(cx - half);
-    const b = Math.round(cx + half);
-    if (b > a) cb(y, a, b - a);
+/** Rows of a blob as [y, x0, x1) triples relative to the centre, cached by outline and (half pixel) size. */
+const spanCache = new WeakMap<readonly Lobe[], Map<string, Int16Array>>();
+
+export function blobSpans(lobes: readonly Lobe[], rx: number, ry: number): Int16Array {
+  let m = spanCache.get(lobes);
+  if (!m) {
+    m = new Map();
+    spanCache.set(lobes, m);
   }
+  const key = `${Math.round(rx * 2)},${Math.round(ry * 2)}`;
+  let out = m.get(key);
+  if (!out) {
+    if (m.size > 160) m.clear();
+    const b: Blob = { cx: 0, cy: 0, rx: Math.round(rx * 2) / 2, ry: Math.round(ry * 2) / 2, lobes };
+    const amp = 1 + lobes.reduce((s, l) => s + Math.abs(l.a), 0);
+    const ex = Math.ceil(b.rx * amp) + 1;
+    const ey = Math.ceil(b.ry * amp) + 1;
+    const v: number[] = [];
+    if (b.rx > 0.5 && b.ry > 0.5) {
+      for (let y = -ey; y <= Math.ceil(FLOOR * b.ry); y++) {
+        let start = 0;
+        let inRun = false;
+        for (let x = -ex; x <= ex + 1; x++) {
+          const inside = x <= ex && insideChamber(b, x + 0.5, y + 0.5);
+          if (inside && !inRun) {
+            start = x;
+            inRun = true;
+          } else if (!inside && inRun) {
+            v.push(y, start, x);
+            inRun = false;
+          }
+        }
+      }
+    }
+    out = Int16Array.from(v);
+    m.set(key, out);
+  }
+  return out;
+}
+
+/** Calls `cb(y, x, w)` for every row run of the blob placed at (cx, cy) (the centre is an integer). */
+export function eachSpan(lobes: readonly Lobe[], cx: number, cy: number, rx: number, ry: number, cb: (y: number, x: number, w: number) => void): void {
+  const sp = blobSpans(lobes, rx, ry);
+  const ox = Math.round(cx);
+  const oy = Math.round(cy);
+  for (let i = 0; i < sp.length; i += 3) cb(oy + sp[i], ox + sp[i + 1], sp[i + 2] - sp[i + 1]);
 }
 
 const RIM_OUT = '#1d130a';
@@ -218,103 +267,100 @@ const RIM_MID = '#5f4a33';
 const RIM_DARK = '#46341f';
 
 /** Rim of a chamber: dark outline, lit edge on the upper half (light from the upper left), darker edge below. */
-export function paintChamberRim(c: Ctx2D, ch: Chamber, rx: number, ry: number): void {
-  c.fillStyle = RIM_OUT;
-  ellipseRows(ch.cx, ch.cy, rx + 2.3, ry + 2.3, (y, x, w) => c.fillRect(x, y, w, 1));
-  ellipseRows(ch.cx, ch.cy, rx + 1.3, ry + 1.3, (y, x, w) => {
+export function paintChamberRim(c: Ctx2D, ch: Blob, rx: number, ry: number, tint: Tint = IDENTITY): void {
+  c.fillStyle = tint(RIM_OUT);
+  eachSpan(ch.lobes, ch.cx, ch.cy, rx + 2.3, ry + 2.3, (y, x, w) => c.fillRect(x, y, w, 1));
+  eachSpan(ch.lobes, ch.cx, ch.cy, rx + 1.3, ry + 1.3, (y, x, w) => {
     const t = (y + 0.5 - ch.cy) / ry;
-    c.fillStyle = t < -0.35 ? RIM_LIT : t < 0.2 ? RIM_MID : RIM_DARK;
+    c.fillStyle = tint(t < -0.35 ? RIM_LIT : t < 0.2 ? RIM_MID : RIM_DARK);
     c.fillRect(x, y, w, 1);
   });
 }
 
 const ROOMS = ['#3a2616', '#46301b', '#533821', '#614327', '#6d4a2b'];
 
+/** y of the lit line of the packed floor: ants, crumbs and eggs stand on it. */
+export const floorY = (ch: Blob, ry: number): number => Math.round(ch.cy) + Math.floor(FLOOR * ry) - 2;
+
 /** Warm dim inside of a chamber: dark ceiling, a faint glow, a lighter packed floor. */
-export function paintChamberInterior(c: Ctx2D, ch: Chamber, rx: number, ry: number): void {
-  ellipseRows(ch.cx, ch.cy, rx, ry, (y, x, w) => {
+export function paintChamberInterior(c: Ctx2D, ch: Blob, rx: number, ry: number, tint: Tint = IDENTITY): void {
+  eachSpan(ch.lobes, ch.cx, ch.cy, rx, ry, (y, x, w) => {
     const t = (y + 0.5 - ch.cy) / ry;
-    c.fillStyle = t < -0.6 ? ROOMS[0] : t < -0.25 ? ROOMS[1] : t < 0.05 ? ROOMS[2] : t < 0.35 ? ROOMS[3] : t < 0.62 ? ROOMS[4] : '#7d5833';
+    c.fillStyle = tint(t < -0.6 ? ROOMS[0] : t < -0.25 ? ROOMS[1] : t < 0.05 ? ROOMS[2] : t < 0.35 ? ROOMS[3] : t < 0.62 ? ROOMS[4] : '#7d5833');
     c.fillRect(x, y, w, 1);
   });
   // glow
   for (const [k, a] of [[0.8, 0.07], [0.55, 0.09], [0.32, 0.1]] as const) {
     c.fillStyle = `rgba(224,150,64,${a})`;
-    ellipseRows(ch.cx, ch.cy + ry * 0.18, rx * k, ry * k * 0.85, (y, x, w) => c.fillRect(x, y, w, 1));
+    eachSpan(ch.lobes, ch.cx, ch.cy - Math.round(ry * 0.18), rx * k, ry * k * 0.85, (y, x, w) => c.fillRect(x, y, w, 1));
   }
-  // floor line (lit edge of the packed floor) and dark base
-  const fy = Math.round(ch.cy + ry * 0.62);
-  ellipseRows(ch.cx, ch.cy, rx, ry, (y, x, w) => {
+  // floor line (lit edge of the packed floor) and a dark base below it
+  const fy = floorY(ch, ry);
+  eachSpan(ch.lobes, ch.cx, ch.cy, rx, ry, (y, x, w) => {
     if (y === fy) {
       c.fillStyle = 'rgba(150,100,50,.55)';
       c.fillRect(x + 2, y, Math.max(0, w - 4), 1);
-    } else if (y >= Math.round(ch.cy + ry) - 2) {
+    } else if (y > fy) {
       c.fillStyle = 'rgba(12,7,3,.45)';
       c.fillRect(x, y, w, 1);
     }
   });
 }
 
-/** Axis-aligned segments become single rects; diagonals are stamped pixel by pixel. */
-function strokeSeg(c: Ctx2D, a: Pt, b: Pt, w: number): void {
-  const h = w / 2;
-  if (a.x === b.x) {
-    c.fillRect(Math.round(a.x - h), Math.round(Math.min(a.y, b.y) - h), Math.round(w), Math.round(Math.abs(b.y - a.y) + w));
-  } else if (a.y === b.y) {
-    c.fillRect(Math.round(Math.min(a.x, b.x) - h), Math.round(a.y - h), Math.round(Math.abs(b.x - a.x) + w), Math.round(w));
-  } else {
-    const n = Math.ceil(Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)));
-    for (let i = 0; i <= n; i++) {
-      const x = a.x + ((b.x - a.x) * i) / n;
-      const y = a.y + ((b.y - a.y) * i) / n;
-      c.fillRect(Math.round(x - h), Math.round(y - h), Math.round(w), Math.round(w));
-    }
-  }
-}
-
-/** Points of a tunnel as painted: the shaft starts above the mound top so the entrance is an open hole. */
+/** The painted polyline of a tunnel: the shaft starts above the mound top so the entrance is an open hole. */
 export function paintedPoints(t: Tunnel, mouthY: number): Pt[] {
-  return [{ x: t.points[0].x, y: mouthY }, ...t.points];
+  if (t.to !== 'shaft') return t.points;
+  const f = t.points[0];
+  const out: Pt[] = [];
+  for (let y = mouthY; y < f.y; y += 2) out.push({ x: f.x, y });
+  return [...out, ...t.points];
 }
 
-export function paintTunnelRims(c: Ctx2D, tunnels: readonly Tunnel[], mouthY: number): void {
-  for (const t of tunnels) {
-    const p = paintedPoints(t, mouthY);
-    c.fillStyle = RIM_OUT;
-    for (let i = 0; i + 1 < p.length; i++) strokeSeg(c, p[i], p[i + 1], t.width + 4);
-  }
-  for (const t of tunnels) {
-    const p = paintedPoints(t, mouthY);
-    c.fillStyle = RIM_MID;
-    for (let i = 0; i + 1 < p.length; i++) strokeSeg(c, p[i], p[i + 1], t.width + 2);
+function paintedWidths(t: Tunnel, n: number): number[] {
+  return t.to !== 'shaft' ? t.widths : [...Array<number>(n - t.widths.length).fill(t.widths[0]), ...t.widths];
+}
+
+function stampRects(c: Ctx2D, pts: readonly Pt[], ws: readonly number[], grow: number): void {
+  for (let i = 0; i < pts.length; i++) {
+    const w = Math.round(ws[i]) + grow;
+    c.fillRect(Math.round(pts[i].x - w / 2), Math.round(pts[i].y - w / 2), w, w);
   }
 }
 
-export function paintTunnelInteriors(c: Ctx2D, tunnels: readonly Tunnel[], mouthY: number): void {
+export function paintTunnelRims(c: Ctx2D, tunnels: readonly Tunnel[], mouthY: number, tint: Tint = IDENTITY): void {
   for (const t of tunnels) {
     const p = paintedPoints(t, mouthY);
-    c.fillStyle = '#523823';
-    for (let i = 0; i + 1 < p.length; i++) strokeSeg(c, p[i], p[i + 1], t.width);
+    c.fillStyle = tint(RIM_OUT);
+    stampRects(c, p, paintedWidths(t, p.length), 4);
   }
-  // darker ceiling edge and lit floor on the horizontal / sloping parts
   for (const t of tunnels) {
     const p = paintedPoints(t, mouthY);
-    for (let i = 0; i + 1 < p.length; i++) {
-      const a = p[i];
-      const b = p[i + 1];
-      if (a.x === b.x) {
-        c.fillStyle = 'rgba(20,10,4,.38)';
-        c.fillRect(Math.round(a.x - t.width / 2), Math.round(Math.min(a.y, b.y)), 2, Math.round(Math.abs(b.y - a.y)));
-        c.fillStyle = 'rgba(200,150,90,.22)';
-        c.fillRect(Math.round(a.x + t.width / 2) - 2, Math.round(Math.min(a.y, b.y)), 2, Math.round(Math.abs(b.y - a.y)));
-      } else {
+    c.fillStyle = tint(RIM_MID);
+    stampRects(c, p, paintedWidths(t, p.length), 2);
+  }
+}
+
+export function paintTunnelInteriors(c: Ctx2D, tunnels: readonly Tunnel[], mouthY: number, tint: Tint = IDENTITY): void {
+  for (const t of tunnels) {
+    const p = paintedPoints(t, mouthY);
+    const ws = paintedWidths(t, p.length);
+    c.fillStyle = tint('#523823');
+    stampRects(c, p, ws, 0);
+    // darker ceiling edge and lit floor on the horizontal / sloping parts, a dark and a lit wall on the steep ones
+    for (let i = 1; i + 1 < p.length; i++) {
+      const dx = p[i + 1].x - p[i - 1].x;
+      const dy = p[i + 1].y - p[i - 1].y;
+      const w = Math.round(ws[i]);
+      const x = Math.round(p[i].x);
+      const y = Math.round(p[i].y);
+      if (Math.abs(dx) > Math.abs(dy) * 0.8) {
         c.fillStyle = 'rgba(200,150,90,.4)';
-        const n = Math.ceil(Math.abs(b.x - a.x));
-        for (let k = 0; k <= n; k++) {
-          const x = a.x + ((b.x - a.x) * k) / n;
-          const y = a.y + ((b.y - a.y) * k) / n;
-          c.fillRect(Math.round(x), Math.round(y + t.width / 2) - 1, 1, 1);
-        }
+        c.fillRect(x, Math.round(y + w / 2) - 1, 1, 1);
+      } else {
+        c.fillStyle = 'rgba(20,10,4,.38)';
+        c.fillRect(Math.round(x - w / 2), y, 1, 1);
+        c.fillStyle = 'rgba(200,150,90,.22)';
+        c.fillRect(Math.round(x + w / 2) - 1, y, 1, 1);
       }
     }
   }
@@ -335,6 +381,14 @@ const GLYPHS: Record<string, string[]> = {
   P: ['##.', '#.#', '##.', '#..', '#..'],
   I: ['###', '.#.', '.#.', '.#.', '###'],
   Z: ['###', '..#', '.#.', '#..', '###'],
+  '1': ['.#.', '##.', '.#.', '.#.', '###'],
+  '2': ['##.', '..#', '.#.', '#..', '###'],
+  '3': ['##.', '..#', '.#.', '..#', '##.'],
+  '4': ['#.#', '#.#', '###', '..#', '..#'],
+  '5': ['###', '#..', '##.', '..#', '##.'],
+  '6': ['.##', '#..', '###', '#.#', '###'],
+  '7': ['###', '..#', '.#.', '.#.', '.#.'],
+  '8': ['###', '#.#', '###', '#.#', '###'],
 };
 /** Accent pixels (x, y relative to the glyph top; negative = above). */
 const ACCENT: Record<string, [number, number][]> = {
@@ -415,11 +469,11 @@ export function larvaRaster(variant: number, frame: number, grow: number): Raste
 export function larvaSlots(count: number): { dx: number; dy: number; variant: number }[] {
   const all: { dx: number; dy: number; variant: number; d: number }[] = [];
   const sx = 10.5;
-  const sy = 7;
-  for (let j = -6; j <= 6; j++) {
-    for (let i = -7; i <= 7; i++) {
+  const sy = 8;
+  for (let j = -1; j <= 0; j++) {
+    for (let i = -4; i <= 4; i++) {
       const dx = i * sx + (Math.abs(j) % 2) * (sx / 2) + (hash2(i, j, 71) - 0.5) * 2.2;
-      const dy = j * sy + (hash2(i, j, 72) - 0.5) * 1.6 + 2;
+      const dy = j * sy + (hash2(i, j, 72) - 0.5) * 1.2 + 1;
       const lenX = dx / 1.0;
       const lenY = dy / 0.62;
       all.push({ dx: Math.round(dx), dy: Math.round(dy), variant: Math.floor(hash2(i, j, 73) * LARVA_VARIANTS), d: Math.hypot(lenX, lenY) });
@@ -453,12 +507,12 @@ const CRUMB_COLORS: [string, string][] = [
   ['#c0583a', '#e07a58'],
 ];
 
-export const MAX_CRUMBS = 200;
-const HEAP_COLS = 14;
+export const MAX_CRUMBS = 80;
+const HEAP_COLS = 9;
 const CELL_W = 2.7;
 const CELL_H = 2.2;
 /** Height of the heap (rows) over column c: a rounded mound. */
-const heapRows = (c: number): number => Math.max(1, Math.round(12 * (1 - (c / (HEAP_COLS + 1)) ** 2)));
+const heapRows = (c: number): number => Math.max(1, Math.round(8 * (1 - (c / (HEAP_COLS + 1)) ** 2)));
 
 let heap: Crumb[] | null = null;
 
@@ -490,18 +544,14 @@ export function pantryCrumbs(count: number): Crumb[] {
   return heap.slice(0, n);
 }
 
-/** y of the pantry floor line (the lit edge painted by paintChamberInterior). */
-export const floorY = (ch: Chamber, ry: number): number => Math.round(ch.cy + ry * 0.62);
-
 /** Paints the pantry's crumb heap inside chamber `ch` at its displayed radii (crumbs outside the walls are skipped). */
-export function paintCrumbs(c: Ctx2D, ch: Chamber, rx: number, ry: number, crumbs: readonly Crumb[]): void {
+export function paintCrumbs(c: Ctx2D, ch: Blob, rx: number, ry: number, crumbs: readonly Crumb[]): void {
   const base = floorY(ch, ry);
+  const here = { cx: ch.cx, cy: ch.cy, rx, ry, lobes: ch.lobes };
   for (const k of crumbs) {
     const x = Math.round(ch.cx + k.col * CELL_W + k.jx);
-    const y = Math.round(base - 2 - k.row * CELL_H + k.jy);
-    const nx = (x - ch.cx) / rx;
-    const ny = (y - ch.cy) / ry;
-    if (nx * nx + ny * ny > 0.86) continue;
+    const y = Math.round(base - 1 - k.row * CELL_H + k.jy);
+    if (!insideChamber(here, x + 0.5, y, -1.5) || !insideChamber(here, x + k.w, y, -1.5)) continue;
     c.fillStyle = k.color;
     c.fillRect(x, y, k.w, 2);
     c.fillStyle = k.light;
@@ -509,9 +559,9 @@ export function paintCrumbs(c: Ctx2D, ch: Chamber, rx: number, ry: number, crumb
   }
 }
 /** Fly remains next to the food (decoration only): a translucent wing pair and a few legs. */
-export function paintFlyRemains(c: Ctx2D, ch: Chamber, rx: number, ry: number): void {
+export function paintFlyRemains(c: Ctx2D, ch: Blob, rx: number, ry: number): void {
   const x = Math.round(ch.cx + rx * 0.05);
-  const y = Math.round(ch.cy + ry * 0.55);
+  const y = floorY(ch, ry) - 2;
   c.fillStyle = 'rgba(205,218,214,.55)';
   c.fillRect(x, y, 5, 1);
   c.fillRect(x + 1, y + 1, 4, 1);
