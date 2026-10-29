@@ -1,5 +1,5 @@
 import {
-  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { PheromoneField } from './pheromone';
@@ -61,6 +61,11 @@ const EXPLORE_LOOKAHEAD = 16;
 const PICKUP_DIST = 1.5;
 /** Beetle heading noise per substep (full range, rad): much calmer than an ant. */
 const BEETLE_JITTER = 0.15;
+/** Caterpillar heading noise per substep (full range, rad): it crawls almost straight. */
+const CATERPILLAR_JITTER = 0.1;
+/** Caterpillar pauses last this many seconds (it stops with the same chance per second as a beetle). */
+const CATERPILLAR_PAUSE_MIN_S = 1;
+const CATERPILLAR_PAUSE_MAX_S = 3;
 /** Chance per second that a walking beetle stops; it then pauses BEETLE_PAUSE_MIN_S..MAX_S. */
 const BEETLE_PAUSE_RATE = 0.2;
 const BEETLE_PAUSE_MIN_S = 0.5;
@@ -217,8 +222,8 @@ export class World {
     const p = resolvePlacement(this.terrain, x, y);
     if (!p) return null;
     const item: FoodItem = { id: this.nextId++, kind, x: p.x, y: p.y, piecesLeft: FOOD_TABLE[kind].pieces };
-    if (kind === 'beetle' || kind === 'fly') {
-      // A placed beetle / fly is a living creature until two ants have touched it.
+    if (kind === 'beetle' || kind === 'fly' || kind === 'caterpillar') {
+      // A placed beetle / fly / caterpillar is a living creature until two ants have touched it.
       item.alive = true;
       item.touches = 0;
       item.heading = this.rng.next() * TWO_PI - Math.PI;
@@ -303,11 +308,15 @@ export class World {
     }
   }
 
-  /** Living creatures: cooldowns tick, hopping flies fly, beetles walk. */
+  /** Living creatures: cooldowns tick, hopping flies fly, beetles and caterpillars walk. */
   private updateCreatures(): void {
     for (const f of this.food) {
       if (!isAlive(f)) continue;
       if (f.cooldown !== undefined && f.cooldown > 0) f.cooldown = Math.max(0, f.cooldown - STEP_S);
+      if (f.fleeT !== undefined) {
+        f.fleeT -= STEP_S;
+        if (f.fleeT <= 1e-9) delete f.fleeT;
+      }
       if (f.hop) {
         const hop = f.hop;
         hop.t += STEP_S;
@@ -319,24 +328,32 @@ export class World {
           f.y = hop.toY;
           delete f.hop;
         }
-      } else if (f.kind === 'beetle') {
-        this.walkBeetle(f);
+      } else if (f.kind === 'beetle' || f.kind === 'caterpillar') {
+        this.walkCrawler(f);
       }
     }
   }
 
-  /** A beetle ambles with little heading noise, pauses now and then and turns away from obstacles; it never steps onto a blocked spot. */
-  private walkBeetle(f: FoodItem): void {
+  /**
+   * A beetle / caterpillar ambles with little heading noise, pauses now and then and turns away from obstacles; it never
+   * steps onto a blocked spot. A caterpillar is slower than a beetle, and while it flees (fleeT > 0) it neither pauses
+   * nor crawls at the normal pace.
+   */
+  private walkCrawler(f: FoodItem): void {
     const rng = this.rng;
+    const cat = f.kind === 'caterpillar';
+    const fleeing = cat && (f.fleeT ?? 0) > 0;
     if (f.wanderT !== undefined && f.wanderT > 0) {
       f.wanderT -= STEP_S;
       return;
     }
-    if (rng.next() < BEETLE_PAUSE_RATE * STEP_S) {
-      f.wanderT = BEETLE_PAUSE_MIN_S + (BEETLE_PAUSE_MAX_S - BEETLE_PAUSE_MIN_S) * rng.next();
+    if (!fleeing && rng.next() < BEETLE_PAUSE_RATE * STEP_S) {
+      const lo = cat ? CATERPILLAR_PAUSE_MIN_S : BEETLE_PAUSE_MIN_S;
+      const hi = cat ? CATERPILLAR_PAUSE_MAX_S : BEETLE_PAUSE_MAX_S;
+      f.wanderT = lo + (hi - lo) * rng.next();
       return;
     }
-    let h = (f.heading ?? 0) + (rng.next() - 0.5) * BEETLE_JITTER;
+    let h = (f.heading ?? 0) + (rng.next() - 0.5) * (cat ? CATERPILLAR_JITTER : BEETLE_JITTER);
     const t = this.terrain;
     const freeAhead = (a: number): boolean =>
       isFreeSpot(t, f.x + Math.cos(a) * BEETLE_LOOKAHEAD, f.y + Math.sin(a) * BEETLE_LOOKAHEAD);
@@ -359,7 +376,8 @@ export class World {
       }
     }
     f.heading = wrapAngle(h);
-    const v = BEETLE_SPEED * speedAt(t, f.x, f.y) * STEP_S;
+    const base = cat ? CATERPILLAR_SPEED * (fleeing ? CATERPILLAR_FLEE_MUL : 1) : BEETLE_SPEED;
+    const v = base * speedAt(t, f.x, f.y) * STEP_S;
     const nx = f.x + Math.cos(f.heading) * v;
     const ny = f.y + Math.sin(f.heading) * v;
     if (isFreeSpot(t, nx, ny)) {
@@ -395,6 +413,7 @@ export class World {
       delete f.cooldown;
       delete f.hop;
       delete f.wanderT;
+      delete f.fleeT;
       ant.state = 'toFood';
       ant.targetFood = f.id;
       ant.timer = 0;
@@ -405,6 +424,16 @@ export class World {
       const i = this.ants.indexOf(ant);
       if (i >= 0) this.ants.splice(i, 1);
       this.antsKilled++;
+      return;
+    }
+    if (f.kind === 'caterpillar') {
+      // First touch of a caterpillar: it hurries away from the ant for CATERPILLAR_FLEE_S; the ant is unhurt and keeps chasing.
+      f.fleeT = CATERPILLAR_FLEE_S;
+      f.heading = Math.atan2(f.y - ant.y, f.x - ant.x);
+      f.wanderT = 0;
+      ant.state = 'toFood';
+      ant.targetFood = f.id;
+      ant.timer = 0;
       return;
     }
     // First touch of a fly: it hops away and the ant keeps chasing it.

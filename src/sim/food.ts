@@ -14,7 +14,7 @@ export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
 };
 
 /** Kinds that exist as living creatures until they die. */
-export type PreyKind = 'beetle' | 'fly';
+export type PreyKind = 'beetle' | 'fly' | 'caterpillar';
 
 /** State of one fly hop (transient, not saved). The creature moves linearly from -> to; the renderer draws the arc from t / dur. */
 export interface Hop {
@@ -33,11 +33,11 @@ export interface FoodItem {
   x: number;
   y: number;
   piecesLeft: number;
-  /** True for a placed, living `beetle` / `fly` (nothing can be taken from it); absent/false for all other food. */
+  /** True for a placed, living `beetle` / `fly` / `caterpillar` (nothing can be taken from it); absent/false for all other food. */
   alive?: boolean;
   /** How many times ants have touched this living creature (0..2; the second touch kills it). */
   touches?: number;
-  /** Facing of a living creature in radians (a beetle walks that way; a fly's is its last hop direction). */
+  /** Facing of a living creature in radians (a beetle / caterpillar walks that way; a fly's is its last hop direction). */
   heading?: number;
   /** Set when a living creature died: `kind` is then 'carrion' and this says what it was. */
   corpseOf?: PreyKind;
@@ -45,13 +45,15 @@ export interface FoodItem {
   cooldown?: number;
   /** TRANSIENT (not saved): present while a fly is in the air. */
   hop?: Hop;
-  /** TRANSIENT (not saved): seconds a beetle still pauses (absent / <= 0 = walking). */
+  /** TRANSIENT (not saved): seconds a beetle / caterpillar still pauses (absent / <= 0 = walking). */
   wanderT?: number;
+  /** TRANSIENT (not saved): seconds a touched caterpillar still hurries away (absent / <= 0 = normal pace). */
+  fleeT?: number;
 }
 
-/** True for a living beetle or fly. */
+/** True for a living beetle, fly or caterpillar. */
 export function isAlive(f: FoodItem): boolean {
-  return f.alive === true && (f.kind === 'beetle' || f.kind === 'fly');
+  return f.alive === true && (f.kind === 'beetle' || f.kind === 'fly' || f.kind === 'caterpillar');
 }
 
 const MAX_SEARCH_RADIUS = 12;

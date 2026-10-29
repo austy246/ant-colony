@@ -34,7 +34,7 @@ describe('living prey: constants and placement', () => {
     expect(HOP_DUR).toBe(0.35);
   });
 
-  it('placed beetles and flies are alive with 0 touches and a heading; everything else is not alive', () => {
+  it('placed beetles, flies and caterpillars are alive with 0 touches and a heading; everything else is not alive (caterpillar: caterpillar.test.ts)', () => {
     const w = flatWorld(1);
     const b = w.placeFood('beetle', 150, 100)!;
     const f = w.placeFood('fly', 180, 100)!;
@@ -44,7 +44,7 @@ describe('living prey: constants and placement', () => {
       expect(Number.isFinite(item.heading)).toBe(true);
       expect(item.piecesLeft).toBe(FOOD_TABLE[item.kind as 'beetle' | 'fly'].pieces);
     }
-    for (const kind of ['caterpillar', 'carrion', 'berry', 'mushroom'] as const) {
+    for (const kind of ['carrion', 'berry', 'mushroom'] as const) {
       const it = w.placeFood(kind, 150, 130)!;
       expect(it.alive).toBeFalsy();
       expect(it.corpseOf).toBeUndefined();

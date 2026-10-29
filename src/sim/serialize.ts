@@ -142,7 +142,7 @@ function validFood(f: unknown): boolean {
     (o.alive === undefined || typeof o.alive === 'boolean') &&
     (o.touches === undefined || (isInt(o.touches) && o.touches >= 0 && o.touches <= 2)) &&
     (o.heading === undefined || isNum(o.heading)) &&
-    (o.corpseOf === undefined || o.corpseOf === 'beetle' || o.corpseOf === 'fly')
+    (o.corpseOf === undefined || o.corpseOf === 'beetle' || o.corpseOf === 'fly' || o.corpseOf === 'caterpillar')
   );
 }
 

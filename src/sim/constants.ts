@@ -45,3 +45,9 @@ export const LARVAE_PER_NURSE = 5;
 export const NURSE_MAX_FRACTION = 0.3;
 /** The wanted nurse count is re-evaluated every NURSE_EVAL_S of simulated time (not every substep). */
 export const NURSE_EVAL_S = 2;
+/** Crawling speed of a living caterpillar in px/s (times the ground speed factor): slower than a beetle. */
+export const CATERPILLAR_SPEED = 2.5;
+/** Speed multiplier of a caterpillar after the first touch, for CATERPILLAR_FLEE_S seconds. */
+export const CATERPILLAR_FLEE_MUL = 2.5;
+/** Seconds a touched caterpillar hurries away from the ant that touched it. */
+export const CATERPILLAR_FLEE_S = 5;
