@@ -289,6 +289,27 @@ describe('World', () => {
     expect(success).toBeGreaterThanOrEqual(15);
   }, 30_000);
 
+  // Boldness: seeds 1-10, flat ground, 5 ants, no food, 40 s; mean distance from the nest of all ants over the
+  // last 20 s (sampled every second). Measured with the tuned constants: 90.4 px (before tuning, tether 60 /
+  // jitter 0.6, no outbound push: 46.2 px on this flat setup). Threshold 70 px = ~77 % of the measured mean.
+  it('scouts are bold: with no food 5 ants average at least 70 px from the nest over seconds 20-40', () => {
+    let sum = 0;
+    let n = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      const w = flatWorld(seed);
+      for (let i = 0; i < 5; i++) w.spawnAnt().lifespan = 1e6;
+      for (let sec = 1; sec <= 40; sec++) {
+        run(w, 1);
+        if (sec <= 20) continue;
+        let m = 0;
+        for (const a of w.ants) m += Math.hypot(a.x - NEST.x, a.y - NEST.y);
+        sum += m / w.ants.length;
+        n++;
+      }
+    }
+    expect(sum / n).toBeGreaterThanOrEqual(70);
+  }, 30_000);
+
   it('trail forms: pheromone along the food-nest line exceeds the sum 15 px off the line', () => {
     const w = flatWorld(9);
     const food = w.placeFood('beetle', NEST.x + 60, NEST.y);

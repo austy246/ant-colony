@@ -24,17 +24,21 @@ const FAN = 0.6;
 const TURN_PENALTY = 0.05;
 const LOOKAHEAD = 3;
 const PHER_LOOKAHEAD = 4;
-/** Radius within which a wandering ant notices food (pickup distance is separate and unchanged). */
-const SENSE_FOOD = 16;
+/** Radius within which a wandering ant notices food (pickup distance is separate and unchanged). Raised 16 -> 32 so bold, straight-heading scouts still find food. */
+const SENSE_FOOD = 32;
 /** Home tether for wandering ants: beyond TETHER_R px from the nest the desired heading is blended toward home... */
-const TETHER_R = 60;
-/** ...with weight TETHER_K * (distance - TETHER_R) / TETHER_R, clamped to [0, TETHER_MAX]. */
+const TETHER_R = 120;
+/** ...with weight TETHER_K * (distance - TETHER_R) / TETHER_SPAN, clamped to [0, TETHER_MAX]. */
+const TETHER_SPAN = 60;
 const TETHER_K = 0.15;
 const TETHER_MAX = 0.6;
 const PICKUP_DIST = 1.5;
 const DEPOSIT = 0.5;
 const MAX_DT = 0.5;
-const WANDER_JITTER = 0.6; // full range of per-step heading noise (+-0.3 rad)
+const WANDER_JITTER = 0.3; // full range of per-step heading noise (+-0.15 rad): ants keep a heading and scout
+/** Wanderers closer than OUTBOUND_R px to the nest are pushed outward (blend OUTBOUND_K) so they do not mill around the crater. */
+const OUTBOUND_R = 50;
+const OUTBOUND_K = 0.2;
 const TWO_PI = Math.PI * 2;
 const FAN_TURNS = [-FAN, 0, FAN];
 
@@ -207,8 +211,10 @@ export class World {
     } else if (ant.state === 'wander') {
       desired = ant.heading + (this.rng.next() - 0.5) * WANDER_JITTER;
       const homeD = Math.hypot(ant.x - NEST.x, ant.y - NEST.y);
-      if (homeD > TETHER_R) {
-        const w = Math.min(TETHER_MAX, (TETHER_K * (homeD - TETHER_R)) / TETHER_R);
+      if (homeD < OUTBOUND_R) {
+        desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
+      } else if (homeD > TETHER_R) {
+        const w = Math.min(TETHER_MAX, (TETHER_K * (homeD - TETHER_R)) / TETHER_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
       pherWeight = 0.15;
