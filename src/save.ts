@@ -4,6 +4,8 @@ const LS_KEY = 'ant-colony-save';
 const DB_NAME = 'ant-colony';
 const STORE = 'saves';
 const IDB_KEY = 'current';
+/** loadGame gives up on a stuck IndexedDB read after this long and starts a new game. */
+const LOAD_TIMEOUT_MS = 1500;
 
 /** Set once IndexedDB holds (or may hold) our save; only then do we bother deleting a stale entry. */
 let idbInUse = false;
@@ -83,12 +85,22 @@ export async function loadGame(): Promise<SaveV1 | null> {
   } catch {
     // fall through to IndexedDB
   }
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const raw = await idbRun('readonly', (st) => st.get(IDB_KEY));
-    if (raw !== undefined) idbInUse = true;
-    return accept(raw);
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), LOAD_TIMEOUT_MS);
+    });
+    const read = (async (): Promise<SaveV1 | null> => {
+      const raw = await idbRun('readonly', (st) => st.get(IDB_KEY));
+      if (raw !== undefined) idbInUse = true;
+      return accept(raw);
+    })();
+    read.catch(() => undefined); // a late failure after the timeout must not become an unhandled rejection
+    return await Promise.race([read, timeout]);
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

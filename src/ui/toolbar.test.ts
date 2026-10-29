@@ -84,3 +84,30 @@ describe('buildToolbar', () => {
     expect(onView).not.toHaveBeenCalled();
   });
 });
+
+describe('view shortcuts on a Czech keyboard layout', () => {
+  const activeView = () => buttons().slice(9).filter((b) => b.classList.contains('active')).map((b) => b.textContent);
+  it('matches by physical key code when e.key is a layout character', () => {
+    const onView = vi.fn();
+    buildToolbar(root, () => {}, onView);
+    key('+', document, { code: 'Digit1' });
+    expect(onView).toHaveBeenLastCalledWith('normal');
+    key('z', document, { code: 'KeyP' });
+    expect(onView).toHaveBeenLastCalledWith('pheromone');
+    expect(activeView()).toEqual(['Feromony (P)']);
+    key('ž', document, { code: 'KeyT' });
+    expect(onView).toHaveBeenLastCalledWith('terrain');
+    key('+', document, { code: 'Numpad1' });
+    expect(onView).toHaveBeenLastCalledWith('normal');
+  });
+  it('still ignores modifiers and input targets', () => {
+    const onView = vi.fn();
+    buildToolbar(root, () => {}, onView);
+    onView.mockClear();
+    key('+', document, { code: 'Digit1', ctrlKey: true });
+    const input = document.createElement('input');
+    root.appendChild(input);
+    key('+', input, { code: 'Digit1' });
+    expect(onView).not.toHaveBeenCalled();
+  });
+});

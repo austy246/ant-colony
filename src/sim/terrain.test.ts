@@ -59,3 +59,24 @@ describe('terrain', () => {
     }
   });
 });
+
+function fnv1a(bytes: Uint8Array): number {
+  let h = 0x811c9dc5;
+  for (const b of bytes) {
+    h ^= b;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+// GOLDEN VALUES: saved games store only the seed and regenerate the terrain from it on load.
+// Changing generateTerrain (and so these literals) silently invalidates all saved games.
+describe('terrain golden values', () => {
+  it('generateTerrain(42) is stable', () => {
+    const t = generateTerrain(42);
+    expect(fnv1a(t.surface)).toBe(644848548);
+    expect(t.speed.length).toBe(64000);
+    expect(fnv1a(new Uint8Array(t.speed.buffer, t.speed.byteOffset, t.speed.byteLength))).toBe(2567583242);
+    expect(t.features.length).toBe(182);
+  });
+});

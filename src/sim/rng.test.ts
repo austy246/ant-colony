@@ -33,3 +33,14 @@ describe('rng', () => {
     for (let i = 0; i < 20; i++) expect(b.next()).toBe(a.next());
   });
 });
+
+// GOLDEN VALUES: terrain, nest-area layout and every simulation are regenerated from the seed on load.
+// Changing the generator (and so these literals) silently invalidates all saved games. Don't, without a save migration.
+describe('rng golden values', () => {
+  it('first five values of Rng(42) are stable', () => {
+    const r = new Rng(42);
+    expect([r.next(), r.next(), r.next(), r.next(), r.next()]).toEqual([
+      0.6011037519201636, 0.44829055899754167, 0.8524657934904099, 0.6697340414393693, 0.17481389874592423,
+    ]);
+  });
+});

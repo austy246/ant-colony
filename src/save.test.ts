@@ -162,6 +162,23 @@ describe('save/load', () => {
   });
 });
 
+describe('loadGame timeout', () => {
+  it('resolves null after 1500 ms when the IndexedDB read never settles', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(indexedDB, 'open').mockImplementation(() => ({}) as IDBOpenDBRequest);
+      let result: SaveV1 | null | undefined;
+      void loadGame().then((r) => (result = r));
+      await vi.advanceTimersByTimeAsync(1400);
+      expect(result).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(200);
+      expect(result).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('clearSave', () => {
   it('removes the localStorage entry', async () => {
     await saveGame(sample());

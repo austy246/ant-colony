@@ -28,7 +28,7 @@ Stav se ukládá automaticky každých 10 s, při skrytí karty a při zavření
 
 ## Technologie
 
-TypeScript, Vite, Canvas 2D (`image-rendering: pixelated`), vitest (jsdom, `@napi-rs/canvas`, `fake-indexeddb`). Simulace (`src/sim`) je oddělená od vykreslování (`src/render`) a ovládání (`src/ui`), takže se testuje bez prohlížeče. Nasazení na GitHub Pages řeší `.github/workflows/pages.yml` (build s `base: './'`); CI (`ci.yml`) spouští testy a build při každém pushi a PR.
+TypeScript, Vite, Canvas 2D (`image-rendering: pixelated`), vitest (jsdom, `@napi-rs/canvas`, `fake-indexeddb`). Simulace (`src/sim`) je oddělená od vykreslování (`src/render`) a ovládání (`src/ui`), takže se testuje bez prohlížeče. Nasazení na GitHub Pages řeší `.github/workflows/pages.yml` (build s `base: './'`); zatím se spouští ručně (`workflow_dispatch`), dokud vlastník nezapne GitHub Pages a nerozhodne o viditelnosti repozitáře, pak se vrátí spouštění při pushi do `main`. CI (`ci.yml`) spouští testy a build při pushi do `main` a u každého PR.
 
 ## Dokumentace
 

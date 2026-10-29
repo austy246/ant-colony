@@ -27,6 +27,9 @@ function makeButton(label: string): HTMLButtonElement {
   return b;
 }
 
+/** Physical key -> view shortcut key, independent of the keyboard layout. */
+const CODE_TO_KEY: Record<string, string> = { Digit1: '1', Numpad1: '1', KeyP: 'p', KeyT: 't' };
+
 export function buildToolbar(
   root: HTMLElement,
   onTool: (t: Tool) => void,
@@ -67,8 +70,10 @@ export function buildToolbar(
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target;
     if (t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    // `code` is layout independent (on a Czech keyboard unshifted digits give "+ěščř"), so check it as well as `key`.
     const k = e.key.toLowerCase();
-    const idx = VIEW_BUTTONS.findIndex((v) => v.key === k);
+    const byCode = CODE_TO_KEY[e.code];
+    const idx = VIEW_BUTTONS.findIndex((v) => v.key === k || (byCode !== undefined && v.key === byCode));
     if (idx >= 0) selectView(viewEls[idx], VIEW_BUTTONS[idx].view);
   };
   document.addEventListener('keydown', onKey);

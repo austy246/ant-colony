@@ -1,8 +1,8 @@
 name: Pages
 
+# Deploy is manual until the owner enables GitHub Pages and decides the repository visibility;
+# re-enable `push: branches: [main]` then.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
