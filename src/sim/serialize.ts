@@ -13,7 +13,8 @@ export interface SaveV1 {
   started?: boolean;
   nextId: number;
   introDone: boolean;
-  ants: Ant[];
+  /** `timer` is optional (absent in older saves): seconds of gnawing left, 0 when not gnawing. */
+  ants: (Omit<Ant, 'timer'> & { timer?: number })[];
   food: FoodItem[];
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
   pheromone: string;
@@ -72,7 +73,7 @@ export function worldFromSave(s: SaveV1): World {
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
-  for (const a of s.ants) w.ants.push({ ...a });
+  for (const a of s.ants) w.ants.push({ ...a, timer: a.timer ?? 0 });
   w.food.length = 0;
   for (const f of s.food) w.food.push({ ...f });
   for (let i = 0; i < bytes.length; i++) w.pher.data[i] = (bytes[i] / 255) * MAX_PHEROMONE;
@@ -82,11 +83,12 @@ export function worldFromSave(s: SaveV1): World {
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
 const inRange = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
-const ANT_STATES = ['wander', 'toFood', 'carry'];
+const ANT_STATES = ['wander', 'toFood', 'gnaw', 'carry'];
 /** Saves from the old colony-floor rules stored up to 15 s here; they still load (clamped on restore). */
 const LEGACY_MAX_HATCH_PROGRESS = 15;
 const MAX_ENTRIES = 2000;
-const MAX_PIECES = 20;
+/** Largest piece count of any food kind (a loaded save may hold 0..max; old saves hold smaller numbers). */
+const MAX_PIECES = Math.max(...Object.values(FOOD_TABLE).map((f) => f.pieces));
 
 function validAnt(a: unknown): boolean {
   if (typeof a !== 'object' || a === null) return false;
@@ -95,7 +97,8 @@ function validAnt(a: unknown): boolean {
     isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) && isNum(o.heading) &&
     isNum(o.age) && o.age >= 0 && isNum(o.lifespan) && o.lifespan > 0 && isNum(o.carry) &&
     typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
-    (o.targetFood === null || isNum(o.targetFood))
+    (o.targetFood === null || isNum(o.targetFood)) &&
+    (o.timer === undefined || (isNum(o.timer) && o.timer >= 0))
   );
 }
 

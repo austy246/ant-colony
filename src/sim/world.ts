@@ -1,12 +1,12 @@
 import {
-  FOOD_PER_ANT, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
+  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
 } from './constants';
 import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import { generateTerrain, speedAt, type Terrain } from './terrain';
 
-export type AntState = 'wander' | 'toFood' | 'carry';
+export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry';
 
 export interface Ant {
   id: number;
@@ -18,6 +18,8 @@ export interface Ant {
   lifespan: number;
   carry: number;
   targetFood: number | null;
+  /** Seconds of gnawing left while state is 'gnaw'; 0 otherwise. */
+  timer: number;
 }
 
 const BASE_SPEED = 12;
@@ -105,6 +107,7 @@ export class World {
       lifespan: LIFESPAN_S * (0.8 + 0.4 * rng.next()),
       carry: 0,
       targetFood: null,
+      timer: 0,
     };
     this.ants.push(ant);
     this.started = true;
@@ -135,7 +138,8 @@ export class World {
     for (const a of this.ants) {
       if (a.targetFood !== id) continue;
       a.targetFood = null;
-      if (a.state === 'toFood') a.state = 'wander';
+      if (a.state === 'toFood' || a.state === 'gnaw') a.state = 'wander';
+      a.timer = 0;
     }
   }
 
@@ -214,6 +218,11 @@ export class World {
       }
     }
 
+    if (ant.state === 'gnaw') {
+      this.gnaw(ant);
+      return;
+    }
+
     let desired = ant.heading;
     let pherWeight = 0;
     if (ant.state === 'toFood') {
@@ -225,11 +234,10 @@ export class World {
         desired = Math.atan2(f.y - ant.y, f.x - ant.x);
         pherWeight = 0.3;
         if (Math.hypot(f.x - ant.x, f.y - ant.y) <= PICKUP_DIST) {
-          f.piecesLeft--;
-          ant.carry = FOOD_TABLE[f.kind].value;
-          ant.state = 'carry';
-          pherWeight = 0;
-          if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
+          // Arrived: stand still and gnaw for a while before taking a piece.
+          ant.state = 'gnaw';
+          ant.timer = GNAW_S * (0.75 + 0.5 * this.rng.next());
+          return;
         }
       }
     }
@@ -263,6 +271,24 @@ export class World {
     }
   }
 
+  /** A gnawing ant stands still; when its bite ends it takes a piece, unless the food is gone or used up meanwhile. */
+  private gnaw(ant: Ant): void {
+    const f = this.findFood(ant.targetFood);
+    if (!f || f.piecesLeft <= 0) {
+      ant.state = 'wander';
+      ant.targetFood = null;
+      ant.timer = 0;
+      return;
+    }
+    ant.timer -= STEP_S;
+    if (ant.timer > 1e-9) return;
+    f.piecesLeft--;
+    ant.carry = FOOD_TABLE[f.kind].value;
+    ant.state = 'carry';
+    ant.timer = 0;
+    if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
+  }
+
   /** Pick the best of three candidate headings around `desired`, turn smoothly toward it and advance. */
   private move(ant: Ant, desired: number, pherWeight: number): void {
     let best = desired;
@@ -282,7 +308,7 @@ export class World {
     }
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
-    const v = BASE_SPEED * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
+    const v = BASE_SPEED * (ant.state === 'carry' ? CARRY_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
     let nx = ant.x + Math.cos(ant.heading) * v;
     let ny = ant.y + Math.sin(ant.heading) * v;
     const maxX = this.terrain.w - 0.5;

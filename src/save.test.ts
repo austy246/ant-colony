@@ -48,6 +48,18 @@ describe('save/load', () => {
     expect(await loadGame()).toEqual(s);
   });
 
+  it('a gnawing ant (state and timer) survives saveGame/loadGame; a negative timer is rejected', async () => {
+    const s = sample();
+    s.ants[0] = { ...s.ants[0], state: 'gnaw', timer: 2.25 };
+    await saveGame(s);
+    const loaded = await loadGame();
+    expect(loaded).toEqual(s);
+    expect(loaded!.ants[0].state).toBe('gnaw');
+    expect(loaded!.ants[0].timer).toBe(2.25);
+    localStorage.setItem(KEY, JSON.stringify({ ...s, ants: [{ ...s.ants[0], timer: -1 }] }));
+    expect(await loadGame()).toBeNull();
+  });
+
   it('invalid JSON returns null', async () => {
     localStorage.setItem(KEY, '{not json');
     expect(await loadGame()).toBeNull();

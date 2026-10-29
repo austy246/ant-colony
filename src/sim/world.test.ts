@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FOOD_PER_ANT, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
+  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
 } from './constants';
+import { FOOD_TABLE } from './food';
 import { Surface } from './terrain';
 import { World } from './world';
 
@@ -97,20 +98,20 @@ describe('World', () => {
     expect(success).toBeGreaterThanOrEqual(9);
   }, 30_000);
 
-  it('a single carried piece is added to stock when the ant reaches the nest', () => {
+  it('every carried piece is added to stock when the ant reaches the nest (berry: 3 pieces of value 1)', () => {
     const w = flatWorld(1);
     const f = w.placeFood('berry', NEST.x + 20, NEST.y)!;
     const a = w.spawnAnt();
     a.lifespan = 1e6;
     a.state = 'toFood';
     a.targetFood = f.id;
-    run(w, 12); // delivered stock (3) stays below FOOD_PER_ANT, so nothing hatches and muddies the accounting
-    expect(delivered(w, 1)).toBe(3);
+    run(w, 40); // 3 trips with gnawing; delivered stock (3) stays below FOOD_PER_ANT, so nothing hatches
+    expect(delivered(w, 1)).toBeCloseTo(3, 9);
     expect(w.food).toHaveLength(0);
-    expect(w.deliveryCount).toBe(1);
+    expect(w.deliveryCount).toBe(3);
   });
 
-  it('piece count reaching 0 removes the food, and a multi-piece item is carried on a second trip', () => {
+  it('piece count reaching 0 removes the food, and a multi-piece item is carried on repeated trips', () => {
     const w = flatWorld(2);
     const f = w.placeFood('fly', NEST.x + 20, NEST.y)!;
     const a = w.spawnAnt();
@@ -126,8 +127,8 @@ describe('World', () => {
       wasCarrying = carrying;
       if (i === 150) expect(f.piecesLeft).toBeGreaterThanOrEqual(0);
     }
-    expect(deliveries).toBe(2);
-    expect(w.deliveryCount).toBe(2);
+    expect(deliveries).toBe(6);
+    expect(w.deliveryCount).toBe(6);
     expect(f.piecesLeft).toBe(0);
     expect(w.food).toHaveLength(0);
     expect(a.state).toBe('wander');
@@ -139,10 +140,12 @@ describe('World', () => {
     const ants = w.ants;
     const food = w.food;
     const f = w.placeFood('berry', 150, 100)!;
+    f.piecesLeft = 1; // the last piece: taking it removes the item
     const picker = w.spawnAnt();
     picker.x = f.x;
     picker.y = f.y;
-    picker.state = 'toFood';
+    picker.state = 'gnaw'; // finishing its bite on the last piece
+    picker.timer = STEP_S;
     picker.targetFood = f.id;
     picker.lifespan = 1e6;
     const doomed = w.spawnAnt();
@@ -531,7 +534,7 @@ describe('World', () => {
   it('moveFood relocates a piece, removeFood deletes it', () => {
     const w = flatWorld(14);
     const f = w.placeFood('fly', 150, 100)!;
-    expect(f.piecesLeft).toBe(2);
+    expect(f.piecesLeft).toBe(6);
     expect(w.moveFood(f.id, 200, 60)).toBe(true);
     expect(f.x).toBe(200);
     expect(f.y).toBe(60);
@@ -560,5 +563,180 @@ describe('World', () => {
       if (delivered(w, 8) > 0) success++;
     }
     expect(success).toBeGreaterThanOrEqual(9);
+  });
+
+  describe('gnawing (an ant at its food bites for ~GNAW_S seconds before it takes a piece)', () => {
+    /** An ant standing exactly on the food, already heading for it. */
+    function antAt(w: World, f: { id: number; x: number; y: number }): ReturnType<World['spawnAnt']> {
+      const a = w.spawnAnt();
+      a.lifespan = 1e6;
+      a.x = f.x;
+      a.y = f.y;
+      a.state = 'toFood';
+      a.targetFood = f.id;
+      return a;
+    }
+
+    it('constants: GNAW_S is 4 s, loaded ants walk at 0.8x speed; new ants have timer 0', () => {
+      expect(GNAW_S).toBe(4);
+      expect(CARRY_SPEED_MUL).toBe(0.8);
+      expect(flatWorld(1).spawnAnt().timer).toBe(0);
+    });
+
+    it('an ant standing at a berry takes its piece no earlier than 3 s after arriving, about 4 s on average (20 ants)', () => {
+      const w = flatWorld(21);
+      const f = w.placeFood('carrion', 150, 100)!; // 24 pieces: enough for all 20 ants
+      const ants = Array.from({ length: 20 }, () => antAt(w, f));
+      const tCarry = new Map<number, number>();
+      for (let i = 1; i <= 8 * 30; i++) {
+        w.step(STEP_S);
+        for (const a of ants) if (a.state === 'carry' && !tCarry.has(a.id)) tCarry.set(a.id, i * STEP_S);
+      }
+      expect(tCarry.size).toBe(20);
+      const ts = [...tCarry.values()];
+      // GNAW_S * (0.75 + 0.5 * r) is in [3, 5)
+      expect(Math.min(...ts)).toBeGreaterThanOrEqual(3);
+      expect(Math.max(...ts)).toBeLessThanOrEqual(5 + 0.1);
+      const mean = ts.reduce((s, t) => s + t, 0) / ts.length;
+      expect(mean).toBeGreaterThan(3.5);
+      expect(mean).toBeLessThan(4.5);
+      expect(new Set(ts).size).toBeGreaterThan(5); // durations differ per ant
+    });
+
+    it('the piece is taken only when the bite ends: piecesLeft--, carry = value, state carry, timer 0', () => {
+      const w = flatWorld(22);
+      const f = w.placeFood('beetle', 150, 100)!;
+      const a = antAt(w, f);
+      w.step(STEP_S);
+      expect(a.state).toBe('gnaw');
+      expect(a.timer).toBeGreaterThan(2.9);
+      expect(a.timer).toBeLessThanOrEqual(5);
+      expect(a.carry).toBe(0);
+      expect(f.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
+      a.timer = STEP_S;
+      w.step(STEP_S);
+      expect(a.state).toBe('carry');
+      expect(a.carry).toBeCloseTo(FOOD_TABLE.beetle.value, 9);
+      expect(a.timer).toBe(0);
+      expect(f.piecesLeft).toBe(FOOD_TABLE.beetle.pieces - 1);
+    });
+
+    it('a gnawing ant does not move or turn, and its timer counts down in seconds', () => {
+      const w = flatWorld(23);
+      const f = w.placeFood('beetle', 150, 100)!;
+      const a = antAt(w, f);
+      a.x -= 1; // within pickup distance, but not exactly on the food
+      a.heading = 1.234;
+      w.step(STEP_S); // arrives and starts gnawing
+      expect(a.state).toBe('gnaw');
+      const { x, y, heading } = a;
+      const t0 = a.timer;
+      for (let i = 0; i < 60; i++) w.step(STEP_S); // 2 s, still below the 3 s minimum bite
+      expect(a.state).toBe('gnaw');
+      expect(a.x).toBe(x);
+      expect(a.y).toBe(y);
+      expect(a.heading).toBe(heading);
+      expect(a.timer).toBeCloseTo(t0 - 2, 6);
+    });
+
+    it('an ant walking to food stops and starts gnawing when it arrives', () => {
+      const w = flatWorld(24);
+      const f = w.placeFood('beetle', 150, 100)!;
+      const a = antAt(w, f);
+      a.x = f.x - 15;
+      a.heading = 0;
+      let i = 0;
+      while (a.state === 'toFood' && i++ < 300) w.step(STEP_S);
+      expect(a.state).toBe('gnaw');
+      expect(a.targetFood).toBe(f.id);
+      expect(Math.hypot(a.x - f.x, a.y - f.y)).toBeLessThan(2);
+      expect(f.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
+    });
+
+    it('food removed while gnawing sends the ant to wander (no piece, no carry)', () => {
+      const w = flatWorld(25);
+      const f = w.placeFood('beetle', 150, 100)!;
+      const ants = [antAt(w, f), antAt(w, f)];
+      run(w, 1);
+      expect(ants.every((a) => a.state === 'gnaw')).toBe(true);
+      w.removeFood(f.id);
+      for (const a of ants) {
+        expect(a.state).toBe('wander');
+        expect(a.targetFood).toBeNull();
+        expect(a.timer).toBe(0);
+        expect(a.carry).toBe(0);
+      }
+      run(w, 6);
+      for (const a of ants) expect(a.state).not.toBe('carry');
+    });
+
+    it('food that vanishes from the array while gnawing also sends the ant to wander on the next step', () => {
+      const w = flatWorld(26);
+      const f = w.placeFood('beetle', 150, 100)!;
+      const a = antAt(w, f);
+      run(w, 1);
+      expect(a.state).toBe('gnaw');
+      w.food.length = 0; // e.g. a save edited behind the world's back
+      w.step(STEP_S);
+      expect(a.state).toBe('wander');
+      expect(a.carry).toBe(0);
+      expect(a.timer).toBe(0);
+    });
+
+    it('the last piece taken mid-gnaw sends the other gnawers to wander; they get nothing', () => {
+      const w = flatWorld(27);
+      const f = w.placeFood('beetle', 150, 100)!;
+      f.piecesLeft = 1;
+      const [first, second, third] = [antAt(w, f), antAt(w, f), antAt(w, f)];
+      w.step(STEP_S); // all three start gnawing
+      expect([first.state, second.state, third.state]).toEqual(['gnaw', 'gnaw', 'gnaw']);
+      first.timer = STEP_S;
+      second.timer = 3;
+      third.timer = 3;
+      w.step(STEP_S);
+      expect(first.state).toBe('carry');
+      expect(first.carry).toBeCloseTo(FOOD_TABLE.beetle.value, 9);
+      expect(w.food).toHaveLength(0);
+      w.step(STEP_S);
+      for (const a of [second, third]) {
+        expect(a.state).toBe('wander');
+        expect(a.targetFood).toBeNull();
+        expect(a.timer).toBe(0);
+        expect(a.carry).toBe(0);
+      }
+      expect(f.piecesLeft).toBe(0);
+    });
+
+    it('a loaded ant (carry) moves at 0.8x the speed of an unloaded one', () => {
+      const dist = (state: 'toFood' | 'carry'): number => {
+        const w = flatWorld(28);
+        const far = w.placeFood('carrion', 280, 150)!; // far away: the ant keeps walking toward it
+        const a = w.spawnAnt();
+        a.lifespan = 1e6;
+        a.x = 200;
+        a.y = 150;
+        a.state = state;
+        a.targetFood = far.id;
+        if (state === 'carry') a.carry = 1;
+        a.heading = state === 'carry' ? Math.PI : 0; // straight at its goal (the nest is to the west)
+        const x0 = a.x;
+        const y0 = a.y;
+        let len = 0;
+        let px = x0;
+        let py = y0;
+        for (let i = 0; i < 60; i++) { // 2 s
+          w.step(STEP_S);
+          len += Math.hypot(a.x - px, a.y - py);
+          px = a.x;
+          py = a.y;
+        }
+        expect(a.state).toBe(state);
+        return len;
+      };
+      const free = dist('toFood');
+      const loaded = dist('carry');
+      expect(free).toBeCloseTo(24, 0); // 12 px/s * 2 s
+      expect(loaded / free).toBeCloseTo(CARRY_SPEED_MUL, 2);
+    });
   });
 });

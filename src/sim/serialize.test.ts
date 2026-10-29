@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S } from './constants';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
+import { FOOD_TABLE } from './food';
 import { World } from './world';
 
+const MAX_PIECES = Math.max(...Object.values(FOOD_TABLE).map((f) => f.pieces));
 const EXTRA = { introDone: true, camera: { x: 10, y: 20, zoom: 2 } };
 
 function busyWorld(): World {
@@ -77,6 +79,35 @@ describe('serialize', () => {
     s.pheromone = btoa('abc');
     expect(() => worldFromSave(s)).toThrow();
   });
+
+  it('roundtrip keeps a gnawing ant (state and timer) and the game goes on identically', () => {
+    const w = World.create(77);
+    const f = w.placeFood('carrion', 150, 100)!;
+    const a = w.spawnAnt();
+    a.lifespan = 1e6;
+    a.x = f.x;
+    a.y = f.y;
+    a.state = 'toFood';
+    a.targetFood = f.id;
+    for (let i = 0; i < 60; i++) w.step(STEP_S); // 2 s: arrived and halfway through the bite
+    expect(a.state).toBe('gnaw');
+    expect(a.timer).toBeGreaterThan(0.5);
+    const s = JSON.parse(JSON.stringify(worldToSave(w, EXTRA))) as SaveV1;
+    expect(validateSave(s)).not.toBeNull();
+    const r = worldFromSave(validateSave(s)!);
+    expect(r.ants[0].state).toBe('gnaw');
+    expect(r.ants[0].timer).toBe(a.timer);
+    expect(r.ants).toEqual(w.ants);
+    for (let i = 0; i < 150; i++) {
+      w.step(STEP_S);
+      r.step(STEP_S);
+    }
+    expect(w.ants[0].state).toBe('carry'); // bite ended within 5 s, so both took the piece
+    expect(r.ants[0].state).toBe('carry');
+    expect(r.ants[0].carry).toBe(w.ants[0].carry);
+    expect(r.food[0].piecesLeft).toBe(w.food[0].piecesLeft);
+    expect(r.ants.map((x) => [x.x, x.y, x.timer])).toEqual(w.ants.map((x) => [x.x, x.y, x.timer]));
+  });
 });
 
 describe('validateSave', () => {
@@ -92,6 +123,38 @@ describe('validateSave', () => {
     const g = good();
     delete g.ants;
     expect(validateSave(g)).toBeNull();
+  });
+  it('accepts the gnaw state with a timer, and old ants without a timer load with timer 0', () => {
+    const g = good();
+    const ant = (g.ants as Record<string, unknown>[])[0];
+    for (const timer of [0, 0.5, 4.99]) {
+      expect(validateSave({ ...g, ants: [{ ...ant, state: 'gnaw', timer }] }), String(timer)).not.toBeNull();
+    }
+    const noTimer = { ...ant, state: 'gnaw' } as Record<string, unknown>;
+    delete noTimer.timer;
+    const loaded = worldFromSave(validateSave({ ...g, ants: [noTimer] })!);
+    expect(loaded.ants[0].state).toBe('gnaw');
+    expect(loaded.ants[0].timer).toBe(0);
+    const old = JSON.parse(JSON.stringify(g)) as { ants: Record<string, unknown>[] };
+    for (const a of old.ants) delete a.timer;
+    const w = worldFromSave(validateSave(old)!);
+    expect(w.ants.every((a) => a.timer === 0)).toBe(true);
+  });
+  it('rejects a negative, non-finite or non-numeric ant timer, and unknown states', () => {
+    const g = good();
+    const ant = (g.ants as Record<string, unknown>[])[0];
+    for (const timer of [-0.001, -5, NaN, Infinity, -Infinity, '2', null, {}]) {
+      expect(validateSave({ ...g, ants: [{ ...ant, state: 'gnaw', timer }] }), String(timer)).toBeNull();
+    }
+    expect(validateSave({ ...g, ants: [{ ...ant, state: 'Gnaw' }] })).toBeNull();
+  });
+  it('piecesLeft accepts 0 up to the largest piece count in FOOD_TABLE (old saves hold smaller values)', () => {
+    const g = good();
+    const food = (g.food as Record<string, unknown>[])[0];
+    expect(MAX_PIECES).toBe(24);
+    for (const piecesLeft of [0, 2, 6, 20, MAX_PIECES]) {
+      expect(validateSave({ ...g, food: [{ ...food, piecesLeft }] }), String(piecesLeft)).not.toBeNull();
+    }
   });
   it('rejects NaN / non-finite numeric fields', () => {
     expect(validateSave({ ...good(), stock: NaN })).toBeNull();
@@ -174,7 +237,7 @@ describe('validateSave', () => {
       { ants: [{ ...ant, heading: Infinity }] },
       { ants: [{ ...ant, id: 1.5 }] },
       { food: [{ ...food, piecesLeft: -1 }] },
-      { food: [{ ...food, piecesLeft: 21 }] },
+      { food: [{ ...food, piecesLeft: MAX_PIECES + 1 }] },
       { food: [{ ...food, piecesLeft: 1.5 }] },
       { food: [{ ...food, x: 1e6 }] },
       { ants: Array.from({ length: 2001 }, () => ({ ...ant })) },

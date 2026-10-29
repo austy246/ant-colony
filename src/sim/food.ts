@@ -3,14 +3,14 @@ import { Surface, type Terrain } from './terrain';
 
 export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom';
 
-/** pieces = number of carryable pieces; value = food per piece. */
+/** pieces = number of carryable pieces; value = food per piece (pieces x value is the total food of an item). */
 export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
-  beetle: { pieces: 6, value: 2 },
-  caterpillar: { pieces: 4, value: 2 },
-  fly: { pieces: 2, value: 2 },
-  carrion: { pieces: 8, value: 2 },
-  berry: { pieces: 1, value: 3 },
-  mushroom: { pieces: 1, value: 3 },
+  beetle: { pieces: 18, value: 2 / 3 },
+  caterpillar: { pieces: 12, value: 2 / 3 },
+  fly: { pieces: 6, value: 2 / 3 },
+  carrion: { pieces: 24, value: 2 / 3 },
+  berry: { pieces: 3, value: 1 },
+  mushroom: { pieces: 3, value: 1 },
 };
 
 export interface FoodItem {

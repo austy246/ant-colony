@@ -14,3 +14,7 @@ export const MAX_ANTS = 300;
 export const LIFESPAN_S = 600;
 export const MAX_PHEROMONE = 5;
 export const STEP_S = 1 / 30;
+/** Seconds an ant gnaws at its food before it takes a piece (each ant: GNAW_S * (0.75 + 0.5 * random)). */
+export const GNAW_S = 4;
+/** Speed multiplier of an ant carrying a piece of food. */
+export const CARRY_SPEED_MUL = 0.8;
