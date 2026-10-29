@@ -1,5 +1,5 @@
 import {
-  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, MAX_ANTS, MAX_QUEENS, NEST, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { PheromoneField } from './pheromone';
@@ -122,6 +122,8 @@ export class World {
   private acc = 0;
   /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
   private rescueTimer = 0;
+  /** Index of the last NURSE_EVAL_S slot of sim time in which the nurse count was re-evaluated (-1 = not yet; transient, derived from `time`). */
+  private nurseSlot = -1;
 
   constructor(seed: number, terrain: Terrain, pher: PheromoneField, rng: Rng) {
     this.seed = seed;
@@ -153,6 +155,20 @@ export class World {
   /** Progress of the current hatching cycle in [0, 1]. */
   get hatchFraction(): number {
     return Math.max(0, Math.min(1, this.hatchProgress / this.hatchInterval));
+  }
+
+  /** Ants working in the nest for good (role 'nurse'): they feed the queen, carry eggs and never go out. */
+  get nurses(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.role === 'nurse') n++;
+    return n;
+  }
+
+  /** Wanted nurses: NURSES_PER_QUEEN per queen plus one per LARVAE_PER_NURSE larvae, but at most NURSE_MAX_FRACTION of all ants. */
+  get desiredNurses(): number {
+    const need = this.queens * NURSES_PER_QUEEN + Math.ceil(this.larvae / LARVAE_PER_NURSE);
+    const cap = Math.floor(this.ants.length * NURSE_MAX_FRACTION + 1e-9);
+    return Math.max(0, Math.min(need, cap));
   }
 
   /** Ants on the surface (everything but state 'nest'). */
@@ -252,6 +268,39 @@ export class World {
     this.rescue();
     this.pher.step(STEP_S);
     this.time += STEP_S;
+    this.updateNurses();
+  }
+
+  /**
+   * Every NURSE_EVAL_S of sim time: too few nurses -> promote ants that are inside the nest (hatchlings about to emerge
+   * first, then unloaders); too many -> the oldest nurse goes out as a wandering forager (one per evaluation).
+   * Ants on the surface are never recalled.
+   */
+  private updateNurses(): void {
+    const slot = Math.floor(this.time / NURSE_EVAL_S + 1e-9);
+    if (this.nurseSlot < 0) this.nurseSlot = slot; // fresh world or a load: wait for the next boundary
+    if (slot <= this.nurseSlot) return;
+    this.nurseSlot = slot;
+    const want = this.desiredNurses;
+    const have = this.nurses;
+    if (have < want) {
+      const candidates = this.ants
+        .filter((a) => a.state === 'nest' && a.role !== 'nurse')
+        .sort((a, b) => (a.nestKind === b.nestKind ? 0 : a.nestKind === 'hatch' ? -1 : 1) || a.timer - b.timer);
+      for (const a of candidates.slice(0, want - have)) {
+        a.role = 'nurse';
+        a.nestKind = 'nurse';
+        a.timer = 0;
+        a.targetFood = null;
+      }
+    } else if (have > want) {
+      let oldest: Ant | undefined;
+      for (const a of this.ants) if (a.role === 'nurse' && (!oldest || a.age > oldest.age)) oldest = a;
+      if (oldest) {
+        oldest.role = 'forager';
+        this.emerge(oldest, 'wander');
+      }
+    }
   }
 
   /** Living creatures: cooldowns tick, hopping flies fly, beetles walk. */
