@@ -102,4 +102,62 @@ describe('save/load', () => {
     });
     await expect(saveGame(sample())).rejects.toThrow();
   });
+
+  async function putIdb(value: unknown): Promise<void> {
+    const db = await new Promise<IDBDatabase>((res, rej) => {
+      const r = indexedDB.open('ant-colony', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('saves');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    await new Promise<void>((res, rej) => {
+      const tx = db.transaction('saves', 'readwrite');
+      tx.objectStore('saves').put(value, 'current');
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+    db.close();
+  }
+
+  it('invalid-base64 and wrong-length pheromone make loadGame return null', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ ...sample(), pheromone: '%%%' }));
+    expect(await loadGame()).toBeNull();
+    localStorage.setItem(KEY, JSON.stringify({ ...sample(), pheromone: btoa('abc') }));
+    expect(await loadGame()).toBeNull();
+  });
+
+  it('invalid localStorage entry falls through to a valid IndexedDB save', async () => {
+    const s = sample();
+    await putIdb(s);
+    localStorage.setItem(KEY, JSON.stringify({ ...s, version: 2 }));
+    expect(await loadGame()).toEqual(s);
+    localStorage.setItem(KEY, '{broken');
+    expect(await loadGame()).toEqual(s);
+  });
+
+  it('corrupt IndexedDB value returns null', async () => {
+    await putIdb({ version: 1, junk: true });
+    expect(await loadGame()).toBeNull();
+    await putIdb('garbage');
+    expect(await loadGame()).toBeNull();
+  });
+
+  it('a save that fails to restore is rejected by the final guard', async () => {
+    const s = sample();
+    const mod = await import('./sim/serialize');
+    vi.spyOn(mod, 'worldFromSave').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    localStorage.setItem(KEY, JSON.stringify(s));
+    expect(await loadGame()).toBeNull();
+  });
+
+  it('does not touch IndexedDB on localStorage saves when it was never used', async () => {
+    // fresh module state so idbInUse is false
+    vi.resetModules();
+    const fresh = await import('./save');
+    const spy = vi.spyOn(indexedDB, 'open');
+    await fresh.saveGame(sample());
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

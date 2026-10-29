@@ -104,4 +104,34 @@ describe('validateSave', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();
     expect(validateSave({ ...good(), introDone: 'yes' })).toBeNull();
   });
+  it('rejects invalid base64 and wrong-length pheromone', () => {
+    expect(validateSave({ ...good(), pheromone: '!!!not base64!!!' })).toBeNull();
+    expect(validateSave({ ...good(), pheromone: btoa('abc') })).toBeNull();
+    expect(validateSave({ ...good(), pheromone: '' })).toBeNull();
+  });
+  it('rejects out-of-range values (table)', () => {
+    const g = good();
+    const ant = (g.ants as Record<string, unknown>[])[0];
+    const food = (g.food as Record<string, unknown>[])[0];
+    const bad: Record<string, unknown>[] = [
+      { ants: [{ ...ant, lifespan: 0 }] },
+      { ants: [{ ...ant, age: -1 }] },
+      { ants: [{ ...ant, x: -1 }] },
+      { ants: [{ ...ant, y: 100000 }] },
+      { ants: [{ ...ant, heading: Infinity }] },
+      { ants: [{ ...ant, id: 1.5 }] },
+      { food: [{ ...food, piecesLeft: -1 }] },
+      { food: [{ ...food, piecesLeft: 21 }] },
+      { food: [{ ...food, piecesLeft: 1.5 }] },
+      { food: [{ ...food, x: 1e6 }] },
+      { ants: Array.from({ length: 2001 }, () => ({ ...ant })) },
+      { food: Array.from({ length: 2001 }, () => ({ ...food })) },
+      { nextId: 1 },
+      { nextId: 2.5 },
+      { camera: { x: 0, y: 0, zoom: 0 } },
+      { stock: -1 },
+      { time: -1 },
+    ];
+    for (const patch of bad) expect(validateSave({ ...g, ...patch }), JSON.stringify(Object.keys(patch))).toBeNull();
+  });
 });

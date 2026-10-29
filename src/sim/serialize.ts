@@ -1,4 +1,4 @@
-import { MAX_PHEROMONE } from './constants';
+import { MAX_PHEROMONE, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import { World, type Ant } from './world';
 
@@ -67,22 +67,27 @@ export function worldFromSave(s: SaveV1): World {
   w.hatchProgress = s.hatchProgress;
   w.nextId = s.nextId;
   w.ants.length = 0;
-  w.ants.push(...s.ants.map((a) => ({ ...a })));
+  for (const a of s.ants) w.ants.push({ ...a });
   w.food.length = 0;
-  w.food.push(...s.food.map((f) => ({ ...f })));
+  for (const f of s.food) w.food.push({ ...f });
   for (let i = 0; i < bytes.length; i++) w.pher.data[i] = (bytes[i] / 255) * MAX_PHEROMONE;
   return w;
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
+const inRange = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
 const ANT_STATES = ['wander', 'toFood', 'carry'];
+const MAX_ENTRIES = 2000;
+const MAX_PIECES = 20;
 
 function validAnt(a: unknown): boolean {
   if (typeof a !== 'object' || a === null) return false;
   const o = a as Record<string, unknown>;
   return (
-    isNum(o.id) && isNum(o.x) && isNum(o.y) && isNum(o.heading) && isNum(o.age) && isNum(o.lifespan) &&
-    isNum(o.carry) && typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
+    isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) && isNum(o.heading) &&
+    isNum(o.age) && o.age >= 0 && isNum(o.lifespan) && o.lifespan > 0 && isNum(o.carry) &&
+    typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
     (o.targetFood === null || isNum(o.targetFood))
   );
 }
@@ -91,22 +96,34 @@ function validFood(f: unknown): boolean {
   if (typeof f !== 'object' || f === null) return false;
   const o = f as Record<string, unknown>;
   return (
-    isNum(o.id) && isNum(o.x) && isNum(o.y) && isNum(o.piecesLeft) && typeof o.kind === 'string' &&
-    Object.prototype.hasOwnProperty.call(FOOD_TABLE, o.kind)
+    isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) &&
+    isInt(o.piecesLeft) && o.piecesLeft >= 0 && o.piecesLeft <= MAX_PIECES &&
+    typeof o.kind === 'string' && Object.prototype.hasOwnProperty.call(FOOD_TABLE, o.kind)
   );
+}
+
+function validPheromone(b64: string): boolean {
+  try {
+    return base64ToBytes(b64).length === WORLD_W * WORLD_H;
+  } catch {
+    return false;
+  }
 }
 
 export function validateSave(x: unknown): SaveV1 | null {
   if (typeof x !== 'object' || x === null) return null;
   const o = x as Record<string, unknown>;
   if (o.version !== 1) return null;
-  if (!isNum(o.seed) || !isNum(o.rngState) || !isNum(o.time) || !isNum(o.stock) || !isNum(o.hatchProgress) || !isNum(o.nextId)) {
-    return null;
-  }
+  if (!isNum(o.seed) || !isNum(o.rngState) || !isNum(o.hatchProgress)) return null;
+  if (!isNum(o.time) || o.time < 0 || !isNum(o.stock) || o.stock < 0 || !isInt(o.nextId)) return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
-  if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom)) return null;
-  if (!Array.isArray(o.ants) || !o.ants.every(validAnt)) return null;
-  if (!Array.isArray(o.food) || !o.food.every(validFood)) return null;
+  if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;
+  if (!Array.isArray(o.ants) || o.ants.length > MAX_ENTRIES || !o.ants.every(validAnt)) return null;
+  if (!Array.isArray(o.food) || o.food.length > MAX_ENTRIES || !o.food.every(validFood)) return null;
+  for (const e of [...(o.ants as { id: number }[]), ...(o.food as { id: number }[])]) {
+    if (e.id >= o.nextId) return null;
+  }
+  if (!validPheromone(o.pheromone)) return null;
   return x as SaveV1;
 }

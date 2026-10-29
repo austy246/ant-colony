@@ -1,9 +1,24 @@
-import { validateSave, type SaveV1 } from './sim/serialize';
+import { validateSave, worldFromSave, type SaveV1 } from './sim/serialize';
 
 const LS_KEY = 'ant-colony-save';
 const DB_NAME = 'ant-colony';
 const STORE = 'saves';
 const IDB_KEY = 'current';
+
+/** Set once IndexedDB holds (or may hold) our save; only then do we bother deleting a stale entry. */
+let idbInUse = false;
+
+/** validateSave plus a final guard: the save must actually be restorable. */
+function accept(x: unknown): SaveV1 | null {
+  const v = validateSave(x);
+  if (!v) return null;
+  try {
+    worldFromSave(v);
+  } catch {
+    return null;
+  }
+  return v;
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -40,6 +55,7 @@ export async function saveGame(s: SaveV1): Promise<void> {
   } catch {
     // Quota exceeded (name, legacy code 22 / Firefox 1014) or storage unavailable: use IndexedDB.
     await idbRun('readwrite', (st) => st.put(s, IDB_KEY));
+    idbInUse = true;
     try {
       localStorage.removeItem(LS_KEY);
     } catch {
@@ -48,8 +64,10 @@ export async function saveGame(s: SaveV1): Promise<void> {
     return;
   }
   // localStorage succeeded: drop any stale IndexedDB copy so it can't shadow later saves (best effort).
+  if (!idbInUse) return;
   try {
     await idbRun('readwrite', (st) => st.delete(IDB_KEY));
+    idbInUse = false;
   } catch {
     // ignore
   }
@@ -59,14 +77,16 @@ export async function loadGame(): Promise<SaveV1 | null> {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw !== null) {
-      const v = validateSave(JSON.parse(raw));
+      const v = accept(JSON.parse(raw));
       if (v) return v;
     }
   } catch {
     // fall through to IndexedDB
   }
   try {
-    return validateSave(await idbRun('readonly', (st) => st.get(IDB_KEY)));
+    const raw = await idbRun('readonly', (st) => st.get(IDB_KEY));
+    if (raw !== undefined) idbInUse = true;
+    return accept(raw);
   } catch {
     return null;
   }
