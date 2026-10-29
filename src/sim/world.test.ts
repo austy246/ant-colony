@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
+  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE } from './food';
 import { Surface } from './terrain';
@@ -26,7 +26,7 @@ function delivered(w: World, initial: number): number {
 /** A started colony (ants that live forever, wandering with no food in sight) on flat ground with the given stock. */
 function startedColony(seed: number, stock: number, ants = 1): World {
   const w = flatWorld(seed);
-  for (let i = 0; i < ants; i++) w.spawnAnt().lifespan = 1e6;
+  for (let i = 0; i < ants; i++) w.spawnAnt();
   w.stock = stock;
   return w;
 }
@@ -72,7 +72,6 @@ describe('World', () => {
     for (const w of [ground, stone]) {
       w.ants[0].x = 160;
       w.ants[0].y = 100;
-      w.ants[0].lifespan = 1e6;
     }
     const lg = pathLength(ground, 4);
     const ls = pathLength(stone, 4);
@@ -91,7 +90,7 @@ describe('World', () => {
     for (let seed = 1; seed <= 10; seed++) {
       const w = flatWorld(seed);
       w.placeFood('beetle', NEST.x + 30, NEST.y);
-      for (let i = 0; i < 8; i++) w.spawnAnt().lifespan = 1e6;
+      for (let i = 0; i < 8; i++) w.spawnAnt();
       run(w, 120);
       if (delivered(w, 8) > 0) success++;
     }
@@ -102,7 +101,6 @@ describe('World', () => {
     const w = flatWorld(1);
     const f = w.placeFood('berry', NEST.x + 20, NEST.y)!;
     const a = w.spawnAnt();
-    a.lifespan = 1e6;
     a.state = 'toFood';
     a.targetFood = f.id;
     run(w, 40); // 3 trips with gnawing; delivered stock (3) stays below FOOD_PER_ANT, so nothing hatches
@@ -115,7 +113,6 @@ describe('World', () => {
     const w = flatWorld(2);
     const f = w.placeFood('fly', NEST.x + 20, NEST.y)!;
     const a = w.spawnAnt();
-    a.lifespan = 1e6;
     a.state = 'toFood';
     a.targetFood = f.id;
     let deliveries = 0;
@@ -135,7 +132,7 @@ describe('World', () => {
     expect(a.targetFood).toBeNull();
   });
 
-  it('ants and food arrays keep their identity across a step with a death and a food removal', () => {
+  it('ants and food arrays keep their identity across a step with a food removal', () => {
     const w = flatWorld(3);
     const ants = w.ants;
     const food = w.food;
@@ -147,10 +144,7 @@ describe('World', () => {
     picker.state = 'gnaw'; // finishing its bite on the last piece
     picker.timer = STEP_S;
     picker.targetFood = f.id;
-    picker.lifespan = 1e6;
-    const doomed = w.spawnAnt();
-    doomed.lifespan = 0.01;
-    expect(ants).toHaveLength(2);
+    expect(ants).toHaveLength(1);
     w.step(STEP_S * 2);
     expect(w.ants).toBe(ants);
     expect(w.food).toBe(food);
@@ -167,31 +161,28 @@ describe('World', () => {
     expect(w.stock).toBe(0);
     const a = w.ants[1];
     expect(a.age).toBeLessThan(1);
-    expect(a.lifespan).toBeGreaterThanOrEqual(LIFESPAN_S * 0.8);
-    expect(a.lifespan).toBeLessThanOrEqual(LIFESPAN_S * 1.2);
   });
 
   it('ants never exceed MAX_ANTS (300 ants, stock 50: nothing hatches, stock untouched, progress resets to 0)', () => {
     const w = flatWorld(5);
-    for (let i = 0; i < MAX_ANTS - 1; i++) w.spawnAnt().lifespan = 1e6;
+    for (let i = 0; i < MAX_ANTS - 1; i++) w.spawnAnt();
     w.stock = 50;
     run(w, 3); // 299 ants: a cycle builds up so the later reset is observable
     expect(w.hatchProgress).toBeGreaterThan(2.5);
-    w.spawnAnt().lifespan = 1e6; // 300 ants
+    w.spawnAnt(); // 300 ants
     run(w, 2 * HATCH_INTERVAL_S);
     expect(w.ants).toHaveLength(MAX_ANTS);
     expect(w.stock).toBe(50);
     expect(w.hatchProgress).toBe(0);
   });
 
-  it('ant dies when age reaches lifespan', () => {
+  it('ants do not die of old age: after 2000 s the ant is alive, age counts up and has no lifespan', () => {
     const w = flatWorld(6);
     const a = w.spawnAnt();
-    a.lifespan = 1;
-    run(w, 0.8);
-    expect(w.ants).toHaveLength(1);
-    run(w, 0.4);
-    expect(w.ants).toHaveLength(0);
+    run(w, 2000, 0.5);
+    expect(w.ants).toEqual([a]);
+    expect(a.age).toBeGreaterThan(1999);
+    expect('lifespan' in a).toBe(false);
   });
 
   it('queen survives: a world that never started stays empty and keeps running 1000 s without throwing', () => {
@@ -213,7 +204,8 @@ describe('World', () => {
 
   it('queen survives: a started colony with zero ants and zero stock gets a free ant and keeps running without throwing', () => {
     const w = flatWorld(7);
-    w.spawnAnt().lifespan = 0.01;
+    w.spawnAnt();
+    w.ants.length = 0;
     run(w, 1);
     expect(w.started).toBe(true);
     expect(w.ants).toHaveLength(0);
@@ -293,7 +285,7 @@ describe('World', () => {
         w.stock = stock;
         expect(w.larvae).toBe(larvae);
       }
-      w.spawnAnt().lifespan = 1e6;
+      w.spawnAnt();
       w.stock = 100;
       for (let i = 0; i < 700; i++) {
         w.step(STEP_S);
@@ -353,7 +345,6 @@ describe('World', () => {
       expect(w.ants).toHaveLength(1);
       expect(w.stock).toBe(0);
       // A living ant means no further rescue, however long we wait.
-      w.ants[0].lifespan = 1e6;
       run(w, 40);
       expect(w.ants).toHaveLength(1);
       // Kill it: a fresh 15 s timer starts.
@@ -431,7 +422,7 @@ describe('World', () => {
       const w = flatWorld(seed);
       const ang = ((seed * 37) % 360) * (Math.PI / 180);
       w.placeFood('beetle', NEST.x + Math.cos(ang) * 40, NEST.y + Math.sin(ang) * 40);
-      w.spawnAnt().lifespan = 1e6;
+      w.spawnAnt();
       w.started = false;
       run(w, 60);
       if (delivered(w, 1) > 0) success++;
@@ -447,7 +438,7 @@ describe('World', () => {
     let n = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const w = flatWorld(seed);
-      for (let i = 0; i < 5; i++) w.spawnAnt().lifespan = 1e6;
+      for (let i = 0; i < 5; i++) w.spawnAnt();
       for (let sec = 1; sec <= 40; sec++) {
         run(w, 1);
         if (sec <= 20) continue;
@@ -466,7 +457,6 @@ describe('World', () => {
     expect(food).not.toBeNull();
     for (let i = 0; i < 5; i++) {
       const a = w.spawnAnt();
-      a.lifespan = 1e6;
     }
     // With the 6 s half-life the trail only lives while ants keep carrying (beetle is eaten up by ~35 s; 90 s
     // would measure an already evaporated trail). At 30 s measured: on-line sum ~59 vs 0 off the line.
@@ -512,7 +502,7 @@ describe('World', () => {
   it('trail evaporates when food is gone', () => {
     const w = flatWorld(12);
     w.placeFood('beetle', NEST.x + 50, NEST.y);
-    for (let i = 0; i < 5; i++) w.spawnAnt().lifespan = 1e6;
+    for (let i = 0; i < 5; i++) w.spawnAnt();
     run(w, 60);
     const sum = () => w.pher.data.reduce((s, v) => s + v, 0);
     const peak = sum();
@@ -549,14 +539,13 @@ describe('World', () => {
     for (let seed = 1; seed <= 10; seed++) {
       const w = flatWorld(seed);
       const a = w.spawnAnt();
-      a.lifespan = 0.5;
+      w.ants.length = 0;
       run(w, 1);
       expect(w.ants).toHaveLength(0);
       expect(w.stock).toBe(0);
       w.placeFood('fly', NEST.x + 25, NEST.y);
       for (let i = 0; i < 8; i++) {
         const n = w.spawnAnt();
-        n.lifespan = 1e6;
         expect(n.id).not.toBe(a.id);
       }
       run(w, 120);
@@ -569,7 +558,6 @@ describe('World', () => {
     /** An ant standing exactly on the food, already heading for it. */
     function antAt(w: World, f: { id: number; x: number; y: number }): ReturnType<World['spawnAnt']> {
       const a = w.spawnAnt();
-      a.lifespan = 1e6;
       a.x = f.x;
       a.y = f.y;
       a.state = 'toFood';
@@ -712,7 +700,6 @@ describe('World', () => {
         const w = flatWorld(28);
         const far = w.placeFood('carrion', 280, 150)!; // far away: the ant keeps walking toward it
         const a = w.spawnAnt();
-        a.lifespan = 1e6;
         a.x = 200;
         a.y = 150;
         a.state = state;

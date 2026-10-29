@@ -1,5 +1,5 @@
 import {
-  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
+  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
 } from './constants';
 import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
 import { PheromoneField } from './pheromone';
@@ -14,8 +14,8 @@ export interface Ant {
   y: number;
   heading: number;
   state: AntState;
+  /** Seconds lived (informational only: ants do not die of old age). */
   age: number;
-  lifespan: number;
   carry: number;
   targetFood: number | null;
   /** Seconds of gnawing left while state is 'gnaw'; 0 otherwise. */
@@ -104,7 +104,6 @@ export class World {
       heading: rng.next() * TWO_PI - Math.PI,
       state: 'wander',
       age: 0,
-      lifespan: LIFESPAN_S * (0.8 + 0.4 * rng.next()),
       carry: 0,
       targetFood: null,
       timer: 0,
@@ -153,9 +152,6 @@ export class World {
 
   private substep(): void {
     for (const ant of this.ants) this.updateAnt(ant);
-    let k = 0;
-    for (const a of this.ants) if (a.age < a.lifespan) this.ants[k++] = a;
-    this.ants.length = k;
     this.hatch();
     this.rescue();
     this.pher.step(STEP_S);

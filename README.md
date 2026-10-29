@@ -1,6 +1,6 @@
 # Mravenci
 
-Pixel-art simulace mravenčí kolonie v prohlížeči. Svět je z jehličí, větviček, kamenů a mechu; ty jsi pozorovatel. Rozmístíš kořist, mravenci ji najdou, odnesou do hnízda a po cestě vytvoří feromonovou stopu, kterou následují další. Za donesenou potravu královna líhne nové mravence. Mravenci stárnou a umírají, takže bez potravy se kolonie zmenšuje.
+Pixel-art simulace mravenčí kolonie v prohlížeči. Svět je z jehličí, větviček, kamenů a mechu; ty jsi pozorovatel. Rozmístíš kořist, mravenci ji najdou, odnesou do hnízda a po cestě vytvoří feromonovou stopu, kterou následují další. Za donesenou potravu královna líhne nové mravence. Mravenci nestárnou a neumírají věkem; zahynout mohou jen v konfliktu (brouk se brání), predátoři jsou plánovaní na později. Za každých 100 donesených jednotek potravy přibude další královna a líhnutí se zrychlí.
 
 Hra začíná krátkým úvodem (celá mapa, zoom na královnu, ta vyhrabe komůrku a zmizí pod zem, pak se objeví první mravenec). Úvod lze přeskočit tlačítkem „Přeskočit" a přehraje se jen při nové hře.
 

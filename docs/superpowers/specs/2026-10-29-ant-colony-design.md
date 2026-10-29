@@ -10,14 +10,14 @@ Pixel-art 2D hra v prohlížeči: simulace vývoje mravenčí kolonie z pohledu 
 ## Cíle první verze
 
 1. Úvodní sekvence: celá mapa oddáleně, plynulý zoom na královnu, ta vyhrabe komůrku a zmizí z mapy (je pod zemí), pak se objeví první mravenec.
-2. Hráč rozmisťuje kořist z lesa: brouk, housenka, hmyz (např. mrtvá moucha), zdechlina, lesní malina, kus houby.
+2. Hráč rozmisťuje kořist z lesa: brouk, housenka, hmyz (např. moucha), zdechlina, lesní malina, kus houby. Brouk a moucha jsou živí: brouk chodí a brání se (první mravenec, který se ho dotkne, zahyne, při druhém doteku brouk zahyne a stane se zdechlinou), moucha při prvním doteku odskočí a při druhém se stane zdechlinou.
 3. Mravenci kořist samostatně hledají, nesou ji do hnízda a značkují feromonovou stopu, kterou ostatní sledují. Stopa se posiluje s provozem a časem slábne.
-4. Kolonie roste podle přinesené potravy: za donesenou potravu královna líhne další mravence (konkrétní kurz potrava → mravenci je ladicí parametr, určí builder).
+4. Kolonie roste podle přinesené potravy: za donesenou potravu královna líhne další mravence (konkrétní kurz potrava → mravenci je ladicí parametr, určí builder). Za každých 100 donesených jednotek potravy přibude královna (nejvýše 8) a líhnutí se úměrně zrychlí.
 5. Posun po mapě a zoom (myš/dotyk).
 6. Přepínač feromonového pohledu („pohled mravenců"): ztmavená mapa, tenká (zhruba 1 pixel) modrá stopa k potravě, jemná oranžová záře kolem hnízda, mravenci jako světlé body.
 7. Terén ovlivňuje pohyb: kameny a velké větve mravence výrazně zpomalují (obcházejí je), drobné větvičky mírně, jehličí jen málo. (Tohle je odhad autora návrhu k potvrzení, hráč s tím souhlasil jen obecně.) Volitelný třetí pohled zobrazuje průchodnost (červená kameny, oranžová větvičky, žlutá jehličí).
 8. Stav hry se ukládá do local storage a po obnovení stránky se pokračuje.
-9. Mravenci stárnou a umírají (rozhodl autor hry). Délku života a vztah ke krmení určí builder tak, aby kolonie s dostatkem potravy rostla a bez potravy se postupně zmenšovala. Královna v první verzi neumírá, takže nevzniká prohra (volba autora návrhu).
+9. Mravenci nestárnou a neumírají věkem (rozhodl autor hry, protože později přibudou predátoři); zahynout mohou jen v konfliktu (brání se brouk); predátoři jsou plánovaní na později. Královna v první verzi neumírá, takže nevzniká prohra (volba autora návrhu).
 
 ## Rozhodnutí o hnízdě a kořisti (potvrdil autor hry)
 

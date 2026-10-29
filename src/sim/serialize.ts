@@ -14,7 +14,8 @@ export interface SaveV1 {
   nextId: number;
   introDone: boolean;
   /** `timer` is optional (absent in older saves): seconds of gnawing left, 0 when not gnawing. */
-  ants: (Omit<Ant, 'timer'> & { timer?: number })[];
+  /** `lifespan` is optional and ignored (removed: ants no longer die of old age; older saves still hold it). */
+  ants: (Omit<Ant, 'timer'> & { timer?: number; lifespan?: number })[];
   food: FoodItem[];
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
   pheromone: string;
@@ -73,7 +74,11 @@ export function worldFromSave(s: SaveV1): World {
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
-  for (const a of s.ants) w.ants.push({ ...a, timer: a.timer ?? 0 });
+  for (const a of s.ants) {
+    // `lifespan` was removed (ants no longer die of old age); old saves may still carry it: drop it.
+    const { lifespan: _lifespan, ...rest } = a;
+    w.ants.push({ ...rest, timer: a.timer ?? 0 });
+  }
   w.food.length = 0;
   for (const f of s.food) w.food.push({ ...f });
   for (let i = 0; i < bytes.length; i++) w.pher.data[i] = (bytes[i] / 255) * MAX_PHEROMONE;
@@ -95,7 +100,7 @@ function validAnt(a: unknown): boolean {
   const o = a as Record<string, unknown>;
   return (
     isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) && isNum(o.heading) &&
-    isNum(o.age) && o.age >= 0 && isNum(o.lifespan) && o.lifespan > 0 && isNum(o.carry) &&
+    isNum(o.age) && o.age >= 0 && isNum(o.carry) &&
     typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
     (o.targetFood === null || isNum(o.targetFood)) &&
     (o.timer === undefined || (isNum(o.timer) && o.timer >= 0))

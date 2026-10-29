@@ -84,7 +84,6 @@ describe('serialize', () => {
     const w = World.create(77);
     const f = w.placeFood('carrion', 150, 100)!;
     const a = w.spawnAnt();
-    a.lifespan = 1e6;
     a.x = f.x;
     a.y = f.y;
     a.state = 'toFood';
@@ -216,6 +215,15 @@ describe('validateSave', () => {
     expect(w.stock).toBe(0);
     expect(w.hatchProgress).toBeLessThan(HATCH_INTERVAL_S);
   });
+  it('old saves with an ant lifespan still load (ignored, dropped); saves without it are valid', () => {
+    const g = good();
+    const ants = (g.ants as Record<string, unknown>[]).map((a) => ({ ...a, lifespan: 600 }));
+    const w = worldFromSave(validateSave({ ...g, ants })!);
+    expect(w.ants).toHaveLength(ants.length);
+    expect(w.ants.every((a) => !('lifespan' in a))).toBe(true);
+    expect((worldToSave(w, EXTRA).ants[0] as Record<string, unknown>).lifespan).toBeUndefined();
+    expect(validateSave(good())).not.toBeNull();
+  });
   it('rejects non-string pheromone and non-boolean introDone', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();
     expect(validateSave({ ...good(), introDone: 'yes' })).toBeNull();
@@ -230,7 +238,6 @@ describe('validateSave', () => {
     const ant = (g.ants as Record<string, unknown>[])[0];
     const food = (g.food as Record<string, unknown>[])[0];
     const bad: Record<string, unknown>[] = [
-      { ants: [{ ...ant, lifespan: 0 }] },
       { ants: [{ ...ant, age: -1 }] },
       { ants: [{ ...ant, x: -1 }] },
       { ants: [{ ...ant, y: 100000 }] },
