@@ -1,19 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { COLONY_FLOOR, FLOOR_HATCH_S, FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S, WORLD_H, WORLD_W } from './constants';
+import {
+  FOOD_PER_ANT, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
+} from './constants';
 import { Surface } from './terrain';
 import { World } from './world';
 
-/** World with an obstacle-free ground (speed 1 everywhere). */
+/** World with an obstacle-free ground (speed 1 everywhere) and an empty larder (no starter stock, so nothing hatches by itself). */
 function flatWorld(seed = 1): World {
   const w = World.create(seed);
+  w.stock = 0;
   w.terrain.surface.fill(Surface.Ground);
   w.terrain.speed.fill(1);
   return w;
 }
 
-/** Food delivered to the nest = stock plus the food spent on hatched ants (beyond `initial` ants). */
+/**
+ * Food delivered to the nest = stock plus the food spent on hatched ants (beyond `initial` ants).
+ * Valid for flatWorld worlds (stock 0) in which no ant dies and the free rescue ant never triggers.
+ */
 function delivered(w: World, initial: number): number {
   return w.stock + (w.ants.length - initial) * FOOD_PER_ANT;
+}
+
+/** A started colony (ants that live forever, wandering with no food in sight) on flat ground with the given stock. */
+function startedColony(seed: number, stock: number, ants = 1): World {
+  const w = flatWorld(seed);
+  for (let i = 0; i < ants; i++) w.spawnAnt().lifespan = 1e6;
+  w.stock = stock;
+  return w;
 }
 
 function run(w: World, seconds: number, dt = 0.1): void {
@@ -36,11 +50,13 @@ function pathLength(w: World, seconds: number): number {
 }
 
 describe('World', () => {
-  it('create starts with no ants and empty stock', () => {
+  it('create starts with no ants, the starter stock and no hatching progress', () => {
     const w = World.create(5);
     expect(w.ants).toHaveLength(0);
-    expect(w.stock).toBe(0);
+    expect(STARTER_STOCK).toBe(10);
+    expect(w.stock).toBe(STARTER_STOCK);
     expect(w.hatchProgress).toBe(0);
+    expect(w.deliveryCount).toBe(0);
     expect(w.seed).toBe(5);
   });
 
@@ -88,9 +104,10 @@ describe('World', () => {
     a.lifespan = 1e6;
     a.state = 'toFood';
     a.targetFood = f.id;
-    run(w, 12); // shorter than FLOOR_HATCH_S, so no floor egg muddies the delivery accounting
+    run(w, 12); // delivered stock (3) stays below FOOD_PER_ANT, so nothing hatches and muddies the accounting
     expect(delivered(w, 1)).toBe(3);
     expect(w.food).toHaveLength(0);
+    expect(w.deliveryCount).toBe(1);
   });
 
   it('piece count reaching 0 removes the food, and a multi-piece item is carried on a second trip', () => {
@@ -110,6 +127,7 @@ describe('World', () => {
       if (i === 150) expect(f.piecesLeft).toBeGreaterThanOrEqual(0);
     }
     expect(deliveries).toBe(2);
+    expect(w.deliveryCount).toBe(2);
     expect(f.piecesLeft).toBe(0);
     expect(w.food).toHaveLength(0);
     expect(a.state).toBe('wander');
@@ -139,26 +157,28 @@ describe('World', () => {
     expect(picker.state).toBe('carry');
   });
 
-  it('food stock of 3 hatches exactly one new ant and leaves stock 0', () => {
-    const w = flatWorld(4);
-    w.stock = FOOD_PER_ANT;
-    w.step(STEP_S);
-    expect(w.ants).toHaveLength(1);
+  it('a started colony with stock for exactly one ant hatches it, leaves stock 0 and spawns it at the nest', () => {
+    const w = startedColony(4, FOOD_PER_ANT);
+    run(w, HATCH_INTERVAL_S + 0.5);
+    expect(w.ants).toHaveLength(2);
     expect(w.stock).toBe(0);
-    const a = w.ants[0];
-    expect(Math.hypot(a.x - NEST.x, a.y - NEST.y)).toBeLessThan(NEST.r);
+    const a = w.ants[1];
+    expect(a.age).toBeLessThan(1);
     expect(a.lifespan).toBeGreaterThanOrEqual(LIFESPAN_S * 0.8);
     expect(a.lifespan).toBeLessThanOrEqual(LIFESPAN_S * 1.2);
   });
 
-  it('ants never exceed MAX_ANTS', () => {
+  it('ants never exceed MAX_ANTS (300 ants, stock 50: nothing hatches, stock untouched, progress resets to 0)', () => {
     const w = flatWorld(5);
-    for (let i = 0; i < MAX_ANTS; i++) w.spawnAnt();
-    w.stock = 100;
-    run(w, 2);
-    expect(w.ants.length).toBeLessThanOrEqual(MAX_ANTS);
+    for (let i = 0; i < MAX_ANTS - 1; i++) w.spawnAnt().lifespan = 1e6;
+    w.stock = 50;
+    run(w, 3); // 299 ants: a cycle builds up so the later reset is observable
+    expect(w.hatchProgress).toBeGreaterThan(2.5);
+    w.spawnAnt().lifespan = 1e6; // 300 ants
+    run(w, 2 * HATCH_INTERVAL_S);
     expect(w.ants).toHaveLength(MAX_ANTS);
-    expect(w.stock).toBe(100);
+    expect(w.stock).toBe(50);
+    expect(w.hatchProgress).toBe(0);
   });
 
   it('ant dies when age reaches lifespan', () => {
@@ -181,7 +201,14 @@ describe('World', () => {
     expect(w.time).toBeGreaterThan(900);
   });
 
-  it('queen survives: a started colony with zero ants and zero stock recovers to the floor', () => {
+  it('spawnAnt marks the colony as started', () => {
+    const w = World.create(1);
+    expect(w.started).toBe(false);
+    w.spawnAnt();
+    expect(w.started).toBe(true);
+  });
+
+  it('queen survives: a started colony with zero ants and zero stock gets a free ant and keeps running without throwing', () => {
     const w = flatWorld(7);
     w.spawnAnt().lifespan = 0.01;
     run(w, 1);
@@ -189,56 +216,176 @@ describe('World', () => {
     expect(w.ants).toHaveLength(0);
     expect(w.stock).toBe(0);
     expect(() => run(w, 200)).not.toThrow();
-    expect(w.ants).toHaveLength(COLONY_FLOOR);
+    expect(w.ants.length).toBeGreaterThanOrEqual(1);
   });
 
-  describe('colony floor (queen keeps laying a few eggs)', () => {
-    function startedEmpty(seed = 21): World {
-      const w = flatWorld(seed);
-      w.spawnAnt().lifespan = 0.01;
-      run(w, 0.5);
+  describe('hatching (one ant per HATCH_INTERVAL_S while the queen has FOOD_PER_ANT food)', () => {
+    /** Steps in STEP_S increments and returns the colony size after every whole second (index 0 = at t=0). */
+    function antsPerSecond(w: World, seconds: number): number[] {
+      const out = [w.ants.length];
+      for (let sec = 1; sec <= seconds; sec++) {
+        for (let i = 0; i < 30; i++) w.step(STEP_S);
+        out.push(w.ants.length);
+      }
+      return out;
+    }
+
+    it('constants: 5 food per ant, one hatch every 10 s', () => {
+      expect(FOOD_PER_ANT).toBe(5);
+      expect(HATCH_INTERVAL_S).toBe(10);
+    });
+
+    it('stock 10 and 1 ant: ant #2 hatches at 10 s, #3 at 20 s, stock ends 0, no 4th ant without food', () => {
+      const w = startedColony(41, 2 * FOOD_PER_ANT);
+      const n = antsPerSecond(w, 40);
+      expect(n[9]).toBe(1);
+      expect(n[10]).toBe(2); // at the 10 s mark (substep granularity 1/30 s, well within 0.1 s)
+      expect(n[19]).toBe(2);
+      expect(n[20]).toBe(3);
+      expect(n[40]).toBe(3);
+      expect(w.stock).toBe(0);
+      expect(w.hatchProgress).toBe(0);
+      expect(w.ants.map((a) => a.id)).toEqual([1, 2, 3]);
+    });
+
+    it('stock 4 (below FOOD_PER_ANT): nothing hatches in 60 s and hatchProgress stays 0', () => {
+      const w = startedColony(42, FOOD_PER_ANT - 1);
+      for (let sec = 0; sec < 60; sec++) {
+        run(w, 1);
+        expect(w.hatchProgress).toBe(0);
+      }
+      expect(w.ants).toHaveLength(1);
+      expect(w.stock).toBe(FOOD_PER_ANT - 1);
+    });
+
+    it('stock 5: hatchFraction rises linearly to 1 and the ant hatches at the 10 s mark; stock below 5 resets the cycle', () => {
+      const w = startedColony(43, FOOD_PER_ANT);
+      expect(w.hatchFraction).toBe(0);
+      for (let i = 0; i < 150; i++) w.step(STEP_S); // 5 s
+      expect(w.hatchFraction).toBeCloseTo(0.5, 6);
+      expect(w.hatchProgress).toBeCloseTo(5, 6);
+      w.stock = FOOD_PER_ANT - 1; // food taken away mid-cycle
+      w.step(STEP_S);
+      expect(w.hatchProgress).toBe(0);
+      expect(w.hatchFraction).toBe(0);
+      expect(w.ants).toHaveLength(1);
+      w.stock = FOOD_PER_ANT; // restart: the full 10 s are needed again
+      let prev = 0;
+      for (let i = 1; i < 300; i++) {
+        w.step(STEP_S);
+        expect(w.hatchFraction).toBeCloseTo(i / 300, 6);
+        expect(w.hatchFraction).toBeGreaterThan(prev);
+        prev = w.hatchFraction;
+        expect(w.ants).toHaveLength(1);
+      }
+      w.step(STEP_S); // the 300th substep completes the cycle
+      expect(w.ants).toHaveLength(2);
+      expect(w.stock).toBe(0);
+      expect(w.hatchProgress).toBe(0);
+    });
+
+    it('larvae = floor(stock / FOOD_PER_ANT), hatchFraction stays within [0, 1]', () => {
+      const w = flatWorld(44);
+      for (const [stock, larvae] of [[0, 0], [4, 0], [5, 1], [14, 2]] as const) {
+        w.stock = stock;
+        expect(w.larvae).toBe(larvae);
+      }
+      w.spawnAnt().lifespan = 1e6;
+      w.stock = 100;
+      for (let i = 0; i < 700; i++) {
+        w.step(STEP_S);
+        expect(w.hatchFraction).toBeGreaterThanOrEqual(0);
+        expect(w.hatchFraction).toBeLessThanOrEqual(1);
+      }
+      w.hatchProgress = 123;
+      expect(w.hatchFraction).toBe(1);
+      w.hatchProgress = -4;
+      expect(w.hatchFraction).toBe(0);
+    });
+
+    it('a big dt does not burst-hatch: one hatch per cycle even with a large stock', () => {
+      const w = startedColony(45, 50);
+      for (let i = 0; i < 40; i++) w.step(0.5); // 20 s of game time in coarse steps
+      expect(w.ants).toHaveLength(3);
+      expect(w.stock).toBe(40);
+    });
+
+    it('does not run for a world that has not started, even with the starter stock', () => {
+      const w = flatWorld(46);
+      w.stock = STARTER_STOCK;
+      run(w, 100);
       expect(w.ants).toHaveLength(0);
-      expect(w.hatchProgress).toBeLessThan(1);
-      w.hatchProgress = 0;
+      expect(w.stock).toBe(STARTER_STOCK);
+      expect(w.hatchProgress).toBe(0);
+    });
+  });
+
+  describe('rescue (a started colony with no ants and no food for an ant gets one free ant)', () => {
+    function emptyStarted(seed: number): World {
+      const w = flatWorld(seed);
+      w.spawnAnt();
+      w.ants.length = 0;
+      expect(w.started).toBe(true);
       return w;
     }
 
-    it('spawnAnt marks the colony as started', () => {
-      const w = World.create(1);
-      expect(w.started).toBe(false);
-      w.spawnAnt();
-      expect(w.started).toBe(true);
+    /** Steps until an ant exists (max 40 s) and returns the elapsed seconds. */
+    function secondsUntilAnt(w: World): number {
+      let t = 0;
+      while (w.ants.length === 0 && t < 40) {
+        w.step(STEP_S);
+        t += STEP_S;
+      }
+      return t;
+    }
+
+    it('RESCUE_AFTER_S is 15', () => {
+      expect(RESCUE_AFTER_S).toBe(15);
     });
 
-    it('hatches one ant after FLOOR_HATCH_S and five after about five times that, then stops', () => {
-      expect(FLOOR_HATCH_S).toBe(15);
-      expect(COLONY_FLOOR).toBe(5);
-      const w = startedEmpty();
-      run(w, FLOOR_HATCH_S - 1);
+    it('exactly one ant appears after 15 s (+-0.1), and again after another 15 s only if the colony is empty again', () => {
+      const w = emptyStarted(51);
+      let t = secondsUntilAnt(w);
+      expect(Math.abs(t - RESCUE_AFTER_S)).toBeLessThan(0.1);
+      expect(w.ants).toHaveLength(1);
+      expect(w.stock).toBe(0);
+      // A living ant means no further rescue, however long we wait.
+      w.ants[0].lifespan = 1e6;
+      run(w, 40);
+      expect(w.ants).toHaveLength(1);
+      // Kill it: a fresh 15 s timer starts.
+      w.ants.length = 0;
+      t = secondsUntilAnt(w);
+      expect(Math.abs(t - RESCUE_AFTER_S)).toBeLessThan(0.1);
+      expect(w.ants).toHaveLength(1);
+    });
+
+    it('the timer resets when the condition breaks (enough stock for an ant)', () => {
+      const w = emptyStarted(52);
+      run(w, 10);
+      w.stock = FOOD_PER_ANT; // hatching takes over; the rescue clock must restart from 0
+      w.step(STEP_S);
+      w.stock = 0;
+      run(w, 10);
+      expect(w.ants).toHaveLength(0); // only ~10 s since the reset, not 20
+      run(w, 6);
+      expect(w.ants).toHaveLength(1);
+    });
+
+    it('a colony with no ants but food for an ant hatches normally instead of getting a free one', () => {
+      const w = emptyStarted(53);
+      w.stock = FOOD_PER_ANT;
+      run(w, HATCH_INTERVAL_S - 1);
       expect(w.ants).toHaveLength(0);
       run(w, 2);
       expect(w.ants).toHaveLength(1);
-      run(w, 15);
-      expect(w.ants).toHaveLength(2);
-      run(w, 15 * 3 + 1);
-      expect(w.ants).toHaveLength(5);
-      run(w, 150);
-      expect(w.ants).toHaveLength(5);
-      expect(w.hatchProgress).toBe(0);
+      expect(w.stock).toBe(0);
     });
 
-    it('does not run for a world that has not started', () => {
-      const w = flatWorld(22);
-      run(w, 100);
-      expect(w.ants).toHaveLength(0);
-      expect(w.hatchProgress).toBe(0);
-    });
-
-    it('respects MAX_ANTS', () => {
-      const w = startedEmpty(23);
-      for (let i = 0; i < MAX_ANTS; i++) w.spawnAnt();
+    it('does nothing for a world that has not started', () => {
+      const w = flatWorld(54);
       run(w, 60);
-      expect(w.ants.length).toBeLessThanOrEqual(MAX_ANTS);
+      expect(w.ants).toHaveLength(0);
     });
   });
 
@@ -271,9 +418,9 @@ describe('World', () => {
   });
 
   // First-minute discovery (seeds 1-30, flat ground, one beetle 40 px from the nest at a fixed angle, ONE ant, 60 s).
-  // The colony floor is switched off (started = false) so only the ant's own sensing/tether is measured.
+  // Hatching/rescue are switched off (stock 0, started = false) so only the ant's own sensing/tether is measured.
   // Reviewer's 100-seed measurement at 40 px / 70 px: before sense 10, no tether: 1 ant 35 % / 10 %, 5 ants 95 % / 39 %.
-  // After (sense 16 + tether, floor off): 1 ant 72 % / 25 %, 5 ants 100 % / 46 %; with the colony floor on, 1 ant 98 % / 42 %.
+  // After (sense 16 + tether, floor off): 1 ant 72 % / 25 %, 5 ants 100 % / 46 %; with the old colony floor on, 1 ant 98 % / 42 %.
   // ("found" = some ant left wander within 60 s; this test counts actual deliveries, 13/30 before, and requires >= 15/30.)
   it('a single ant delivers food placed 40 px from the nest in at least half of 30 seeds within 60 s', () => {
     let success = 0;

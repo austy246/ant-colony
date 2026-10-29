@@ -1,4 +1,4 @@
-import { MAX_PHEROMONE, WORLD_H, WORLD_W } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import { World, type Ant } from './world';
 
@@ -67,7 +67,8 @@ export function worldFromSave(s: SaveV1): World {
   w.rng.state = s.rngState;
   w.time = s.time;
   w.stock = s.stock;
-  w.hatchProgress = s.hatchProgress;
+  // Old saves (colony floor) may hold up to LEGACY_MAX_HATCH_PROGRESS seconds: clamp into the new cycle range.
+  w.hatchProgress = Math.max(0, Math.min(HATCH_INTERVAL_S - STEP_S, s.hatchProgress));
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
   w.ants.length = 0;
@@ -82,6 +83,8 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
 const inRange = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
 const ANT_STATES = ['wander', 'toFood', 'carry'];
+/** Saves from the old colony-floor rules stored up to 15 s here; they still load (clamped on restore). */
+const LEGACY_MAX_HATCH_PROGRESS = 15;
 const MAX_ENTRIES = 2000;
 const MAX_PIECES = 20;
 
@@ -118,7 +121,8 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (typeof x !== 'object' || x === null) return null;
   const o = x as Record<string, unknown>;
   if (o.version !== 1) return null;
-  if (!isNum(o.seed) || !isNum(o.rngState) || !isNum(o.hatchProgress)) return null;
+  if (!isNum(o.seed) || !isNum(o.rngState)) return null;
+  if (!inRange(o.hatchProgress, 0, LEGACY_MAX_HATCH_PROGRESS)) return null;
   if (!isNum(o.time) || o.time < 0 || !isNum(o.stock) || o.stock < 0 || !isInt(o.nextId)) return null;
   if (o.started !== undefined && typeof o.started !== 'boolean') return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;

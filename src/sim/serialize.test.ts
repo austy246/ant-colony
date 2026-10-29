@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PHEROMONE, STEP_S } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S } from './constants';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { World } from './world';
 
@@ -10,7 +10,7 @@ function busyWorld(): World {
   for (let i = 0; i < 12; i++) w.spawnAnt();
   w.placeFood('beetle', 80, 140);
   w.placeFood('berry', 120, 100);
-  w.stock = 4;
+  w.stock = 12; // enough for an ant, so hatchProgress keeps running (1 s * 3 = 3.25 s after the loop below)
   w.hatchProgress = 0.25;
   w.pher.deposit(60, 140, 2);
   w.pher.deposit(61, 141, 4.9);
@@ -26,7 +26,9 @@ describe('serialize', () => {
     expect(r.ants).toEqual(w.ants);
     expect(r.food).toEqual(w.food);
     expect(r.stock).toBe(w.stock);
+    expect(w.hatchProgress).toBeGreaterThan(3);
     expect(r.hatchProgress).toBe(w.hatchProgress);
+    expect(r.deliveryCount).toBe(0); // transient, not saved
     expect(r.time).toBe(w.time);
     expect(r.nextId).toBe(w.nextId);
     expect(r.rng.state).toBe(w.rng.state);
@@ -59,11 +61,15 @@ describe('serialize', () => {
   it('restored world evolves identically to the original', () => {
     const w = busyWorld();
     const r = worldFromSave(worldToSave(w, EXTRA));
-    for (let i = 0; i < 150; i++) {
+    // 300 substeps = 10 s: crosses the hatch at 10 s (progress 3.25 + 10 > 10), so hatching after restore is covered too.
+    for (let i = 0; i < 300; i++) {
       w.step(STEP_S);
       r.step(STEP_S);
     }
+    expect(w.ants.length).toBeGreaterThan(12);
     expect(r.ants.map((a) => [a.id, a.x, a.y])).toEqual(w.ants.map((a) => [a.id, a.x, a.y]));
+    expect(r.stock).toBe(w.stock);
+    expect(r.hatchProgress).toBe(w.hatchProgress);
   });
 
   it('pheromone with wrong length is invalid', () => {
@@ -123,6 +129,29 @@ describe('validateSave', () => {
     const oldEmptyLate = { ...oldEmptyEarly, time: 100 };
     expect(worldFromSave(validateSave(oldEmptyLate)!).started).toBe(true); // time > 30
     expect(validateSave({ ...s, started: 'yes' })).toBeNull();
+  });
+  it('hatchProgress: valid range is [0, HATCH_INTERVAL_S]; legacy values up to 15 (old colony floor) load, clamped below the interval', () => {
+    const g = good();
+    expect(validateSave({ ...g, hatchProgress: 0 })).not.toBeNull();
+    expect(validateSave({ ...g, hatchProgress: HATCH_INTERVAL_S })).not.toBeNull();
+    for (const bad of [-0.1, NaN, Infinity, 15.5, 100, '3']) {
+      expect(validateSave({ ...g, hatchProgress: bad }), String(bad)).toBeNull();
+    }
+    const old = validateSave({ ...g, hatchProgress: 12.5 });
+    expect(old).not.toBeNull();
+    const w = worldFromSave(old!);
+    expect(w.hatchProgress).toBeGreaterThan(HATCH_INTERVAL_S - 1);
+    expect(w.hatchProgress).toBeLessThan(HATCH_INTERVAL_S);
+    expect(w.hatchFraction).toBeLessThan(1);
+    expect(worldFromSave(validateSave({ ...g, hatchProgress: HATCH_INTERVAL_S })!).hatchProgress).toBeLessThan(HATCH_INTERVAL_S);
+    expect(worldFromSave(validateSave({ ...g, hatchProgress: 7.5 })!).hatchProgress).toBe(7.5);
+  });
+  it('a restored legacy hatchProgress finishes the cycle instead of overflowing it', () => {
+    const w = worldFromSave(validateSave({ ...good(), hatchProgress: 14, stock: 5, ants: [], started: true })!);
+    for (let i = 0; i < 5; i++) w.step(STEP_S);
+    expect(w.ants).toHaveLength(1);
+    expect(w.stock).toBe(0);
+    expect(w.hatchProgress).toBeLessThan(HATCH_INTERVAL_S);
   });
   it('rejects non-string pheromone and non-boolean introDone', () => {
     expect(validateSave({ ...good(), pheromone: 5 })).toBeNull();

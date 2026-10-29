@@ -1,4 +1,6 @@
-import { COLONY_FLOOR, FLOOR_HATCH_S, FOOD_PER_ANT, LIFESPAN_S, MAX_ANTS, NEST, STEP_S } from './constants';
+import {
+  FOOD_PER_ANT, HATCH_INTERVAL_S, LIFESPAN_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S,
+} from './constants';
 import { FOOD_TABLE, resolvePlacement, type FoodItem, type FoodKind } from './food';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
@@ -53,16 +55,21 @@ export class World {
   pher: PheromoneField;
   ants: Ant[] = [];
   food: FoodItem[] = [];
-  stock = 0;
-  /** Seconds accumulated toward the next colony-floor egg (0 while the colony is at or above the floor). */
+  /** The queen's food. Every FOOD_PER_ANT of it is a fed larva waiting to hatch. */
+  stock = STARTER_STOCK;
+  /** Seconds of the current hatching cycle, in [0, HATCH_INTERVAL_S); 0 while no cycle runs. */
   hatchProgress = 0;
-  /** True once the first ant has appeared (set by spawnAnt); the colony floor only applies from then on. */
+  /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
+  /** Number of carried-food deliveries to the nest (transient: not saved, 0 after a load). */
+  deliveryCount = 0;
   time = 0;
   nextId = 1;
   rng: Rng;
   seed: number;
   private acc = 0;
+  /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
+  private rescueTimer = 0;
 
   constructor(seed: number, terrain: Terrain, pher: PheromoneField, rng: Rng) {
     this.seed = seed;
@@ -74,6 +81,16 @@ export class World {
   static create(seed: number): World {
     const terrain = generateTerrain(seed);
     return new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
+  }
+
+  /** Fed larvae waiting to hatch. */
+  get larvae(): number {
+    return Math.floor(this.stock / FOOD_PER_ANT);
+  }
+
+  /** Progress of the current hatching cycle in [0, 1]. */
+  get hatchFraction(): number {
+    return Math.max(0, Math.min(1, this.hatchProgress / HATCH_INTERVAL_S));
   }
 
   spawnAnt(): Ant {
@@ -135,25 +152,36 @@ export class World {
     let k = 0;
     for (const a of this.ants) if (a.age < a.lifespan) this.ants[k++] = a;
     this.ants.length = k;
-    while (this.stock >= FOOD_PER_ANT && this.ants.length < MAX_ANTS) {
-      this.stock -= FOOD_PER_ANT;
-      this.spawnAnt();
-    }
-    this.layFloorEgg();
+    this.hatch();
+    this.rescue();
     this.pher.step(STEP_S);
     this.time += STEP_S;
   }
 
-  /** The queen keeps laying a few eggs: below COLONY_FLOOR ants a new one hatches every FLOOR_HATCH_S. */
-  private layFloorEgg(): void {
-    if (!this.started || this.ants.length >= COLONY_FLOOR) {
+  /** One hatching cycle per HATCH_INTERVAL_S while the queen has food and there is room; at most one hatch per substep. */
+  private hatch(): void {
+    if (!this.started || this.stock < FOOD_PER_ANT || this.ants.length >= MAX_ANTS) {
       this.hatchProgress = 0;
       return;
     }
     this.hatchProgress += STEP_S;
-    if (this.hatchProgress >= FLOOR_HATCH_S - 1e-9) {
+    if (this.hatchProgress >= HATCH_INTERVAL_S - 1e-9) {
+      this.stock -= FOOD_PER_ANT;
+      this.spawnAnt();
       this.hatchProgress = 0;
-      if (this.ants.length < MAX_ANTS) this.spawnAnt();
+    }
+  }
+
+  /** Never soft-lock: an empty, foodless started colony gets one free ant after RESCUE_AFTER_S. */
+  private rescue(): void {
+    if (!this.started || this.ants.length > 0 || this.stock >= FOOD_PER_ANT) {
+      this.rescueTimer = 0;
+      return;
+    }
+    this.rescueTimer += STEP_S;
+    if (this.rescueTimer >= RESCUE_AFTER_S - 1e-9) {
+      this.rescueTimer = 0;
+      this.spawnAnt();
     }
   }
 
@@ -225,6 +253,7 @@ export class World {
     if (ant.state === 'carry' && Math.hypot(ant.x - NEST.x, ant.y - NEST.y) <= NEST.r) {
       this.stock += ant.carry;
       ant.carry = 0;
+      this.deliveryCount++;
       if (this.findFood(ant.targetFood)) {
         ant.state = 'toFood';
       } else {
