@@ -5,7 +5,10 @@ export interface Spider {
   x: number;
   y: number;
   alive: boolean;
-  /** Seconds since the last meal (or since the first catch); the longest-caught ant is eaten at SPIDER_EAT_S. */
+  /**
+   * Seconds since the last meal (or since the first catch); a caught ant is eaten at SPIDER_EAT_S. Stays at SPIDER_EAT_S
+   * while only a major is caught that has not been held SPIDER_MAJOR_HOLD_S yet.
+   */
   eatT: number;
   /** Seconds until a dead spider is replaced (0 while alive). */
   respawnT: number;

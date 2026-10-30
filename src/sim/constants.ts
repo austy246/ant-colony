@@ -141,7 +141,15 @@ export const MAX_NORMAL_LARVAE_CHAMBERS = 128;
 // ---- Spider (normal mode): one immobile spider in a corner with a web ----
 /** Radius (art px) of the circular web around the spider. */
 export const SPIDER_WEB_R = 22;
-/** Seconds between two meals: the spider eats the longest-caught ant this often while anyone is caught. */
-export const SPIDER_EAT_S = 6;
+/**
+ * Seconds between two meals (digestion): the spider eats one caught ant this often while anyone is caught, ordinary ants
+ * first (longest caught first). Tuned 15 -> 25 by the headless gameplay sim (see the spider spec).
+ */
+export const SPIDER_EAT_S = 25;
+/**
+ * A caught major is eaten only after it has hung in the web this long and no ordinary caught ant is waiting (time for a
+ * second major to come). Tuned 60 -> 90 by the headless gameplay sim.
+ */
+export const SPIDER_MAJOR_HOLD_S = 90;
 /** Seconds after the spider's death until a new one settles in a corner. */
 export const SPIDER_RESPAWN_S = 600;

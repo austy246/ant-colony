@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { SPIDER_EAT_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, STEP_S, WORLD_H, WORLD_W } from './constants';
+import {
+  EXPLORE_CAP,
+  EXPLORE_CELL,
+  SPIDER_EAT_S,
+  SPIDER_MAJOR_HOLD_S,
+  SPIDER_RESPAWN_S,
+  SPIDER_WEB_R,
+  STEP_S,
+  WORLD_H,
+  WORLD_W,
+} from './constants';
 import { pickSpawnSpot } from './environment';
 import { inWeb, spiderCorner } from './spider';
+import { Surface } from './terrain';
 import { World, type Ant } from './world';
 
 /** A normal world whose spider exists (created by the first step), with prey spawning switched off. */
@@ -142,13 +153,42 @@ describe('spider in the world', () => {
     expect(inWeb(w.spider, plain.x, plain.y)).toBe(false);
   });
 
-  it('one caught major alone is eaten like any ant', () => {
+  it('a caught major is not eaten while an ordinary caught ant waits; the ordinary one goes first', () => {
     const w = spiderWorld();
-    const m = antAt(w, 1, 1, 4);
+    const m = antAt(w, 1, 1, 10); // caught longest
     m.major = true;
+    const plain = antAt(w, -2, 1, 1);
     run(w, SPIDER_EAT_S + 0.1);
     expect(w.spider!.alive).toBe(true);
+    expect(w.ants.includes(plain)).toBe(false);
+    expect(w.ants.includes(m)).toBe(true);
+  });
+
+  it('a caught major alone is held SPIDER_MAJOR_HOLD_S and only then eaten', () => {
+    expect(SPIDER_MAJOR_HOLD_S).toBeGreaterThan(SPIDER_EAT_S);
+    const w = spiderWorld();
+    const m = antAt(w, 1, 1, 0);
+    m.major = true;
+    run(w, SPIDER_MAJOR_HOLD_S - 1);
+    expect(w.ants.includes(m)).toBe(true);
+    expect(w.spider!.alive).toBe(true);
+    run(w, 1.2);
     expect(w.ants.includes(m)).toBe(false);
+    expect(w.spider!.alive).toBe(true);
+  });
+
+  it('a second major arriving 40 s after the first still kills the spider', () => {
+    const w = spiderWorld();
+    const m1 = antAt(w, 1, 1, 0);
+    m1.major = true;
+    run(w, 40);
+    expect(w.ants).toContain(m1);
+    const m2 = antAt(w, -2, 2);
+    m2.major = true;
+    w.step(STEP_S);
+    expect(w.spider!.alive).toBe(false);
+    expect(w.ants).toContain(m1);
+    expect(w.ants).toContain(m2);
   });
 
   it('second major arriving later kills the spider when both are caught', () => {
@@ -216,3 +256,187 @@ describe('spider in the world', () => {
     expect(() => run(w, 1)).not.toThrow();
   });
 });
+
+/** Explored-grid columns of the world's current map. */
+const cols = (w: World): number => Math.ceil(w.terrain.w / EXPLORE_CELL);
+
+/** Does the explored-grid cell (cx, cy) overlap the web of a spider at (sx, sy)? */
+function cellTouchesWeb(cx: number, cy: number, sx: number, sy: number): boolean {
+  const nx = Math.max(cx * EXPLORE_CELL, Math.min((cx + 1) * EXPLORE_CELL, sx));
+  const ny = Math.max(cy * EXPLORE_CELL, Math.min((cy + 1) * EXPLORE_CELL, sy));
+  return Math.hypot(nx - sx, ny - sy) <= SPIDER_WEB_R;
+}
+
+/** Heading from the spider toward the middle of the base map. */
+const inward = (w: World): number => Math.atan2(WORLD_H / 2 - w.spider!.y, WORLD_W / 2 - w.spider!.x);
+
+function flatten(w: World): void {
+  w.terrain.surface.fill(Surface.Ground);
+  w.terrain.speed.fill(1);
+}
+
+/** Sends every ant of the world underground for good (so no ant touches the prey and the world is not extinct). */
+function parkAnts(w: World): void {
+  for (const a of w.ants) {
+    a.state = 'nest';
+    a.nestKind = 'nurse';
+    a.role = 'nurse';
+  }
+}
+
+describe('wanderers are not pulled into the web', () => {
+  it('explored cells under a living web are saturated every substep (also after map growth and on a new spot)', () => {
+    const w = spiderWorld();
+    const check = (): void => {
+      const sp = w.spider!;
+      const cw = cols(w);
+      let n = 0;
+      for (let cy = 0; cy * EXPLORE_CELL < w.terrain.h; cy++) {
+        for (let cx = 0; cx < cw; cx++) {
+          const v = w.explored[cy * cw + cx];
+          if (Math.hypot((cx + 0.5) * EXPLORE_CELL - sp.x, (cy + 0.5) * EXPLORE_CELL - sp.y) <= SPIDER_WEB_R) {
+            expect(v).toBeGreaterThanOrEqual(EXPLORE_CAP - 1e-6);
+            n++;
+          } else if (!cellTouchesWeb(cx, cy, sp.x, sp.y)) {
+            expect(v).toBeLessThan(1);
+          }
+        }
+      }
+      expect(n).toBeGreaterThan(20);
+    };
+    w.explored.fill(0);
+    w.step(STEP_S);
+    check();
+    w.growMapTo(1);
+    w.explored.fill(0);
+    w.step(STEP_S);
+    check();
+    w.spider!.y = WORLD_H - w.spider!.y; // as if it respawned in the other corner
+    w.explored.fill(0);
+    w.step(STEP_S);
+    check();
+  });
+
+  it('explored cells are not saturated once the spider is dead', () => {
+    const w = spiderWorld();
+    w.spider!.alive = false;
+    w.spider!.respawnT = 1e9;
+    w.explored.fill(0);
+    run(w, 1);
+    const sp = w.spider!;
+    expect(w.explored[Math.floor(sp.y / EXPLORE_CELL) * cols(w) + Math.floor(sp.x / EXPLORE_CELL)]).toBeLessThan(0.1);
+  });
+
+  it('wanderers walking past the web on well-explored ground do not turn into it', () => {
+    let caught = 0;
+    let total = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = spiderWorld(seed);
+      flatten(w);
+      parkAnts(w);
+      const sp = w.spider!;
+      const base = inward(w);
+      const ants: Ant[] = [];
+      for (let k = -3; k <= 3; k++) {
+        const ang = base + k * 0.25;
+        const a = antAt(w, Math.cos(ang) * (SPIDER_WEB_R + 9), Math.sin(ang) * (SPIDER_WEB_R + 9));
+        a.heading = ang + Math.PI / 2; // tangent: walking past the web
+        a.age = 1000; // beyond the young-ant range
+        ants.push(a);
+      }
+      const cw = cols(w);
+      for (let i = 0; i < Math.round(4 / STEP_S); i++) {
+        // Everything away from the web is well explored; the cells over the web are left to the world.
+        for (let cy = 0; cy * EXPLORE_CELL < w.terrain.h; cy++) {
+          for (let cx = 0; cx < cw; cx++) if (!cellTouchesWeb(cx, cy, sp.x, sp.y)) w.explored[cy * cw + cx] = 3;
+        }
+        w.step(STEP_S);
+      }
+      for (const a of ants) if (a.caughtT !== undefined || !w.ants.includes(a)) caught++;
+      total += ants.length;
+    }
+    expect(total).toBe(28);
+    expect(caught).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('prey avoids the web of a living spider', () => {
+  /** A beetle (or caterpillar) 3 px outside the web, heading straight at the spider. */
+  function crawlerAtWeb(w: World, kind: 'beetle' | 'caterpillar') {
+    const sp = w.spider!;
+    const ang = inward(w);
+    const f = w.placeFood(kind, sp.x + Math.cos(ang) * (SPIDER_WEB_R + 3), sp.y + Math.sin(ang) * (SPIDER_WEB_R + 3))!;
+    f.heading = ang + Math.PI;
+    f.speedMul = 1;
+    return f;
+  }
+
+  it('a crawling beetle or caterpillar never steps into a living web', () => {
+    for (let seed = 1; seed <= 5; seed++) {
+      for (const kind of ['beetle', 'caterpillar'] as const) {
+        const w = spiderWorld(seed);
+        flatten(w);
+        parkAnts(w);
+        const f = crawlerAtWeb(w, kind);
+        for (let i = 0; i < Math.round(60 / STEP_S); i++) {
+          w.step(STEP_S);
+          expect(inWeb(w.spider, f.x, f.y), `seed ${seed} ${kind} step ${i}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('a crawling beetle does walk over the spot of a dead spider', () => {
+    let entered = 0;
+    for (let seed = 1; seed <= 5; seed++) {
+      const w = spiderWorld(seed);
+      flatten(w);
+      parkAnts(w);
+      w.spider!.alive = false;
+      w.spider!.respawnT = 1e9;
+      const f = crawlerAtWeb(w, 'beetle');
+      const sp = w.spider!;
+      for (let i = 0; i < Math.round(30 / STEP_S); i++) {
+        w.step(STEP_S);
+        if (Math.hypot(f.x - sp.x, f.y - sp.y) <= SPIDER_WEB_R) {
+          entered++;
+          break;
+        }
+      }
+    }
+    expect(entered).toBeGreaterThanOrEqual(3);
+  });
+
+  it('a hopping fly never lands in a living web, but may land where a dead spider sat', () => {
+    const hops = (alive: boolean): { n: number; inside: number } => {
+      const w = spiderWorld(2);
+      flatten(w);
+      parkAnts(w);
+      const sp = w.spider!;
+      sp.alive = alive;
+      if (!alive) sp.respawnT = 1e9;
+      const ang = inward(w);
+      const f = w.placeFood('fly', sp.x + Math.cos(ang) * (SPIDER_WEB_R + 2), sp.y + Math.sin(ang) * (SPIDER_WEB_R + 2))!;
+      const x0 = f.x;
+      const y0 = f.y;
+      let n = 0;
+      let inside = 0;
+      for (let i = 0; i < 400; i++) {
+        f.x = x0;
+        f.y = y0;
+        delete f.hop;
+        (w as unknown as { startHop(f: unknown): void }).startHop(f);
+        const hop = f.hop as { toX: number; toY: number } | undefined; // set by startHop (TS narrowed it away after the delete)
+        if (!hop) continue;
+        n++;
+        if (Math.hypot(hop.toX - sp.x, hop.toY - sp.y) <= SPIDER_WEB_R) inside++;
+      }
+      return { n, inside };
+    };
+    const live = hops(true);
+    expect(live.n).toBeGreaterThan(350);
+    expect(live.inside).toBe(0);
+    expect(hops(false).inside).toBeGreaterThan(20);
+  });
+});
+
