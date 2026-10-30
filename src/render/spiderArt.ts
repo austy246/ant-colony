@@ -27,7 +27,8 @@ export function drawWeb(c: Ctx2D, x: number, y: number, r: number, time: number)
   const plot = (px: number, py: number): void => {
     const ix = Math.floor(px * FINE);
     const iy = Math.floor(py * FINE);
-    // keep the pixel centre inside the web circle
+    // The circle test uses the exact (unfloored) centre so the web is round; the dedupe key only needs a stable cell index,
+    // hence the floored centre.
     if (Math.hypot(ix + 0.5 - x * FINE, iy + 0.5 - y * FINE) > rf) return;
     const key = (iy - cy + 4096) * 8192 + (ix - cx + 4096);
     if (seen.has(key)) return;
@@ -49,7 +50,7 @@ export function drawWeb(c: Ctx2D, x: number, y: number, r: number, time: number)
     for (let s = 0; s < steps; s++) {
       const a = (s / steps) * Math.PI * 2;
       const f = (((a - rot) / seg) % 1 + 1) % 1; // 0 at a spoke, 0.5 midway
-      const rad = base * (1 - SAG * Math.sin(Math.PI * f)) + (RINGS[k] === 0.96 ? 0 : sway);
+      const rad = base * (1 - SAG * Math.sin(Math.PI * f)) + (k === RINGS.length - 1 ? 0 : sway);
       plot(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
     }
   }

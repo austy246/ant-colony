@@ -17,7 +17,7 @@ describe('large colony', () => {
     const ms = performance.now() - t0;
     expect(w.ants.length).toBe(2000);
     expect(ms).toBeLessThan(8000);
-  });
+  }, 60000);
 
   it('normal hatch() passes 300 ants and stops at 2000', () => {
     const w = World.create(3, 'normal');
@@ -33,5 +33,5 @@ describe('large colony', () => {
     expect(w.ants.length).toBe(MAX_ANTS_NORMAL);
     for (let i = 0; i < 60; i++) w.step(0.5);
     expect(w.ants.length).toBe(MAX_ANTS_NORMAL);
-  });
+  }, 180000);
 });

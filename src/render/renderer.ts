@@ -144,7 +144,9 @@ export class Renderer {
       if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
       // The spider's web lies on the ground under the ants; the spider sits on it, also under the ants.
       const sp = this.world.spider;
-      if (sp?.alive) {
+      const halfW = this.cssW / 2 / zoom + SPIDER_WEB_R;
+      const halfH = this.cssH / 2 / zoom + SPIDER_WEB_R;
+      if (sp?.alive && Math.abs(sp.x - this.camera.x) <= halfW && Math.abs(sp.y - this.camera.y) <= halfH) {
         drawWeb(c, sp.x, sp.y, SPIDER_WEB_R, this.world.time);
         drawSpider(c, sp.x, sp.y);
       }
