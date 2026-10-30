@@ -8,7 +8,7 @@ import type { World } from './world';
 type SpawnKind = Exclude<FoodKind, 'sugar'>;
 
 /** One weighted draw (a single rng call). */
-export function pickSpawnKind(rng: Rng, weights: Record<SpawnKind, number> = SPAWN_WEIGHTS): FoodKind {
+export function pickSpawnKind(rng: Rng, weights: Record<SpawnKind, number> = SPAWN_WEIGHTS): SpawnKind {
   const kinds = Object.keys(weights) as SpawnKind[];
   let total = 0;
   for (const k of kinds) total += weights[k];
@@ -24,10 +24,6 @@ export function pickSpawnKind(rng: Rng, weights: Record<SpawnKind, number> = SPA
 export function pickSpawnSpot(world: World): { x: number; y: number } | null {
   const x = world.rng.next() * world.terrain.w;
   const y = world.rng.next() * world.terrain.h;
-  return resolvePlacementOn(world, x, y);
-}
-
-function resolvePlacementOn(world: World, x: number, y: number): { x: number; y: number } | null {
   return resolvePlacement(world.terrain, x, y);
 }
 
