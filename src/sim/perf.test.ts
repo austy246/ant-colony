@@ -13,7 +13,7 @@ describe('large colony', () => {
     w.placeFood('caterpillar', 160, 140);
     w.placeFood('fly', 90, 120);
     const t0 = performance.now();
-    w.step(10);
+    for (let i = 0; i < 20; i++) w.step(0.5);
     const ms = performance.now() - t0;
     expect(w.ants.length).toBe(2000);
     expect(ms).toBeLessThan(8000);
@@ -24,14 +24,14 @@ describe('large colony', () => {
     for (let i = 0; i < 299; i++) w.spawnAnt();
     w.stock = 1e6;
     let guard = 0;
-    while (w.ants.length < MAX_ANTS + 5 && guard++ < 200) w.step(10);
+    while (w.ants.length < MAX_ANTS + 5 && guard++ < 4000) w.step(0.5);
     expect(w.ants.length).toBeGreaterThan(MAX_ANTS);
 
     while (w.ants.length < MAX_ANTS_NORMAL - 1) w.spawnAnt();
     guard = 0;
-    while (w.ants.length < MAX_ANTS_NORMAL && guard++ < 50) w.step(10);
+    while (w.ants.length < MAX_ANTS_NORMAL && guard++ < 4000) w.step(0.5);
     expect(w.ants.length).toBe(MAX_ANTS_NORMAL);
-    w.step(30);
+    for (let i = 0; i < 60; i++) w.step(0.5);
     expect(w.ants.length).toBe(MAX_ANTS_NORMAL);
   });
 });

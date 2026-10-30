@@ -18,7 +18,7 @@ npm run build    # kontrola typů + produkční build do dist/
 Na začátku nové hry si vybereš mód.
 
 - **Sandbox**: vše jako dosud. Kořist si pokládáš sám, počet mravenců je nejvýše 300 a kolonie nikdy nezahyne (prázdné hnízdo bez jídla dostane po 15 s jednoho zachránce).
-- **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny i houby), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí**.
+- **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny i houby), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí (×1,5 rychlost)**.
 
 **Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie.
 
@@ -28,7 +28,7 @@ Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane
 
 - **Lišta kořisti** dole (jen v Sandboxu): Brouk, Housenka, Moucha, Zdechlina, Malina, Houba. Vyber druh a klikni do mapy. Počet kusů je neomezený.
 - **Lišta v Normalu**: místo kořisti a nástrojů jen tlačítko **Cukr** (vybereš ho a klikneš do mapy; po položení běží 5min odpočet, který tlačítko ukazuje) a pohledy. Mapu posouváš tažením a zoomuješ kolečkem nebo pinchem.
-- **Přesunout**: tažením přemístíš položenou kořist. **Smazat**: kliknutím kořist odstraníš. **Posun**: tažení posouvá mapu.
+- **Nástroje v Sandboxu** – **Přesunout**: tažením přemístíš položenou kořist. **Smazat**: kliknutím kořist odstraníš. **Posun**: tažení posouvá mapu.
 - **Kolečko myši** = zoom, **tažení** (v nástroji Posun nebo mimo kořist) = posun mapy, **pravé nebo prostřední tlačítko** = posun vždy. Na dotykovém displeji pinch = zoom, dva prsty = posun.
 - **Pohledy**: `1` běžný, `P` feromonový (pohled mravenců: ztmavená mapa, modrá stopa k potravě, oranžová záře kolem hnízda), `T` průchodnost terénu (červená kameny, oranžová větvičky, žlutá jehličí).
 - **Podzemí** (tlačítko `Podzemí (U)` nebo klávesa `U`): řez hnízdem. Hnízdo se pro každou kolonii vygeneruje náhodně (podle seedu hry) a komůrky se vyhrabávají podle potřeby: jedna komůrka na každou královnu (roste s počtem mravenců), tolik spíží, kolik zásoby kolonie kdy potřebovala (25 jídla na spíž, každá roste podle své naplněnosti), a tolik komůrek larev, kolik larev kdy čekalo (10 na komůrku). Nová komůrka vzniká viditelným hrabáním chodby (asi 3 s) a pak zvolna roste; chodby tvoří jeden strom od jediného vchodu bez zbytečných slepých ramen. Mravenci chodí jen po chodbách. Mravenci uvnitř hnízda jsou skuteční: vidíš každého (nejvýše 60 najednou) při práci, viz Život v hnízdě. Mapu a kořist v tomto pohledu nelze ovládat (tlačítka kořisti jsou zašedlá); svět se mezitím dál simuluje. Návrat kterýmkoli povrchovým pohledem vše obnoví.

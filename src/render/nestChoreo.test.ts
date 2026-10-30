@@ -465,7 +465,7 @@ describe('nestAntPose: unloading foragers', () => {
     }
     expect(first).toBeGreaterThanOrEqual(10);
     expect(second).toBeGreaterThanOrEqual(0);
-  }, 600000);
+  }, 120000);
 
   it('stands (unloading) for a while at the far end and a short stay is simply drawn nearer the entrance', () => {
     const l = layoutFor(2);
