@@ -219,7 +219,23 @@
 - [ ] **Step 4:** `npx vitest run` → PASS. Ručně v prohlížeči (`npm run dev`): normal mód, vynutit `world.ants.length = 0; world.stock = 0` v konzoli → překryv, obnovení stránky nabídne výběr módu.
 - [ ] **Step 5: Commit** `ui: colony extinction screen for normal mode`
 
-### Task 12: Výkon při 2000 mravencích, dokumentace a ruční kontrola
+### Task 12: Podzemí roste s kolonií (normal)
+
+**Files:**
+- Modify: `src/sim/constants.ts`, `src/sim/nestNeeds.ts`, `src/sim/world.ts` (`nestNeeds`), `src/render/nestLayout.ts`, `src/render/underground.ts`, případně `src/render/nestChoreo.ts`
+- Test: `src/sim/nestNeeds.test.ts`, `src/render/nestLayout.test.ts`, `src/render/underground.test.ts`
+
+**Interfaces:**
+- Consumes: Task 1 (`World.mode`), Task 3 (`sizeLoads`, peaky), Task 10 popisky z úkolu X (`MAX_LABELED_CHAMBERS`).
+- Produces: `pantriesNeeded(peakStock: number, mode: GameMode = 'sandbox'): number` a `larvaeChambersNeeded(peakLarvae: number, mode: GameMode = 'sandbox'): number` — v `'normal'` bez horního limitu (`max(1, ceil(peak / kapacita))`), v `'sandbox'` jako dnes (limity 6 a 4); `World.nestNeeds` předává `this.mode`; `nestLayout` přijme libovolný počet spižíren a komor larev a zvětší obraz (`NestLayout.width/height` rostou po krocích, např. o 40 × 25 na krok jako mapa) tak, aby se komůrky nepřekrývaly; již umístěné komůrky a chodby (podle indexu) zůstanou na stejných souřadnicích (deterministicky ze semínka); `UndergroundView` počítá zoom a posun z aktuální velikosti scény (`NEST_W/NEST_H` už nejsou pevné).
+
+- [ ] **Step 1: Napsat testy**: `normal pantriesNeeded has no upper limit` (`peak = 25 * 40` → 40; sandbox pořád max 6); `normal larvaeChambersNeeded has no upper limit` (`peak = 10 * 30` → 30; sandbox max 4); `layout with 20 pantries and 12 larvae chambers has no overlapping chambers`; `adding chambers keeps the positions of the existing ones` (první 6 spižíren a 4 komory larev mají stejná `cx, cy` v malém i velkém rozložení); `layout is deterministic for the same seed and counts`; `scene size grows with the number of chambers and never shrinks for increasing counts`; `underground view picks a zoom that fits the grown scene` (žádná komůrka mimo plátno).
+- [ ] **Step 2:** spustit → FAIL.
+- [ ] **Step 3: Implementovat** podpisy výše. Generování dalších slotů pokračuje po dnešním pevném pořadí (`plan`) deterministicky stejným způsobem do nově získané plochy (nové pásy dolů a doprava); klíč cache `subsetCache` musí obsahovat velikost scény. Dnešní chování v sandboxu a pro počty v dosavadních limitech zůstává bit po bitu stejné (screenshotové testy se nesmí změnit).
+- [ ] **Step 4:** `npx vitest run src/render src/sim` → PASS, `npm run build` → bez chyb. Ručně `npm run dev`: v normal módu v konzoli zvýšit `world.peakStock = 3000; world.peakLarvae = 300` a otevřít Podzemí.
+- [ ] **Step 5: Commit** `render: underground grows with the colony in normal mode`
+
+### Task 13: Výkon při 2000 mravencích, dokumentace a ruční kontrola
 
 **Files:**
 - Modify: `src/render/underground.ts` (jen pokud měření ukáže potřebu), `README.md`

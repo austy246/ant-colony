@@ -112,6 +112,14 @@ Tohle jsou věci, které při kontrole návrhu vyšly najevo a které jsem rozho
 **Ovládání**
 - V normal módu v nabídce **nejsou** žádné ovládání rychlosti ani pauza (ve hře taková tlačítka dnes ani nejsou).
 
+## 5. Podzemí roste s kolonií (dodatek autora, 2026-10-30; jen normal mód)
+
+- Autor: podzemí se má **zvětšovat stejně jako normální mapa**; čím víc mravenců a chodbiček, tím větší podzemí, takže **prakticky neexistuje limit pro komůrky larev a skladů jídla**.
+- V normal módu proto padají limity `MAX_PANTRIES` (6) a `MAX_LARVAE_CHAMBERS` (4): počet spižíren a komor larev vždy odpovídá vrcholu zásoby / larev (`ceil(peak / kapacita)`). Pevný obraz podzemí 320 × 200 se podle potřeby zvětšuje (kroky obdobné růstu mapy), nové komůrky a chodby přibývají do nově získaného místa a už vykopané zůstávají na místě. Zobrazení (zoom) se přizpůsobí velikosti scény.
+- **Sandbox** si podzemí ponechává dnešní limity **(moje volba R5: autor mluvil o normal módu a o růstu jako mapy, která se zvětšuje jen tam)**. Počet královen zůstává `MAX_QUEENS` (8).
+- Při velkém počtu komůrek platí skrytí popisků (viz volba R4: nad 8 zobrazených komůrek se popisky nekreslí).
+- Výkon: kresba podzemí se stovkami komůrek nesmí zpomalit hru (builder může omezit počet kreslených larev a mravenců).
+
 ## Co je na builderovi
 
 Přesné četnosti a poměry kořisti, míra zrychlení cukru, četnost majorů, přírůstky mapy, grafika majora a hlášky, způsob uložení mapy a módu, umístění tlačítka Cukr, odpočet.
