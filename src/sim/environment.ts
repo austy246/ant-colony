@@ -6,7 +6,7 @@ import type { Rng } from './rng';
 import { inWeb } from './spider';
 import type { World } from './world';
 
-type SpawnKind = Exclude<FoodKind, 'sugar'>;
+type SpawnKind = Exclude<FoodKind, 'sugar' | 'honeydew'>;
 
 /** One weighted draw (a single rng call). */
 export function pickSpawnKind(rng: Rng, weights: Record<SpawnKind, number> = SPAWN_WEIGHTS): SpawnKind {

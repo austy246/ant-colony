@@ -1,13 +1,15 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, BUSH_MIN_ANTS, APHID_START, APHID_MAX, HONEY_MAX_ITEMS, BUSH_REACH, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
+import { dropInterval, type Bush } from './aphids';
+import { pickSpawnSpot } from './environment';
 import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
@@ -36,6 +38,8 @@ export interface Ant {
   role: AntRole;
   /** A major (big soldier ant): always kills living prey on touch and survives, ignores touch cooldowns, carries MAJOR_CARRY_PIECES pieces. Absent on ordinary ants and old saves. */
   major?: true;
+  /** TRANSIENT (not saved): leaf units this ant carries to the aphids bush (instead of food to the nest). */
+  carryLeaf?: number;
   /** Normal mode: seconds this ant has been stuck in the spider's web (absent = free). A caught ant does not move or act. Saved. */
   caughtT?: number;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
@@ -183,6 +187,8 @@ export class World {
   spawnTimer = 0;
   /** Normal mode: the spider (created on the first step; null in sandbox and before that). */
   spider: Spider | null = null;
+  /** Normal mode: the bush with aphids (null until the colony has BUSH_MIN_ANTS ants). Saved. */
+  bush: Bush | null = null;
   /** Test hook: no spider is ever created (tests of unrelated mechanics that place ants anywhere on the map). */
   noSpider = false;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
@@ -459,6 +465,7 @@ export class World {
       const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
       updateEnvironment(this);
+      this.updateBush();
     }
     this.updateSpider();
     this.pher.step(STEP_S);
@@ -901,7 +908,8 @@ export class World {
     let best: FoodItem | undefined;
     let bestD = SENSE_FOOD;
     for (const f of this.food) {
-      if (f.piecesLeft <= 0 || f.stuck || f.kind === 'leaf') continue; // ants do not eat leaves
+      if (f.piecesLeft <= 0 || f.stuck) continue;
+      if (f.kind === 'leaf' && !this.bush) continue; // without aphids to feed, ants leave leaves to the caterpillars
       const d = Math.hypot(f.x - x, f.y - y);
       if (d <= bestD) {
         bestD = d;
@@ -1019,7 +1027,9 @@ export class World {
         }
       }
     }
-    if (ant.state === 'carry') {
+    if (ant.state === 'carry' && ant.carryLeaf !== undefined) {
+      desired = this.leafHeading(ant);
+    } else if (ant.state === 'carry') {
       desired = this.carryHeading(ant);
       this.pher.deposit(ant.x, ant.y, DEPOSIT);
     } else if (ant.state === 'wander') {
@@ -1061,7 +1071,8 @@ export class World {
       }
     }
 
-    if (ant.state === 'carry' && Math.hypot(ant.x - NEST.x, ant.y - NEST.y) <= NEST.r) {
+    if (ant.state === 'carry' && ant.carryLeaf !== undefined) this.feedAphids(ant);
+    if (ant.state === 'carry' && ant.carryLeaf === undefined && Math.hypot(ant.x - NEST.x, ant.y - NEST.y) <= NEST.r) {
       this.stock += ant.carry;
       this.totalDelivered += ant.carry;
       ant.carry = 0;
@@ -1093,6 +1104,47 @@ export class World {
     const gauss = (rng.next() + rng.next() + rng.next() - 1.5) * 2; // mean 0, std 1
     const w = decay * (ant.weave ?? 0) + amp * Math.sqrt(1 - decay * decay) * gauss;
     ant.weave = Math.max(-1, Math.min(1, w));
+  }
+
+  /** Heading of an ant carrying a leaf: straight to the aphids bush (with a slight weave); without a bush it drops the leaf. */
+  private leafHeading(ant: Ant): number {
+    const b = this.bush;
+    if (!b) {
+      delete ant.carryLeaf;
+      ant.state = 'wander';
+      return ant.heading;
+    }
+    this.stepWeave(ant, WEAVE_AMP * ant.curiosity);
+    return Math.atan2(b.y - ant.y, b.x - ant.x) + (ant.weave ?? 0);
+  }
+
+  /** An ant with a leaf close to the bush hands it over: every leaf unit adds an aphid (up to APHID_MAX). */
+  private feedAphids(ant: Ant): void {
+    const b = this.bush;
+    if (!b || ant.carryLeaf === undefined || Math.hypot(ant.x - b.x, ant.y - b.y) > BUSH_REACH) return;
+    b.aphids = Math.min(APHID_MAX, b.aphids + ant.carryLeaf);
+    delete ant.carryLeaf;
+    ant.carry = 0;
+    ant.state = 'wander';
+    ant.targetFood = null;
+  }
+
+  /** Normal mode: the bush appears with a big colony; its aphids now and then drop honeydew next to it (at most HONEY_MAX_ITEMS on the map). */
+  private updateBush(): void {
+    if (!this.bush) {
+      if (this.ants.length < BUSH_MIN_ANTS) return;
+      const spot = pickSpawnSpot(this);
+      if (spot) this.bush = { x: spot.x, y: spot.y, aphids: APHID_START, dropT: dropInterval(APHID_START) };
+      return;
+    }
+    const b = this.bush;
+    b.dropT -= STEP_S;
+    if (b.dropT > 1e-9) return;
+    b.dropT = dropInterval(b.aphids);
+    let n = 0;
+    for (const f of this.food) if (f.kind === 'honeydew') n++;
+    if (n >= HONEY_MAX_ITEMS) return;
+    this.placeFood('honeydew', b.x + (this.rng.next() - 0.5) * 8, b.y + 6 + this.rng.next() * 3);
   }
 
   /**
@@ -1131,6 +1183,7 @@ export class World {
     f.piecesLeft -= pieces;
     ant.carry = pieces * FOOD_TABLE[f.kind].value;
     if (f.kind === 'sugar') ant.carrySugar = true;
+    if (f.kind === 'leaf') ant.carryLeaf = pieces; // a leaf is not food: it goes to the aphids
     ant.state = 'carry';
     ant.timer = 0;
     if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);

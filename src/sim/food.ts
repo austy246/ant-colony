@@ -1,7 +1,7 @@
 import { NEST } from './constants';
 import { Surface, type Terrain } from './terrain';
 
-export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar' | 'leaf';
+export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar' | 'leaf' | 'honeydew';
 
 /** Every source is FOOD_SIZE_MUL times larger than the base size, so it lasts longer and food does not keep popping up. */
 const FOOD_SIZE_MUL = 6;
@@ -16,6 +16,8 @@ export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
   sugar: { pieces: 1 * FOOD_SIZE_MUL, value: 1 },
   /** Leaves are only eaten by caterpillars: pieces = leaf units left, ants never take any (value 0). */
   leaf: { pieces: 24, value: 0 },
+  /** A drop of honeydew from the aphids: ordinary food for the ants. */
+  honeydew: { pieces: 1 * FOOD_SIZE_MUL, value: 1 },
 };
 
 /** Kinds that exist as living creatures until they die. */

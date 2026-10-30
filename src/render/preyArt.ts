@@ -393,6 +393,18 @@ function buildLeaf(): Sprite {
   return toSprite(R);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Honeydew: a glossy amber droplet.
+// ---------------------------------------------------------------------------------------------------------------------
+function buildHoneydew(): Sprite {
+  const R = newR();
+  R.ell(2, 4, 7, 3, SH);
+  R.dome(0, 0, 6, 5, ['#8a5a14', '#b3801f', '#d8a63a', '#f0c860', '#fbe6a0']);
+  R.px(-2, -2, '#fff7d6');
+  R.px(-1, -2, '#fff7d6');
+  return toSprite(R);
+}
+
 const BUILDERS: Record<FoodKind, () => Sprite> = {
   beetle: buildBeetle,
   caterpillar: buildCaterpillar,
@@ -402,6 +414,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   mushroom: buildMushroom,
   sugar: buildSugar,
   leaf: buildLeaf,
+  honeydew: buildHoneydew,
 };
 
 const cache = new Map<FoodKind, Sprite>();

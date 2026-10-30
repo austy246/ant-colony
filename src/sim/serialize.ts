@@ -1,6 +1,7 @@
-import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
+import type { Bush } from './aphids';
 import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
@@ -56,6 +57,8 @@ export interface SaveV1 {
   spawnTimer?: number;
   /** Optional (absent = none yet: created on the first normal-mode step): the spider. A caught ant carries `caughtT` (seconds stuck). */
   spider?: Spider;
+  /** Optional (absent = no bush yet): the aphids bush (normal mode). */
+  bush?: Bush;
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -120,6 +123,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     sugarReadyAt: w.sugarReadyAt,
     boostUntil: w.boostUntil,
     spawnTimer: w.spawnTimer,
+    ...(w.bush ? { bush: { ...w.bush } } : {}),
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
 }
@@ -160,6 +164,7 @@ export function worldFromSave(s: SaveV1): World {
     else delete ant.nestKind;
     w.ants.push(ant);
   }
+  w.bush = s.bush ? { ...s.bush } : null;
   // Without a living spider nobody can be stuck in a web.
   // Clamped to one full respawn from now, like the sugar clocks.
   w.spider = s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
@@ -231,6 +236,12 @@ function validSpider(sp: unknown, size: { w: number; h: number }): boolean {
   );
 }
 
+function validBush(b: unknown, size: { w: number; h: number }): boolean {
+  if (typeof b !== 'object' || b === null) return false;
+  const o = b as Record<string, unknown>;
+  return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isInt(o.aphids) && o.aphids >= 1 && o.aphids <= APHID_MAX && isNum(o.dropT) && o.dropT >= 0;
+}
+
 function validPheromone(b64: string, size: { w: number; h: number }): boolean {
   try {
     return base64ToBytes(b64).length === size.w * size.h;
@@ -258,6 +269,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
+  if (o.bush !== undefined && !validBush(o.bush, size)) return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;

@@ -44,7 +44,7 @@ export const SUGAR_BOOST_MUL = 1.5;
 export const SPAWN_MIN_S = 12;
 export const SPAWN_MAX_S = 30;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
-export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar'>, number> = {
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew'>, number> = {
   berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
@@ -165,6 +165,18 @@ export const LEAF_REACH = 2.5;
 export const CATERPILLAR_BITE_S = 2.5;
 export const CATERPILLAR_GAIN = 4;
 export const CATERPILLAR_MAX_PIECES = 144;
+
+// ---- Aphids: a bush with a few aphids appears with a big colony; ants feed them leaves and collect their honeydew ----
+/** The bush appears once the colony has this many ants (normal mode). */
+export const BUSH_MIN_ANTS = 500;
+export const APHID_START = 3;
+export const APHID_MAX = 15;
+/** A drop of honeydew falls every max(APHID_DROP_MIN_S, APHID_DROP_BASE_S / aphids) seconds; at most HONEY_MAX_ITEMS lie on the map. */
+export const APHID_DROP_BASE_S = 270;
+export const APHID_DROP_MIN_S = 18;
+export const HONEY_MAX_ITEMS = 3;
+/** An ant carrying a leaf feeds the aphids once it is this close (px) to the bush. */
+export const BUSH_REACH = 5;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */
