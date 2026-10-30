@@ -73,8 +73,9 @@ describe('resolvePlacement', () => {
 });
 
 describe('FOOD_TABLE', () => {
-  it('has exactly the six forest kinds plus sugar', () => {
-    expect(Object.keys(FOOD_TABLE).sort()).toEqual(['beetle', 'berry', 'carrion', 'caterpillar', 'fly', 'mushroom', 'sugar']);
+  it('has exactly the six forest kinds plus sugar and leaves', () => {
+    expect(Object.keys(FOOD_TABLE).sort()).toEqual(['beetle', 'berry', 'carrion', 'caterpillar', 'fly', 'leaf', 'mushroom', 'sugar']);
+    expect(FOOD_TABLE.leaf).toEqual({ pieces: 24, value: 0 });
     expect(FOOD_TABLE.beetle).toEqual({ pieces: 18 * 3, value: 2 / 3 });
     expect(FOOD_TABLE.caterpillar).toEqual({ pieces: 12 * 3, value: 2 / 3 });
     expect(FOOD_TABLE.fly).toEqual({ pieces: 6 * 3, value: 2 / 3 });

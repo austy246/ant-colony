@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -653,10 +653,47 @@ export class World {
           f.y = hop.toY;
           delete f.hop;
         }
-      } else if (f.kind === 'beetle' || f.kind === 'caterpillar' || f.kind === 'fly') {
+      } else if (f.kind === 'caterpillar') {
+        if (!this.feedCaterpillar(f)) this.walkCrawler(f);
+      } else if (f.kind === 'beetle' || f.kind === 'fly') {
         this.walkCrawler(f);
       }
     }
+  }
+
+  /**
+   * A hungry caterpillar (not fleeing, below CATERPILLAR_MAX_PIECES) turns toward the nearest leaves within LEAF_SENSE and,
+   * once at them, stands and chews: every CATERPILLAR_BITE_S one leaf unit disappears and the caterpillar gains
+   * CATERPILLAR_GAIN pieces of meat (it grows longer, and a killed one is worth more). Returns true while it stands eating.
+   */
+  private feedCaterpillar(f: FoodItem): boolean {
+    if ((f.fleeT ?? 0) > 0 || f.piecesLeft >= CATERPILLAR_MAX_PIECES) return false;
+    let leaf: FoodItem | null = null;
+    let best = LEAF_SENSE;
+    for (const l of this.food) {
+      if (l.kind !== 'leaf' || l.piecesLeft <= 0) continue;
+      const d = Math.hypot(l.x - f.x, l.y - f.y);
+      if (d <= best) {
+        best = d;
+        leaf = l;
+      }
+    }
+    if (!leaf) {
+      delete f.biteT;
+      return false;
+    }
+    if (best > LEAF_REACH) {
+      f.heading = Math.atan2(leaf.y - f.y, leaf.x - f.x);
+      return false;
+    }
+    f.biteT = (f.biteT ?? 0) + STEP_S;
+    if (f.biteT >= CATERPILLAR_BITE_S - 1e-9) {
+      f.biteT = 0;
+      leaf.piecesLeft -= 1;
+      f.piecesLeft = Math.min(CATERPILLAR_MAX_PIECES, f.piecesLeft + CATERPILLAR_GAIN);
+      if (leaf.piecesLeft <= 0) this.food.splice(this.food.indexOf(leaf), 1);
+    }
+    return true;
   }
 
   /**
@@ -747,8 +784,9 @@ export class World {
       f.alive = false;
       f.kind = 'carrion';
       f.corpseOf = was;
-      f.piecesLeft = FOOD_TABLE[was].pieces;
+      f.piecesLeft = was === 'caterpillar' ? Math.max(f.piecesLeft, FOOD_TABLE[was].pieces) : FOOD_TABLE[was].pieces; // a fattened caterpillar is worth more
       delete f.cooldown;
+      delete f.biteT;
       delete f.hop;
       delete f.wanderT;
       delete f.fleeT;
@@ -845,7 +883,7 @@ export class World {
     let best: FoodItem | undefined;
     let bestD = SENSE_FOOD;
     for (const f of this.food) {
-      if (f.piecesLeft <= 0 || f.stuck) continue;
+      if (f.piecesLeft <= 0 || f.stuck || f.kind === 'leaf') continue; // ants do not eat leaves
       const d = Math.hypot(f.x - x, f.y - y);
       if (d <= bestD) {
         bestD = d;

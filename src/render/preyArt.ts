@@ -381,6 +381,18 @@ function buildSugar(): Sprite {
   return toSprite(R);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Leaf: a green leaf with a pale midrib and a darker rim, lying slightly tilted. (Drawn smaller as it is eaten, see drawPreyItem.)
+// ---------------------------------------------------------------------------------------------------------------------
+function buildLeaf(): Sprite {
+  const R = newR();
+  R.ell(2, 4, 11, 4, SH);
+  eachInLens(0, 0, 14, 8, -0.4, (ix, iy, _u, v, e) => {
+    R.px(ix, iy, Math.abs(v) < 0.8 ? '#b3c96a' : e < 1.2 ? '#2f5a22' : (ix + iy) & 1 ? '#4c8a34' : '#5a9a3c');
+  });
+  return toSprite(R);
+}
+
 const BUILDERS: Record<FoodKind, () => Sprite> = {
   beetle: buildBeetle,
   caterpillar: buildCaterpillar,
@@ -389,6 +401,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   berry: buildBerry,
   mushroom: buildMushroom,
   sugar: buildSugar,
+  leaf: buildLeaf,
 };
 
 const cache = new Map<FoodKind, Sprite>();

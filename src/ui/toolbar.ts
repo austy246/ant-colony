@@ -9,6 +9,7 @@ export const TOOL_BUTTONS: { label: string; tool: Tool }[] = [
   { label: 'Moucha', tool: { kind: 'place', food: 'fly' } },
   { label: 'Zdechlina', tool: { kind: 'place', food: 'carrion' } },
   { label: 'Malina', tool: { kind: 'place', food: 'berry' } },
+  { label: 'Listí', tool: { kind: 'place', food: 'leaf' } },
   { label: 'Houba', tool: { kind: 'place', food: 'mushroom' } },
   { label: 'Přesunout', tool: { kind: 'move' } },
   { label: 'Smazat', tool: { kind: 'delete' } },

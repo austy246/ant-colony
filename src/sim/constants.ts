@@ -45,7 +45,7 @@ export const SPAWN_MIN_S = 20;
 export const SPAWN_MAX_S = 45;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
 export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar'>, number> = {
-  berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1,
+  berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
 export const SPAWN_MAX_FOOD_BASE = 12;
@@ -153,6 +153,18 @@ export const SPIDER_EAT_S = 15;
 export const SPIDER_MAJOR_HOLD_S = 60;
 /** Seconds after the spider's death until a new one settles in a corner. */
 export const SPIDER_RESPAWN_S = 600;
+
+// ---- Leaves: food of caterpillars (ants ignore them) ----
+/** Leaf units in a fresh pile of leaves. */
+export const LEAF_PIECES = 24;
+/** A hungry caterpillar smells leaves this far away (px) and crawls to them. */
+export const LEAF_SENSE = 60;
+/** A caterpillar eats while it is this close (px) to the leaves. */
+export const LEAF_REACH = 2.5;
+/** Seconds a caterpillar needs per leaf unit; each one it eats adds CATERPILLAR_GAIN pieces of meat, up to CATERPILLAR_MAX_PIECES (a full caterpillar stops eating). */
+export const CATERPILLAR_BITE_S = 2.5;
+export const CATERPILLAR_GAIN = 2;
+export const CATERPILLAR_MAX_PIECES = 72;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

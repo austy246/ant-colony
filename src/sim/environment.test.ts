@@ -26,7 +26,7 @@ describe('spontaneous prey', () => {
       expect(k).not.toBe('sugar');
       if (k === 'berry') berries++;
     }
-    expect(Math.abs(berries / n - 3 / 11)).toBeLessThan(0.03);
+    expect(Math.abs(berries / n - 3 / 13)).toBeLessThan(0.03);
   });
 
   it('sandbox never spawns anything', () => {

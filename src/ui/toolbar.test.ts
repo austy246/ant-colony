@@ -18,11 +18,11 @@ describe('buildToolbar', () => {
   it('has the exact Czech labels in order', () => {
     buildToolbar(root, () => {}, () => {});
     expect(buttons().map((b) => b.textContent)).toEqual([
-      'Brouk', 'Housenka', 'Moucha', 'Zdechlina', 'Malina', 'Houba',
+      'Brouk', 'Housenka', 'Moucha', 'Zdechlina', 'Malina', 'Listí', 'Houba',
       'Přesunout', 'Smazat', 'Posun',
       'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
     ]);
-    expect(TOOL_BUTTONS).toHaveLength(9);
+    expect(TOOL_BUTTONS).toHaveLength(10);
     expect(VIEW_BUTTONS.map((v) => v.view)).toEqual(['normal', 'pheromone', 'terrain', 'underground']);
     expect(root.querySelector('div.toolbar')).not.toBeNull();
     expect(buttons().every((b) => b.type === 'button')).toBe(true);

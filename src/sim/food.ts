@@ -1,7 +1,7 @@
 import { NEST } from './constants';
 import { Surface, type Terrain } from './terrain';
 
-export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar';
+export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar' | 'leaf';
 
 /** Every source is FOOD_SIZE_MUL times larger than the base size, so it lasts longer and food does not keep popping up. */
 const FOOD_SIZE_MUL = 3;
@@ -14,6 +14,8 @@ export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
   berry: { pieces: 3 * FOOD_SIZE_MUL, value: 1 },
   mushroom: { pieces: 3 * FOOD_SIZE_MUL, value: 1 },
   sugar: { pieces: 1 * FOOD_SIZE_MUL, value: 1 },
+  /** Leaves are only eaten by caterpillars: pieces = leaf units left, ants never take any (value 0). */
+  leaf: { pieces: 24, value: 0 },
 };
 
 /** Kinds that exist as living creatures until they die. */
@@ -56,6 +58,8 @@ export interface FoodItem {
   stuck?: boolean;
   /** TRANSIENT (not saved): seconds the spider has been eating this stuck fly. */
   eatT?: number;
+  /** TRANSIENT (not saved): seconds a caterpillar has been chewing its current leaf unit. */
+  biteT?: number;
   /** TRANSIENT (not saved): seconds a touched caterpillar still hurries away (absent / <= 0 = normal pace). */
   fleeT?: number;
 }

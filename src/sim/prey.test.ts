@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEETLE_SPEED, FLY_SPEED, HOP_DUR, NEST, PREY_SPEED_VAR, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
+import { BEETLE_SPEED, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES, FLY_SPEED, HOP_DUR, NEST, PREY_SPEED_VAR, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE } from './food';
 import { Surface } from './terrain';
 import { World } from './world';
@@ -132,6 +132,70 @@ describe('beetle (alive) walks', () => {
         }
       }
     }
+  });
+});
+
+describe('leaves and caterpillars', () => {
+  const caterpillarAt = (w: World, x: number, y: number) => {
+    const c = w.placeFood('caterpillar', x, y)!;
+    c.speedMul = 1;
+    return c;
+  };
+
+  it('ants ignore leaves', () => {
+    const w = flatWorld(31);
+    const leaf = w.placeFood('leaf', 150, 100)!;
+    const a = w.spawnAnt();
+    a.x = 150;
+    a.y = 102;
+    run(w, 10);
+    expect(a.state).toBe('wander');
+    expect(leaf.piecesLeft).toBe(FOOD_TABLE.leaf.pieces);
+  });
+
+  it('a caterpillar crawls to leaves, eats them away and grows meatier (and longer)', () => {
+    const w = flatWorld(32);
+    const leaf = w.placeFood('leaf', 150, 100)!;
+    const c = caterpillarAt(w, 170, 100);
+    const before = c.piecesLeft;
+    run(w, 30); // arrives after ~8 s, then eats one unit per 2.5 s
+    expect(leaf.piecesLeft).toBeLessThan(FOOD_TABLE.leaf.pieces);
+    expect(c.piecesLeft).toBeGreaterThan(before);
+    expect(c.piecesLeft).toBeLessThanOrEqual(CATERPILLAR_MAX_PIECES);
+    expect(Math.hypot(c.x - leaf.x, c.y - leaf.y)).toBeLessThan(10);
+  });
+
+  it('the meat gained equals CATERPILLAR_GAIN per leaf unit eaten, and a full caterpillar stops eating', () => {
+    const w = flatWorld(33);
+    const leaf = w.placeFood('leaf', 150, 100)!;
+    leaf.piecesLeft = 100;
+    const c = caterpillarAt(w, 150, 100);
+    run(w, 400);
+    expect(c.piecesLeft).toBe(CATERPILLAR_MAX_PIECES);
+    const eaten = 100 - leaf.piecesLeft;
+    expect(eaten).toBe((CATERPILLAR_MAX_PIECES - FOOD_TABLE.caterpillar.pieces) / CATERPILLAR_GAIN);
+  });
+
+  it('a killed fattened caterpillar leaves all of its meat as carrion', () => {
+    const w = flatWorld(34);
+    const c = caterpillarAt(w, 150, 100);
+    c.piecesLeft = 60;
+    antNear(w, c.x, c.y);
+    w.step(STEP_S);
+    c.cooldown = 0;
+    antNear(w, c.x, c.y);
+    w.step(STEP_S);
+    expect(c.kind).toBe('carrion');
+    expect(c.piecesLeft).toBe(60);
+  });
+
+  it('a leaf pile that is eaten up disappears', () => {
+    const w = flatWorld(35);
+    const leaf = w.placeFood('leaf', 150, 100)!;
+    leaf.piecesLeft = 1;
+    caterpillarAt(w, 150, 100);
+    run(w, 5);
+    expect(w.food).not.toContain(leaf);
   });
 });
 

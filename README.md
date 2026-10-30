@@ -18,7 +18,7 @@ npm run build    # kontrola typů + produkční build do dist/
 Na začátku nové hry si vybereš mód.
 
 - **Sandbox**: vše jako dosud. Kořist si pokládáš sám, počet mravenců je nejvýše 300 a kolonie nikdy nezahyne (prázdné hnízdo bez jídla dostane po 15 s jednoho zachránce).
-- **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny i houby), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí (×1,5 rychlost)**.
+- **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny, houby i listí), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí (×1,5 rychlost)**.
 
 **Pavouk** (v Sandboxu vpravo dole, v Normalu vpravo nahoře nebo dole): je **velký**, chodí po své pavučině k chycené kořisti a sedí v rohu mapy a kolem něj je **pavučina**. Mravenec, který do ní vstoupí, se **chytí** a stojí na místě; pavouk chycené mravence postupně **sní**, jednoho každých **15 sekund** (tráví), obyčejné mravence dřív (nejdéle chyceného jako prvního). Chyceného **majora** si nechá viset **minutu**, než ho sní, takže mu na pomoc může přijít druhý major: když se do pavučiny chytí **dva majoři** najednou, pavouka **přemůžou**, všichni chycení se osvobodí a pavouk zmizí. Toulaví mravenci vlákna cítí a pavučině se vyhýbají (ne vždy úspěšně); mravenci, kteří jdou za jídlem nebo ho nesou, na ni nedbají. Brouci a housenky se pavučině vyhýbají, ale **mouchy** (které teď chodí) se do ní chytají; pavouk k nim dojde a po **6 sekundách** je sní, dřív než mravence. Po **10 minutách** se vrátí v některém z rohů.
 
@@ -28,7 +28,7 @@ Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane
 
 ## Ovládání
 
-- **Lišta kořisti** dole (jen v Sandboxu): Brouk, Housenka, Moucha, Zdechlina, Malina, Houba. Vyber druh a klikni do mapy. Počet kusů je neomezený.
+- **Lišta kořisti** dole (jen v Sandboxu): Brouk, Housenka, Moucha, Zdechlina, Malina, Listí, Houba. Vyber druh a klikni do mapy. Počet kusů je neomezený.
 - **Lišta v Normalu**: místo kořisti a nástrojů jen tlačítko **Cukr** (vybereš ho a klikneš do mapy; po položení běží 5min odpočet, který tlačítko ukazuje) a pohledy. Mapu posouváš tažením a zoomuješ kolečkem nebo pinchem.
 - **Nástroje v Sandboxu** – **Přesunout**: tažením přemístíš položenou kořist. **Smazat**: kliknutím kořist odstraníš. **Posun**: tažení posouvá mapu.
 - **Kolečko myši** = zoom, **tažení** (v nástroji Posun nebo mimo kořist) = posun mapy, **pravé nebo prostřední tlačítko** = posun vždy. Na dotykovém displeji pinch = zoom, dva prsty = posun.
@@ -49,7 +49,7 @@ Každý mravenec stráví v hnízdě skutečný čas. Čerstvě vylíhlý mraven
 
 ## Kořist: živá housenka
 
-Housenka se po mapě plazí (pomaleji než brouk), tělo se jí vlní. Když se jí první mravenec dotkne, na chvíli zrychlí a uteče (vlna běží dvakrát rychleji a tělo se natáhne); při druhém doteku zahyne a zbude po ní stočená zdechlina s bledě žlutými kapkami, kterou mravenci rozdělí na dílky jako ostatní zdechliny. V pheromonovém a terénním pohledu je to stejná tečka jako každá jiná potrava.
+Housenka se po mapě plazí (pomaleji než brouk), tělo se jí vlní. Když se jí první mravenec dotkne, na chvíli zrychlí a uteče (vlna běží dvakrát rychleji a tělo se natáhne); při druhém doteku zahyne a zbude po ní stočená zdechlina s bledě žlutými kapkami, kterou mravenci rozdělí na dílky jako ostatní zdechliny. **Listí** je potrava jen pro housenky (mravenci ho ignorují): housenka k němu dolezne, žere ho a listí postupně **mizí** (zmenšuje se); za každý snědený kousek **přibude** housence maso, takže se **prodlužuje**, až do dvojnásobku. Kdyby ji pak mravenci zabili, zbyde po ní víc jídla. Syta se přestane krmit. V pheromonovém a terénním pohledu je to stejná tečka jako každá jiná potrava.
 
 ## Ukládání
 

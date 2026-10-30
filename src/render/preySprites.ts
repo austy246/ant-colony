@@ -1,4 +1,5 @@
-import type { FoodItem } from '../sim/food';
+import { CATERPILLAR_MAX_PIECES } from '../sim/constants';
+import { FOOD_TABLE, type FoodItem } from '../sim/food';
 import { FINE } from './fine';
 import {
   BEETLE_DIRS,
@@ -131,7 +132,18 @@ export function drawPreyItem(c: Ctx2D, spr: PreySprites, f: FoodItem, beetleFram
     if (f.kind === 'beetle') {
       blitPrey(c, spr.beetle(preyDirection(f.heading, BEETLE_DIRS), beetleFrame), f.x, f.y);
     } else if (f.kind === 'caterpillar') {
-      blitPrey(c, spr.caterpillar(preyDirection(f.heading, CATERPILLAR_DIRS), beetleFrame, isFleeing(f)), f.x, f.y);
+      const cat = spr.caterpillar(preyDirection(f.heading, CATERPILLAR_DIRS), beetleFrame, isFleeing(f));
+      const g = caterpillarGrowth(f);
+      if (g > 1.001) {
+        // A fattened caterpillar is drawn bigger (longer) in proportion to the meat it has eaten.
+        c.save();
+        c.translate(f.x, f.y);
+        c.scale(g, g);
+        blitPrey(c, cat, 0, 0);
+        c.restore();
+      } else {
+        blitPrey(c, cat, f.x, f.y);
+      }
     } else {
       const dir = preyDirection(f.heading, FLY_DIRS);
       blitPrey(c, spr.flyShadow(), f.x, f.y);
@@ -150,7 +162,23 @@ export function drawPreyItem(c: Ctx2D, spr: PreySprites, f: FoodItem, beetleFram
     blitPrey(c, corpse === 'beetle' ? spr.deadBeetle(dir) : corpse === 'caterpillar' ? spr.deadCaterpillar(dir) : spr.deadFly(dir), f.x, f.y);
     return;
   }
+  if (f.kind === 'leaf') {
+    // The leaves shrink as caterpillars eat them.
+    const k = 0.35 + 0.65 * Math.min(1, f.piecesLeft / FOOD_TABLE.leaf.pieces);
+    c.save();
+    c.translate(f.x, f.y);
+    c.scale(k, k);
+    drawFood(c, 'leaf', 0, 0);
+    c.restore();
+    return;
+  }
   drawFood(c, f.kind, f.x, f.y);
+}
+
+/** 1 for a caterpillar of the normal size, up to 1.5 for one fattened to CATERPILLAR_MAX_PIECES. */
+export function caterpillarGrowth(f: FoodItem): number {
+  const base = FOOD_TABLE.caterpillar.pieces;
+  return 1 + 0.5 * Math.max(0, Math.min(1, (f.piecesLeft - base) / (CATERPILLAR_MAX_PIECES - base)));
 }
 
 /** Dust puff offsets per frame in fine px (module constants, nothing allocated per draw): x, y, size. */
