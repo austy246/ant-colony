@@ -65,8 +65,6 @@ export interface Ant {
 const BASE_SPEED = 12;
 const MAX_TURN = 6 * STEP_S; // rad per substep
 const FAN = 0.6;
-const TURN_PENALTY = 0.05;
-const LOOKAHEAD = 3;
 /** How far ahead (px) and how wide (cells, each way) a pheromone-following ant senses a trail: a 1 px trail is easy to miss with less. */
 const PHER_LOOKAHEAD = 6;
 const PHER_R = 2;
@@ -137,7 +135,17 @@ const OUTBOUND_K = 0.2;
 /** Tolerance when comparing the fractional stock (pieces of 2/3) with FOOD_PER_ANT. */
 const STOCK_EPS = 1e-6;
 const TWO_PI = Math.PI * 2;
-const FAN_TURNS = [-FAN, 0, FAN];
+/** Candidate turns: the fan, plus a wider one that lets an ant swing around a big obstacle. */
+const FAN_TURNS = [-2 * FAN, -FAN, 0, FAN, 2 * FAN];
+/**
+ * Terrain look-ahead: along each candidate heading the ant samples the ground every RAY_STEP px for RAY_N samples and
+ * takes the harmonic mean speed (the real average speed over that stretch), so a stone in the way costs what it costs to
+ * cross it. A candidate's score is that speed minus TURN_ARC * (1 - cos(turn)): turning costs a little, so on open ground
+ * the ant keeps its heading, but a stone (speed 0.15) in the way is walked around.
+ */
+const RAY_STEP = 2;
+const RAY_N = 6;
+const TURN_ARC = 0.35;
 
 function wrapAngle(a: number): number {
   a = (a + Math.PI) % TWO_PI;
@@ -1366,6 +1374,13 @@ export class World {
     this.explored[i] = Math.min(EXPLORE_CAP, this.explored[i] + STEP_S * EXPLORE_RATE);
   }
 
+  /** Harmonic mean speed of the ground along the ray from (x, y) in direction (c, s): RAY_N samples, RAY_STEP px apart. */
+  private rayProgress(x: number, y: number, c: number, s: number): number {
+    let slow = 0;
+    for (let i = 1; i <= RAY_N; i++) slow += 1 / Math.max(0.05, speedAt(this.terrain, x + c * RAY_STEP * i, y + s * RAY_STEP * i));
+    return RAY_N / slow;
+  }
+
   /**
    * Pick the best of the candidate headings around `desired`, turn smoothly toward it and advance.
    * Returns the pheromone pull: pherWeight times the strongest trail value any candidate heading senses (0 without trail).
@@ -1381,7 +1396,7 @@ export class World {
       const h = desired + turn;
       const c = Math.cos(h);
       const s = Math.sin(h);
-      let score = speedAt(this.terrain, ant.x + c * LOOKAHEAD, ant.y + s * LOOKAHEAD) - TURN_PENALTY * Math.abs(turn);
+      let score = this.rayProgress(ant.x, ant.y, c, s) - TURN_ARC * (1 - Math.cos(turn));
       if (pherWeight > 0) {
         const p = pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, PHER_R);
         score += p;
