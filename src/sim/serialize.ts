@@ -1,6 +1,7 @@
-import { FOOD_PER_ANT, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
+import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, STEP_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
-import { World, type Ant, type AntRole } from './world';
+import { terrainSize } from './terrain';
+import { World, type Ant, type AntRole, type GameMode } from './world';
 
 /** Ant fields that only live while the ant is steering a certain way; never written to a save. */
 type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave';
@@ -42,6 +43,16 @@ export interface SaveV1 {
   /** base64 of Uint8Array, one byte per cell: round(value / MAX_PHEROMONE * 255). */
   pheromone: string;
   camera: { x: number; y: number; zoom: number };
+  /** Optional (absent in older saves = 'sandbox'). */
+  mode?: GameMode;
+  /** Optional (absent = 0): map growth step 0..MAX_MAP_STEP; the pheromone payload and coordinates follow terrainSize(mapStep). */
+  mapStep?: number;
+  /** Optional (absent = ants.length): the highest number of ants ever alive; restored as max(saved, ants.length). */
+  peakAnts?: number;
+  /** Optional (absent = 0): normal mode sugar cooldown, speed boost end and spawn wait (sim time / seconds). */
+  sugarReadyAt?: number;
+  boostUntil?: number;
+  spawnTimer?: number;
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -100,12 +111,19 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     food: w.food.map(foodToSave),
     pheromone: bytesToBase64(bytes),
     camera: { ...extra.camera },
+    mode: w.mode,
+    mapStep: w.mapStep,
+    peakAnts: w.peakAnts,
+    sugarReadyAt: w.sugarReadyAt,
+    boostUntil: w.boostUntil,
+    spawnTimer: w.spawnTimer,
   };
 }
 
 /** Throws if the pheromone payload does not match the world size. Validate with `validateSave` first. */
 export function worldFromSave(s: SaveV1): World {
-  const w = World.create(s.seed);
+  const w = World.create(s.seed, s.mode ?? 'sandbox');
+  w.growMapTo(s.mapStep ?? 0);
   const bytes = base64ToBytes(s.pheromone);
   if (bytes.length !== w.pher.data.length) throw new Error('Invalid save: pheromone size mismatch');
   w.rng.state = s.rngState;
@@ -118,6 +136,9 @@ export function worldFromSave(s: SaveV1): World {
   w.peakLarvae = Math.max(s.peakLarvae ?? 0, w.larvae);
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
+  w.sugarReadyAt = s.sugarReadyAt ?? 0;
+  w.boostUntil = s.boostUntil ?? 0;
+  w.spawnTimer = s.spawnTimer ?? 0;
   w.ants.length = 0;
   for (const a of s.ants) {
     // `lifespan` was removed (ants no longer die of old age); old saves may still carry it: drop it.
@@ -134,6 +155,7 @@ export function worldFromSave(s: SaveV1): World {
     else delete ant.nestKind;
     w.ants.push(ant);
   }
+  w.peakAnts = Math.max(s.peakAnts ?? 0, w.ants.length);
   w.food.length = 0;
   for (const f of s.food) w.food.push(foodToSave(f));
   for (let i = 0; i < bytes.length; i++) w.pher.data[i] = (bytes[i] / 255) * MAX_PHEROMONE;
@@ -155,11 +177,11 @@ const TRAIT_MAX = 3;
 /** Largest piece count of any food kind (a loaded save may hold 0..max; old saves hold smaller numbers). */
 const MAX_PIECES = Math.max(...Object.values(FOOD_TABLE).map((f) => f.pieces));
 
-function validAnt(a: unknown): boolean {
+function validAnt(a: unknown, size: { w: number; h: number }): boolean {
   if (typeof a !== 'object' || a === null) return false;
   const o = a as Record<string, unknown>;
   return (
-    isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) && isNum(o.heading) &&
+    isInt(o.id) && inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isNum(o.heading) &&
     isNum(o.age) && o.age >= 0 && isNum(o.carry) &&
     typeof o.state === 'string' && ANT_STATES.includes(o.state) &&
     (o.targetFood === null || isNum(o.targetFood)) &&
@@ -168,15 +190,17 @@ function validAnt(a: unknown): boolean {
     (o.role === undefined || (typeof o.role === 'string' && ANT_ROLES.includes(o.role))) &&
     (o.speedMul === undefined || inRange(o.speedMul, TRAIT_MIN, TRAIT_MAX)) &&
     (o.curiosity === undefined || inRange(o.curiosity, TRAIT_MIN, TRAIT_MAX)) &&
-    (o.stubbornness === undefined || inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX))
+    (o.stubbornness === undefined || inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX)) &&
+    (o.major === undefined || o.major === true) &&
+    (o.carrySugar === undefined || o.carrySugar === true)
   );
 }
 
-function validFood(f: unknown): boolean {
+function validFood(f: unknown, size: { w: number; h: number }): boolean {
   if (typeof f !== 'object' || f === null) return false;
   const o = f as Record<string, unknown>;
   return (
-    isInt(o.id) && inRange(o.x, 0, WORLD_W) && inRange(o.y, 0, WORLD_H) &&
+    isInt(o.id) && inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) &&
     isInt(o.piecesLeft) && o.piecesLeft >= 0 && o.piecesLeft <= MAX_PIECES &&
     typeof o.kind === 'string' && Object.prototype.hasOwnProperty.call(FOOD_TABLE, o.kind) &&
     (o.alive === undefined || typeof o.alive === 'boolean') &&
@@ -187,9 +211,9 @@ function validFood(f: unknown): boolean {
   );
 }
 
-function validPheromone(b64: string): boolean {
+function validPheromone(b64: string, size: { w: number; h: number }): boolean {
   try {
-    return base64ToBytes(b64).length === WORLD_W * WORLD_H;
+    return base64ToBytes(b64).length === size.w * size.h;
   } catch {
     return false;
   }
@@ -207,14 +231,20 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   if (o.totalDelivered !== undefined && (!isNum(o.totalDelivered) || o.totalDelivered < 0)) return null;
   if (o.started !== undefined && typeof o.started !== 'boolean') return null;
+  if (o.mode !== undefined && o.mode !== 'sandbox' && o.mode !== 'normal') return null;
+  if (o.mapStep !== undefined && (!isInt(o.mapStep) || o.mapStep < 0 || o.mapStep > MAX_MAP_STEP)) return null;
+  for (const k of ['peakAnts', 'sugarReadyAt', 'boostUntil', 'spawnTimer'] as const) {
+    if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
+  }
+  const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;
-  if (!Array.isArray(o.ants) || o.ants.length > MAX_ENTRIES || !o.ants.every(validAnt)) return null;
-  if (!Array.isArray(o.food) || o.food.length > MAX_ENTRIES || !o.food.every(validFood)) return null;
+  if (!Array.isArray(o.ants) || o.ants.length > MAX_ENTRIES || !o.ants.every((a) => validAnt(a, size))) return null;
+  if (!Array.isArray(o.food) || o.food.length > MAX_ENTRIES || !o.food.every((f) => validFood(f, size))) return null;
   for (const e of [...(o.ants as { id: number }[]), ...(o.food as { id: number }[])]) {
     if (e.id >= o.nextId) return null;
   }
-  if (!validPheromone(o.pheromone)) return null;
+  if (!validPheromone(o.pheromone, size)) return null;
   return x as SaveV1;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
+import { terrainSize } from './terrain';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { FOOD_TABLE } from './food';
 import { World } from './world';
@@ -403,5 +404,103 @@ describe('validateSave', () => {
       { time: -1 },
     ];
     for (const patch of bad) expect(validateSave({ ...g, ...patch }), JSON.stringify(Object.keys(patch))).toBeNull();
+  });
+});
+
+describe('normal mode fields', () => {
+  function normalWorld(step: number): World {
+    const w = World.create(77, 'normal');
+    w.growMapTo(step);
+    for (let i = 0; i < 5; i++) w.spawnAnt();
+    w.ants[0].major = true;
+    w.ants[1].carrySugar = true;
+    w.ants[1].state = 'carry';
+    w.sugarReadyAt = 123.5;
+    w.boostUntil = 77.25;
+    w.spawnTimer = 4.5;
+    w.peakAnts = 40;
+    return w;
+  }
+  const json = (s: SaveV1) => JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+
+  it('round trip keeps mode, mapStep, sugar cooldown, boost and majors', () => {
+    const w = normalWorld(2);
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.mode).toBe('normal');
+    expect(r.mapStep).toBe(2);
+    expect(r.pher.data.length).toBe(terrainSize(2).w * terrainSize(2).h);
+    expect(r.sugarReadyAt).toBe(123.5);
+    expect(r.boostUntil).toBe(77.25);
+    expect(r.spawnTimer).toBe(4.5);
+    expect(r.peakAnts).toBe(40);
+    expect(r.ants[0].major).toBe(true);
+    expect(r.ants[1].carrySugar).toBe(true);
+    expect(r.ants[2].major).toBeUndefined();
+  });
+
+  it('peakAnts is restored as at least the ant count', () => {
+    const w = normalWorld(0);
+    const s = worldToSave(w, EXTRA);
+    s.peakAnts = 1;
+    expect(worldFromSave(s).peakAnts).toBe(5);
+    delete s.peakAnts;
+    expect(worldFromSave(s).peakAnts).toBe(5);
+  });
+
+  it('old save without new fields loads as sandbox 320x200', () => {
+    const s = json(worldToSave(busyWorld(), EXTRA));
+    for (const k of ['mode', 'mapStep', 'peakAnts', 'sugarReadyAt', 'boostUntil', 'spawnTimer']) delete s[k];
+    const r = worldFromSave(validateSave(s)!);
+    expect(r.mode).toBe('sandbox');
+    expect(r.mapStep).toBe(0);
+    expect(r.terrain.w).toBe(WORLD_W);
+    expect(r.terrain.h).toBe(WORLD_H);
+    expect(r.sugarReadyAt).toBe(0);
+    expect(r.boostUntil).toBe(0);
+    expect(r.spawnTimer).toBe(0);
+  });
+
+  it('save with mapStep 3 restores terrain of size terrainSize(3) identical to extend steps', () => {
+    const w = normalWorld(3);
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.terrain.w).toBe(terrainSize(3).w);
+    expect(r.terrain.h).toBe(terrainSize(3).h);
+    expect(Array.from(r.terrain.surface)).toEqual(Array.from(w.terrain.surface));
+    expect(r.terrain.features).toEqual(w.terrain.features);
+  });
+
+  it('pheromone size mismatch for the saved mapStep is rejected', () => {
+    const s = json(worldToSave(normalWorld(2), EXTRA));
+    expect(validateSave({ ...s, mapStep: 0 })).toBeNull();
+    expect(validateSave({ ...s, mapStep: 3 })).toBeNull();
+    const base = json(worldToSave(busyWorld(), EXTRA));
+    expect(validateSave({ ...base, mapStep: 1 })).toBeNull();
+  });
+
+  it('ant coordinates beyond the saved map are rejected', () => {
+    const s = json(worldToSave(normalWorld(0), EXTRA));
+    const ant = (s.ants as Record<string, unknown>[])[0];
+    expect(validateSave({ ...s, ants: [{ ...ant, x: WORLD_W + 10 }] })).toBeNull();
+    const g = json(worldToSave(normalWorld(2), EXTRA));
+    const ga = (g.ants as Record<string, unknown>[])[0];
+    expect(validateSave({ ...g, ants: [{ ...ga, x: terrainSize(2).w - 1, y: terrainSize(2).h - 1 }] })).not.toBeNull();
+    expect(validateSave({ ...g, ants: [{ ...ga, x: terrainSize(2).w + 1 }] })).toBeNull();
+    const food = { id: 1, kind: 'berry', x: terrainSize(2).w + 1, y: 5, piecesLeft: 1 };
+    expect(validateSave({ ...g, nextId: 100, food: [food] })).toBeNull();
+  });
+
+  it('invalid mapStep (negative, 9, fraction) is rejected', () => {
+    const s = json(worldToSave(busyWorld(), EXTRA));
+    for (const m of [-1, 9, 1.5, NaN, '1']) expect(validateSave({ ...s, mapStep: m }), String(m)).toBeNull();
+  });
+
+  it('rejects bad types of the other new fields', () => {
+    const s = json(worldToSave(normalWorld(0), EXTRA));
+    const ant = (s.ants as Record<string, unknown>[])[0];
+    const bad: Record<string, unknown>[] = [
+      { mode: 'hard' }, { mode: 1 }, { peakAnts: -1 }, { peakAnts: NaN }, { sugarReadyAt: Infinity }, { boostUntil: '1' }, { spawnTimer: NaN },
+      { ants: [{ ...ant, major: false }] }, { ants: [{ ...ant, carrySugar: 1 }] },
+    ];
+    for (const patch of bad) expect(validateSave({ ...s, ...patch }), JSON.stringify(patch)).toBeNull();
   });
 });
