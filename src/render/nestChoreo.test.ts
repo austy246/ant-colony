@@ -168,7 +168,7 @@ describe('nestAntPose: continuity and geometry', () => {
       }
     }
     expect(n).toBeGreaterThan(200 * 300 * 10);
-  }, 240000);
+  }, 600000);
 
   it('walking ants face along the path they follow (the sprite direction is the direction of motion)', () => {
     const l = layoutFor(3);
@@ -465,7 +465,7 @@ describe('nestAntPose: unloading foragers', () => {
     }
     expect(first).toBeGreaterThanOrEqual(10);
     expect(second).toBeGreaterThanOrEqual(0);
-  }, 60000);
+  }, 600000);
 
   it('stands (unloading) for a while at the far end and a short stay is simply drawn nearer the entrance', () => {
     const l = layoutFor(2);

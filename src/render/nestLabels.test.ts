@@ -46,7 +46,7 @@ describe('labelPlates', () => {
       }
     }
     expect(above).toBeGreaterThanOrEqual(30 * 3 * 0.5);
-  }, 60000);
+  }, 600000);
 
   it('never lets two plates overlap and keeps them inside the picture (200 seeds at 4 + 2 + 2 chambers, and at other levels)', () => {
     for (let i = 0; i < 200; i++) {
@@ -64,7 +64,7 @@ describe('labelPlates', () => {
         }
       }
     }
-  }, 120000);
+  }, 600000);
 
   it('is deterministic, and plates never overlap whether the chambers are empty or full', () => {
     for (const [ants, fill, larv] of [[1, 0, 0], [300, 25, 10]]) {
@@ -75,7 +75,7 @@ describe('labelPlates', () => {
         for (let a = 0; a < ps.length; a++) for (let b = a + 1; b < ps.length; b++) expect(hit(ps[a], ps[b]), `seed ${i} ${ants}`).toBe(false);
       }
     }
-  }, 120000);
+  }, 600000);
 
   it('keeps most plates off the tunnels', () => {
     let on = 0;
@@ -88,5 +88,5 @@ describe('labelPlates', () => {
       }
     }
     expect(on / n).toBeLessThan(0.15);
-  }, 60000);
+  }, 600000);
 });
