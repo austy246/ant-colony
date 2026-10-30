@@ -79,7 +79,7 @@ describe('the aphids bush', () => {
 
   it('every so often a drop of honeydew falls by the bush, at most HONEY_MAX_ITEMS at a time', () => {
     const w = normalWorld(6);
-    w.bush = { x: 100, y: 100, aphids: APHID_MAX, dropT: 0.1 };
+    w.bush = { x: 100, y: 40, aphids: APHID_MAX, dropT: 0.1 };
     run(w, 1);
     expect(w.food.filter((f) => f.kind === 'honeydew')).toHaveLength(1);
     run(w, APHID_DROP_MIN_S * (HONEY_MAX_ITEMS + 3));
