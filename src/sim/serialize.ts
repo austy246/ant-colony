@@ -120,7 +120,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     sugarReadyAt: w.sugarReadyAt,
     boostUntil: w.boostUntil,
     spawnTimer: w.spawnTimer,
-    ...(w.spider ? { spider: { ...w.spider } } : {}),
+    ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
 }
 

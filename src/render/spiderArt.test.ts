@@ -52,7 +52,7 @@ describe('spiderArt', () => {
   it('drawSpider is not blank and differs from the web', () => {
     const s = paint((c) => drawSpider(c, CENTRE, CENTRE));
     const w = paint((c) => drawWeb(c, CENTRE, CENTRE, 12, 0));
-    expect(painted(s)).toBeGreaterThan(40);
+    expect(painted(s)).toBeGreaterThan(160); // the spider is twice the size
     expect(Array.from(s)).not.toEqual(Array.from(w));
     // a dark body pixel in the middle
     const mid = (CENTRE * SCALE * SIZE + CENTRE * SCALE) * 4;

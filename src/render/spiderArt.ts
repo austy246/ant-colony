@@ -70,17 +70,21 @@ const SPIDER = [
   '.#...........#.',
 ];
 
-/** Dark pixel-art spider (8 legs, two dark-red dots on the back), 15 x 9 fine pixels, centred on (x, y). Static. */
+/** Every cell of the spider pattern is painted this many fine pixels wide and tall. */
+const SPIDER_SCALE = 2;
+
+/** Dark pixel-art spider (8 legs, two dark-red dots on the back), 30 x 18 fine pixels, centred on (x, y). */
 export function drawSpider(c: Ctx2D, x: number, y: number): void {
-  const ox = Math.floor(x * FINE) - 7;
-  const oy = Math.floor(y * FINE) - 4;
+  const ox = Math.floor(x * FINE) - 7 * SPIDER_SCALE;
+  const oy = Math.floor(y * FINE) - 4 * SPIDER_SCALE;
+  const size = SPIDER_SCALE * PX;
   for (let row = 0; row < SPIDER.length; row++) {
     const line = SPIDER[row];
     for (let col = 0; col < line.length; col++) {
       const ch = line[col];
       if (ch === '.') continue;
       c.fillStyle = ch === 'r' ? BACK : BODY;
-      c.fillRect((ox + col) * PX, (oy + row) * PX, PX, PX);
+      c.fillRect(ox * PX + col * size, oy * PX + row * size, size, size);
     }
   }
 }

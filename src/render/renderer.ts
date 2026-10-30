@@ -3,6 +3,7 @@ import { isAlive } from '../sim/food';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
 import { SPIDER_WEB_R } from '../sim/constants';
+import { bodyPos } from '../sim/spider';
 import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
@@ -148,7 +149,7 @@ export class Renderer {
       const halfH = this.cssH / 2 / zoom + SPIDER_WEB_R;
       if (sp?.alive && Math.abs(sp.x - this.camera.x) <= halfW && Math.abs(sp.y - this.camera.y) <= halfH) {
         drawWeb(c, sp.x, sp.y, SPIDER_WEB_R, this.world.time);
-        drawSpider(c, sp.x, sp.y);
+        drawSpider(c, bodyPos(sp).x, bodyPos(sp).y);
       }
 
       const ants = this.sorted;

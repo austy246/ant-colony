@@ -153,3 +153,9 @@ export const SPIDER_EAT_S = 15;
 export const SPIDER_MAJOR_HOLD_S = 60;
 /** Seconds after the spider's death until a new one settles in a corner. */
 export const SPIDER_RESPAWN_S = 600;
+/** The spider walks along its web to a caught creature at this speed (px/s). */
+export const SPIDER_SPEED = 14;
+/** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */
+export const SPIDER_FLY_EAT_S = 6;
+/** Walking speed of a living fly in px/s (times the ground speed factor): it ambles, and a touch still makes it hop away. */
+export const FLY_SPEED = 6;

@@ -14,6 +14,14 @@ export interface Spider {
   respawnT: number;
   /** 0 = upper right, 1 = lower right corner of the base map. */
   corner: number;
+  /** TRANSIENT (not saved): where the spider's body is while it walks along the web to a catch (absent = at the web's centre x, y). */
+  bx?: number;
+  by?: number;
+}
+
+/** Where the spider's body is (it walks about its web; x, y is the web's centre). */
+export function bodyPos(sp: Spider): { x: number; y: number } {
+  return { x: sp.bx ?? sp.x, y: sp.by ?? sp.y };
 }
 
 /** Distance of the spider's centre from the map edges: the whole web fits in the base map. */

@@ -3,6 +3,7 @@ import {
   EXPLORE_CAP,
   EXPLORE_CELL,
   SPIDER_EAT_S,
+  SPIDER_FLY_EAT_S,
   SPIDER_MAJOR_HOLD_S,
   SPIDER_RESPAWN_S,
   SPIDER_WEB_R,
@@ -11,7 +12,7 @@ import {
   WORLD_W,
 } from './constants';
 import { pickSpawnSpot } from './environment';
-import { inWeb, spiderCorner } from './spider';
+import { bodyPos, inWeb, spiderCorner } from './spider';
 import { Surface } from './terrain';
 import { World, type Ant } from './world';
 
@@ -539,5 +540,50 @@ describe('wanderers sense the silk of a living web (R4)', () => {
     run(w, 600);
     expect(w.antsKilled).toBe(n0 - w.ants.length); // no prey: every loss is a spider meal
     expect(w.antsKilled).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('the spider walks along its web', () => {
+  it('walks to a caught ant, eats it after SPIDER_EAT_S and goes back to the middle of the web', () => {
+    const w = spiderWorld(3);
+    const sp = w.spider!;
+    const a = antAt(w, 15, 0, 0);
+    run(w, 3);
+    const b = bodyPos(sp);
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThan(2.5);
+    expect(Math.hypot(b.x - sp.x, b.y - sp.y)).toBeGreaterThan(10);
+    run(w, SPIDER_EAT_S);
+    expect(w.ants).not.toContain(a);
+    run(w, 3);
+    const home = bodyPos(sp);
+    expect(Math.hypot(home.x - sp.x, home.y - sp.y)).toBeLessThan(2.5);
+  });
+
+  it('a fly that walks into the web sticks; the spider walks to it and eats it', () => {
+    const w = spiderWorld(4);
+    const sp = w.spider!;
+    w.terrain.surface.fill(Surface.Ground);
+    w.terrain.speed.fill(1);
+    const f = w.placeFood('fly', sp.x + SPIDER_WEB_R + 1.5, sp.y)!;
+    f.heading = Math.PI;
+    let stuck = false;
+    for (let i = 0; i < 30 / STEP_S && w.food.includes(f); i++) {
+      w.step(STEP_S);
+      if (f.stuck) stuck = true;
+    }
+    expect(stuck).toBe(true);
+    expect(w.food).not.toContain(f); // eaten
+  });
+
+  it('a stuck fly takes SPIDER_FLY_EAT_S once the spider is there, and ants leave it alone', () => {
+    const w = spiderWorld(5);
+    const sp = w.spider!;
+    const f = w.placeFood('fly', sp.x + 10, sp.y)!;
+    w.step(STEP_S);
+    expect(f.stuck).toBe(true);
+    run(w, 1);
+    expect(w.food).toContain(f);
+    run(w, SPIDER_FLY_EAT_S);
+    expect(w.food).not.toContain(f);
   });
 });

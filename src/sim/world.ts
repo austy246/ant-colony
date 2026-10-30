@@ -1,14 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
-import { inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
+import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
 /** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
@@ -497,12 +497,33 @@ export class World {
       for (const a of this.ants) delete a.caughtT;
       return;
     }
-    if (!longest && !longestMajor) {
-      sp.eatT = 0;
+    // Flies caught in the web are served first: the spider walks to the nearest one and eats it after SPIDER_FLY_EAT_S.
+    let fly: FoodItem | null = null;
+    let flyD = Infinity;
+    const body = bodyPos(sp);
+    for (const f of this.food) {
+      const d = f.stuck ? Math.hypot(f.x - body.x, f.y - body.y) : Infinity;
+      if (d < flyD) {
+        flyD = d;
+        fly = f;
+      }
+    }
+    if (fly) {
+      if (this.walkSpider(sp, fly.x, fly.y)) {
+        fly.eatT = (fly.eatT ?? 0) + STEP_S;
+        if (fly.eatT >= SPIDER_FLY_EAT_S - 1e-9) this.food.splice(this.food.indexOf(fly), 1);
+      }
       return;
     }
+    if (!longest && !longestMajor) {
+      sp.eatT = 0;
+      this.walkSpider(sp, sp.x, sp.y); // back to the middle of the web
+      return;
+    }
+    const target = (longest ?? longestMajor) as Ant;
+    const arrived = this.walkSpider(sp, target.x, target.y);
     sp.eatT += STEP_S;
-    if (sp.eatT < SPIDER_EAT_S - 1e-9) return;
+    if (sp.eatT < SPIDER_EAT_S - 1e-9 || !arrived) return;
     // Ordinary ants first; a lone major only after SPIDER_MAJOR_HOLD_S, so a second major has time to come and help.
     const meal = longest ?? ((longestMajor!.caughtT as number) >= SPIDER_MAJOR_HOLD_S - 1e-9 ? longestMajor : null);
     if (!meal) {
@@ -513,6 +534,17 @@ export class World {
     const i = this.ants.indexOf(meal);
     if (i >= 0) this.ants.splice(i, 1); // whatever it carried is lost
     this.antsKilled++;
+  }
+
+  /** Moves the spider's body one substep toward (tx, ty) along the web; true once it is within reach (2 px) of it. */
+  private walkSpider(sp: Spider, tx: number, ty: number): boolean {
+    const b = bodyPos(sp);
+    const d = Math.hypot(tx - b.x, ty - b.y);
+    const step = SPIDER_SPEED * STEP_S;
+    if (d <= 2) return true;
+    sp.bx = b.x + ((tx - b.x) / d) * Math.min(step, d);
+    sp.by = b.y + ((ty - b.y) / d) * Math.min(step, d);
+    return d - step <= 2;
   }
 
   /**
@@ -591,6 +623,17 @@ export class World {
         f.fleeT -= STEP_S;
         if (f.fleeT <= 1e-9) delete f.fleeT;
       }
+      if (f.kind === 'fly') {
+        // A fly that walks (or is dropped) into the web sticks to it; one that is no longer in a living web is free again.
+        const caught = this.spider?.alive === true && inWeb(this.spider, f.x, f.y);
+        if (caught) {
+          f.stuck = true;
+          delete f.hop;
+          continue;
+        }
+        delete f.stuck;
+        delete f.eatT;
+      }
       if (f.hop) {
         const hop = f.hop;
         hop.t += STEP_S;
@@ -602,7 +645,7 @@ export class World {
           f.y = hop.toY;
           delete f.hop;
         }
-      } else if (f.kind === 'beetle' || f.kind === 'caterpillar') {
+      } else if (f.kind === 'beetle' || f.kind === 'caterpillar' || f.kind === 'fly') {
         this.walkCrawler(f);
       }
     }
@@ -616,6 +659,7 @@ export class World {
   private walkCrawler(f: FoodItem): void {
     const rng = this.rng;
     const cat = f.kind === 'caterpillar';
+    const fly = f.kind === 'fly';
     const fleeing = cat && (f.fleeT ?? 0) > 0;
     if (f.wanderT !== undefined && f.wanderT > 0) {
       f.wanderT -= STEP_S;
@@ -632,7 +676,7 @@ export class World {
     const freeAhead = (a: number): boolean => {
       const ax = f.x + Math.cos(a) * BEETLE_LOOKAHEAD;
       const ay = f.y + Math.sin(a) * BEETLE_LOOKAHEAD;
-      return isFreeSpot(t, ax, ay) && !this.intoWeb(f.x, f.y, ax, ay);
+      return isFreeSpot(t, ax, ay) && (fly || !this.intoWeb(f.x, f.y, ax, ay));
     };
     if (!freeAhead(h)) {
       const sign = rng.next() < 0.5 ? 1 : -1;
@@ -653,11 +697,11 @@ export class World {
       }
     }
     f.heading = wrapAngle(h);
-    const base = cat ? CATERPILLAR_SPEED * (fleeing ? CATERPILLAR_FLEE_MUL : 1) : BEETLE_SPEED;
+    const base = cat ? CATERPILLAR_SPEED * (fleeing ? CATERPILLAR_FLEE_MUL : 1) : fly ? FLY_SPEED : BEETLE_SPEED;
     const v = base * (f.speedMul ?? 1) * speedAt(t, f.x, f.y) * STEP_S;
     const nx = f.x + Math.cos(f.heading) * v;
     const ny = f.y + Math.sin(f.heading) * v;
-    if (isFreeSpot(t, nx, ny) && !this.intoWeb(f.x, f.y, nx, ny)) {
+    if (isFreeSpot(t, nx, ny) && (fly || !this.intoWeb(f.x, f.y, nx, ny))) {
       f.x = nx;
       f.y = ny;
     }
@@ -667,7 +711,7 @@ export class World {
   private resolveTouches(): void {
     if (this.ants.length === 0) return;
     for (const f of this.food) {
-      if (!isAlive(f) || f.hop) continue;
+      if (!isAlive(f) || f.hop || f.stuck) continue;
       const onCooldown = (f.cooldown ?? 0) > 1e-9;
       let toucher: Ant | null = null;
       for (const ant of this.ants) {
@@ -793,7 +837,7 @@ export class World {
     let best: FoodItem | undefined;
     let bestD = SENSE_FOOD;
     for (const f of this.food) {
-      if (f.piecesLeft <= 0) continue;
+      if (f.piecesLeft <= 0 || f.stuck) continue;
       const d = Math.hypot(f.x - x, f.y - y);
       if (d <= bestD) {
         bestD = d;
@@ -891,7 +935,7 @@ export class World {
     let pherWeight = 0;
     if (ant.state === 'toFood') {
       const f = this.findFood(ant.targetFood);
-      if (!f || f.piecesLeft <= 0) {
+      if (!f || f.piecesLeft <= 0 || f.stuck) {
         ant.state = 'wander';
         ant.targetFood = null;
       } else {

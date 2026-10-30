@@ -52,6 +52,10 @@ export interface FoodItem {
   hop?: Hop;
   /** TRANSIENT (not saved): seconds a beetle / caterpillar still pauses (absent / <= 0 = walking). */
   wanderT?: number;
+  /** TRANSIENT (not saved): a fly stuck in the web of the spider (it does not move; ants leave it alone). */
+  stuck?: boolean;
+  /** TRANSIENT (not saved): seconds the spider has been eating this stuck fly. */
+  eatT?: number;
   /** TRANSIENT (not saved): seconds a touched caterpillar still hurries away (absent / <= 0 = normal pace). */
   fleeT?: number;
 }

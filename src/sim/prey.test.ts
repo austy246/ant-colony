@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BEETLE_SPEED, HOP_DUR, NEST, PREY_SPEED_VAR, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
+import { BEETLE_SPEED, FLY_SPEED, HOP_DUR, NEST, PREY_SPEED_VAR, RESCUE_AFTER_S, STEP_S, TOUCH_DIST, WORLD_H, WORLD_W } from './constants';
 import { FOOD_TABLE } from './food';
 import { Surface } from './terrain';
 import { World } from './world';
@@ -136,12 +136,14 @@ describe('beetle (alive) walks', () => {
 });
 
 describe('fly (alive)', () => {
-  it('sits still without ants', () => {
+  it('ambles slowly (walks, no hopping) without ants and is never touched', () => {
     const w = flatWorld(3);
     const f = w.placeFood('fly', 150, 100)!;
     run(w, 60);
-    expect(f.x).toBe(150);
-    expect(f.y).toBe(100);
+    const moved = Math.hypot(f.x - 150, f.y - 100);
+    expect(moved).toBeGreaterThan(5);
+    expect(moved).toBeLessThanOrEqual(FLY_SPEED * 60);
+    expect(f.hop).toBeUndefined();
     expect(f.touches).toBe(0);
     expect(f.alive).toBe(true);
   });
@@ -273,12 +275,12 @@ describe('touching a fly', () => {
       expect(f.touches).toBe(1);
       expect(f.alive).toBe(true);
       expect(f.hop).toBeDefined();
-      expect(f.hop!.fromX).toBe(150);
-      expect(f.hop!.fromY).toBe(100);
+      expect(Math.hypot(f.hop!.fromX - 150, f.hop!.fromY - 100)).toBeLessThan(1); // it ambled a hair before the touch
+      const { fromX, fromY } = f.hop!;
       expect(f.hop!.dur).toBe(HOP_DUR);
       run(w, HOP_DUR + 0.1);
       expect(f.hop).toBeUndefined();
-      const d = Math.hypot(f.x - 150, f.y - 100);
+      const d = Math.hypot(f.x - fromX, f.y - fromY);
       expect(d, `seed ${seed}`).toBeGreaterThanOrEqual(20 - 1e-6);
       expect(d, `seed ${seed}`).toBeLessThanOrEqual(35 + 1e-6);
       expect(f.x).toBeGreaterThanOrEqual(0);
@@ -399,8 +401,7 @@ describe('player interaction', () => {
     expect(w.moveFood(f.id, 240, 120)).toBe(true);
     expect(f.hop).toBeUndefined();
     run(w, 0.5);
-    expect(f.x).toBe(240);
-    expect(f.y).toBe(120);
+    expect(Math.hypot(f.x - 240, f.y - 120)).toBeLessThan(FLY_SPEED * 1.2 * 0.5 + 0.1); // only ambles on from where it was dropped
 
     const a = w.spawnAnt();
     a.state = 'toFood';
