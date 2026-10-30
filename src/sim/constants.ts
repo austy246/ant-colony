@@ -137,3 +137,11 @@ export const MAX_LARVAE_CHAMBERS = 4;
  */
 export const MAX_NORMAL_PANTRIES = 256;
 export const MAX_NORMAL_LARVAE_CHAMBERS = 128;
+
+// ---- Spider (normal mode): one immobile spider in a corner with a web ----
+/** Radius (art px) of the circular web around the spider. */
+export const SPIDER_WEB_R = 22;
+/** Seconds between two meals: the spider eats the longest-caught ant this often while anyone is caught. */
+export const SPIDER_EAT_S = 6;
+/** Seconds after the spider's death until a new one settles in a corner. */
+export const SPIDER_RESPAWN_S = 600;

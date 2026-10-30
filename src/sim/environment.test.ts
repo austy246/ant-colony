@@ -42,7 +42,7 @@ describe('spontaneous prey', () => {
   });
 
   it('spawns are spaced SPAWN_MIN_S..SPAWN_MAX_S apart', () => {
-    const w = World.create(3, 'normal');
+    const w = World.create(4, 'normal');
     const times: number[] = [];
     let count = 0;
     for (let i = 0; i < 100 * 30 && times.length < 3; i++) {

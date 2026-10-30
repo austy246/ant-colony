@@ -1,13 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_RESPAWN_S, SPIDER_WEB_R,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
+import { inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
 /** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
@@ -35,6 +36,8 @@ export interface Ant {
   role: AntRole;
   /** A major (big soldier ant): always kills living prey on touch and survives, ignores touch cooldowns, carries MAJOR_CARRY_PIECES pieces. Absent on ordinary ants and old saves. */
   major?: true;
+  /** Normal mode: seconds this ant has been stuck in the spider's web (absent = free). A caught ant does not move or act. Saved. */
+  caughtT?: number;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
   speedMul: number;
   /** Scales heading jitter, the chance to stray off a trail, the pull of unexplored ground and the weave of a carrier. */
@@ -165,6 +168,8 @@ export class World {
   mapVersion = 0;
   /** Normal mode: seconds until the next spontaneous prey / food appearance (0 = draw a new wait now). */
   spawnTimer = 0;
+  /** Normal mode: the spider (created on the first step; null in sandbox and before that). */
+  spider: Spider | null = null;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
   sugarReadyAt = 0;
   /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
@@ -271,6 +276,18 @@ export class World {
   get majors(): number {
     let n = 0;
     for (const a of this.ants) if (a.major) n++;
+    return n;
+  }
+
+  /** Radius of the spider's web (art px). */
+  get spiderWebR(): number {
+    return SPIDER_WEB_R;
+  }
+
+  /** Ants currently stuck in the web. */
+  get caughtAnts(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.caughtT !== undefined) n++;
     return n;
   }
 
@@ -414,11 +431,65 @@ export class World {
       // The map follows the colony size, one step per substep at most, and never shrinks.
       const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
+      this.updateSpider();
       updateEnvironment(this);
     }
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();
+  }
+
+  /**
+   * Normal mode, once per substep, after the ants moved: creates the spider on the first step, catches surface ants that
+   * stand in the web, kills the spider when two majors are caught at once (everyone is freed), otherwise eats the
+   * longest-caught ant every SPIDER_EAT_S. A dead spider counts down to its replacement. Uses no randomness of the world's rng.
+   */
+  private updateSpider(): void {
+    if (!this.spider) {
+      const c = spiderCorner(this.seed, 0);
+      this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, 0) };
+    }
+    const sp = this.spider;
+    if (!sp.alive) {
+      sp.respawnT -= STEP_S;
+      if (sp.respawnT <= 1e-9) {
+        // The replacement's corner depends on the seed and the (whole-second) time of death, so it is reproducible.
+        const index = 1 + Math.floor(this.time);
+        const c = spiderCorner(this.seed, index);
+        this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, index) };
+      }
+      return;
+    }
+    let caught = 0;
+    let majors = 0;
+    let longest: Ant | null = null;
+    for (const a of this.ants) {
+      if (a.caughtT === undefined) {
+        if (a.state === 'nest' || !inWeb(sp, a.x, a.y)) continue;
+        a.caughtT = 0;
+      }
+      caught++;
+      if (a.major) majors++;
+      if (!longest || a.caughtT > (longest.caughtT as number)) longest = a;
+    }
+    if (majors >= 2) {
+      sp.alive = false;
+      sp.eatT = 0;
+      sp.respawnT = SPIDER_RESPAWN_S;
+      for (const a of this.ants) delete a.caughtT;
+      return;
+    }
+    if (!longest) {
+      sp.eatT = 0;
+      return;
+    }
+    sp.eatT += STEP_S;
+    if (sp.eatT >= SPIDER_EAT_S - 1e-9) {
+      sp.eatT = 0;
+      const i = this.ants.indexOf(longest);
+      if (i >= 0) this.ants.splice(i, 1); // whatever it carried is lost
+      this.antsKilled++;
+    }
   }
 
   /**
@@ -548,6 +619,7 @@ export class World {
       let toucher: Ant | null = null;
       for (const ant of this.ants) {
         if (ant.state !== 'wander' && ant.state !== 'toFood') continue;
+        if (ant.caughtT !== undefined) continue;
         if (onCooldown && !ant.major) continue;
         if (Math.hypot(ant.x - f.x, ant.y - f.y) > TOUCH_DIST) continue;
         // A major in reach wins over any ordinary ant (and ignores the cooldown); otherwise the first ant in array order.
@@ -702,6 +774,10 @@ export class World {
 
   private updateAnt(ant: Ant): void {
     ant.age += STEP_S;
+    if (ant.caughtT !== undefined) {
+      ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
+      return;
+    }
     if (ant.state === 'nest') {
       this.updateNestAnt(ant);
       return;
