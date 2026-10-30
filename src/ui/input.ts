@@ -6,7 +6,8 @@ export type Tool =
   | { kind: 'place'; food: FoodKind }
   | { kind: 'move' }
   | { kind: 'delete' }
-  | { kind: 'pan' };
+  | { kind: 'pan' }
+  | { kind: 'sugar' };
 
 const PICK_RADIUS = 8;
 const CLICK_SLOP = 4;
@@ -137,6 +138,7 @@ export class Input {
     const w = this.camera.screenToWorld(p.x, p.y);
     switch (tool.kind) {
       case 'place':
+      case 'sugar':
         this.mode = 'place';
         break;
       case 'move': {
@@ -216,6 +218,9 @@ export class Input {
         if (tool.kind === 'place') {
           const w = this.camera.screenToWorld(p.x, p.y);
           this.world.placeFood(tool.food, w.x, w.y);
+        } else if (tool.kind === 'sugar') {
+          const w = this.camera.screenToWorld(p.x, p.y);
+          this.world.placeSugar(w.x, w.y);
         }
       }
     }

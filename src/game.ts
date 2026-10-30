@@ -5,9 +5,11 @@ import { nestHud, UndergroundView } from './render/underground';
 import { clearSave, loadGame, saveGame } from './save';
 import { NEST, SCALE } from './sim/constants';
 import { worldFromSave, worldToSave } from './sim/serialize';
-import { World } from './sim/world';
+import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
+import { handleExtinction, restoreLiveSave, showExtinct } from './ui/extinct';
+import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
 import { createViewController } from './ui/viewController';
 
@@ -33,8 +35,10 @@ export async function startGame(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const ui = document.getElementById('ui') as HTMLElement;
 
-  const save = await loadGame();
-  const world = save ? worldFromSave(save) : World.create(Date.now() >>> 0);
+  const restored = restoreLiveSave(await loadGame(), worldFromSave);
+  const save = restored?.save ?? null;
+  const chosen: GameMode | null = restored ? null : await showModeSelect(ui);
+  const world = restored ? restored.world : World.create(Date.now() >>> 0, chosen ?? 'sandbox');
   let introDone = save !== null;
   const intro = introDone ? null : new Intro();
 
@@ -43,7 +47,8 @@ export async function startGame(): Promise<void> {
     h: Math.max(1, canvas.clientHeight || window.innerHeight || 1),
   });
   const v0 = viewSize();
-  const camera = new Camera(v0.w, v0.h);
+  const camera = new Camera(v0.w, v0.h, world.terrain.w, world.terrain.h);
+  let seenMapVersion = world.mapVersion;
   const renderer = new Renderer(canvas, world, camera);
   if (save) {
     camera.x = save.camera.x;
@@ -62,6 +67,7 @@ export async function startGame(): Promise<void> {
   const hudMain = el('span', '', '', hud);
   const hudSmall = el('span', 'hud-small', '', hud);
   const hudRest = el('span', '', '', hud);
+  el('span', 'hud-mode', world.mode === 'normal' ? 'Normal' : 'Sandbox', hud);
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
@@ -162,6 +168,7 @@ export async function startGame(): Promise<void> {
       ui,
       (t) => (tool = t),
       (v) => views.setView(v),
+      { mode: world.mode, sugarLeft: () => world.sugarCooldownLeft },
     );
     renderer.setQueen(null);
     settle = {
@@ -187,6 +194,7 @@ export async function startGame(): Promise<void> {
       ui,
       (t) => (tool = t),
       (v) => views.setView(v),
+      { mode: world.mode, sugarLeft: () => world.sugarCooldownLeft },
     );
     updateHud();
   }
@@ -234,6 +242,18 @@ export async function startGame(): Promise<void> {
       if (intro.consumeSpawn()) world.spawnAnt();
     }
     world.step(dt);
+    if (world.extinct && !resetting) {
+      resetting = true; // stops autosave
+      void handleExtinction({
+        inFlight: () => inFlight,
+        clear: clearSave,
+        show: () => showExtinct(ui, () => location.reload()),
+      });
+    }
+    if (world.mapVersion !== seenMapVersion) {
+      seenMapVersion = world.mapVersion;
+      camera.setWorldSize(world.terrain.w, world.terrain.h);
+    }
     if (intro && !introDone && intro.done) finishIntro();
     if (settle) {
       settle.t += dt;

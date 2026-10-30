@@ -1,5 +1,5 @@
 import { createRng } from './rng';
-import { NEST, WORLD_H, WORLD_W } from './constants';
+import { MAP_STEP_H, MAP_STEP_W, MAX_MAP_STEP, NEST, WORLD_H, WORLD_W } from './constants';
 
 export const Surface = { Ground: 0, Needle: 1, SmallTwig: 2, BigTwig: 3, Stone: 4 } as const;
 
@@ -101,13 +101,26 @@ export function generateTerrain(seed: number): Terrain {
   decor(int(15, 25), (x, y) => ({ kind: 'leaf', x, y, c: int(0, 3) }));
   decor(int(30, 50), (x, y) => ({ kind: 'grass', x, y }));
 
-  // Rasterize: needle < twig < stone.
   const surface = new Uint8Array(WORLD_W * WORLD_H);
+  rasterize(features, surface, WORLD_W, WORLD_H);
+
+  const speed = new Float32Array(surface.length);
+  for (let i = 0; i < surface.length; i++) speed[i] = SPEED[surface[i]];
+
+  return { seed, w: WORLD_W, h: WORLD_H, surface, speed, features };
+}
+
+/**
+ * Rasterize features into a w x h surface: needle < twig < stone. Cells for which `skip(ix, iy)` is true are left
+ * untouched (map growth only draws into the new area).
+ */
+function rasterize(features: Feature[], surface: Uint8Array, w: number, h: number, skip?: (ix: number, iy: number) => boolean): void {
   const set = (x: number, y: number, s: number) => {
     const ix = Math.round(x);
     const iy = Math.round(y);
-    if (ix < 0 || iy < 0 || ix >= WORLD_W || iy >= WORLD_H) return;
-    const i = iy * WORLD_W + ix;
+    if (ix < 0 || iy < 0 || ix >= w || iy >= h) return;
+    if (skip && skip(ix, iy)) return;
+    const i = iy * w + ix;
     if (s > surface[i]) surface[i] = s;
   };
 
@@ -143,11 +156,123 @@ export function generateTerrain(seed: number): Terrain {
       }
     }
   }
+}
 
-  const speed = new Float32Array(surface.length);
-  for (let i = 0; i < surface.length; i++) speed[i] = SPEED[surface[i]];
+/** Map size at growth step `step` (clamped to 0..MAX_MAP_STEP): the base map plus MAP_STEP_W x MAP_STEP_H per step. */
+export function terrainSize(step: number): { w: number; h: number } {
+  const s = Math.max(0, Math.min(MAX_MAP_STEP, Math.floor(step)));
+  return { w: WORLD_W + MAP_STEP_W * s, h: WORLD_H + MAP_STEP_H * s };
+}
 
-  return { seed, w: WORLD_W, h: WORLD_H, surface, speed, features };
+/**
+ * Grows terrain `t` (of size terrainSize(step - 1)) to terrainSize(step). The map grows to the right and down, so
+ * every old coordinate stays valid: old cells and features are kept as they are, new features are drawn only for the
+ * new L-shaped area (everything outside the old rectangle) and rasterized only into its cells. Feature counts follow
+ * the ranges of generateTerrain scaled by new area / base area. Deterministic in (t.seed, step).
+ */
+export function extendTerrain(t: Terrain, step: number): Terrain {
+  const prev = terrainSize(step - 1);
+  if (step < 1 || step > MAX_MAP_STEP || t.w !== prev.w || t.h !== prev.h) {
+    throw new Error(`extendTerrain: terrain ${t.w}x${t.h} cannot grow to step ${step}`);
+  }
+  const { w, h } = terrainSize(step);
+  const ow = t.w;
+  const oh = t.h;
+  const rnd = createRng((t.seed ^ Math.imul(step, 0x9e3779b1)) >>> 0);
+  const range = (a: number, b: number) => a + rnd() * (b - a);
+  const int = (a: number, b: number) => Math.floor(range(a, b + 1));
+  const k = (w * h - ow * oh) / (WORLD_W * WORLD_H);
+  const count = (a: number, b: number, min = 0) => Math.max(min, Math.round(int(a, b) * k));
+  const inOld = (x: number, y: number) => x < ow && y < oh;
+  // A uniform point of the new area: the right strip (full height) or the bottom strip (old width), by area.
+  const rightArea = (w - ow) * h;
+  const bottomArea = ow * (h - oh);
+  const point = (): { x: number; y: number } =>
+    rnd() * (rightArea + bottomArea) < rightArea
+      ? { x: range(ow, w), y: range(0, h) }
+      : { x: range(0, ow), y: range(oh, h) };
+  /** True if any point of the segment (sampled every px) lies within `margin` of the old rectangle. */
+  const segmentTouchesOld = (x0: number, y0: number, x1: number, y1: number, margin: number) => {
+    const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+    for (let s = 0; s <= steps; s++) {
+      const u = s / steps;
+      if (inOld(x0 + (x1 - x0) * u - margin, y0 + (y1 - y0) * u - margin)) return true;
+    }
+    return false;
+  };
+  const features: Feature[] = [];
+
+  // Stones, wholly in the new area and inside the map.
+  const stoneCount = count(7, 10, 1);
+  for (let n = 0, tries = 0; n < stoneCount && tries < 500; tries++) {
+    const rx = range(4, 11);
+    const ry = range(3, 8);
+    const { x, y } = point();
+    if (x < rx + 1 || x > w - rx - 1 || y < ry + 1 || y > h - ry - 1) continue;
+    if (inOld(x - rx - 1, y - ry - 1)) continue;
+    if (Math.hypot(x - NEST.x, y - NEST.y) < CLEAR_R + Math.max(rx, ry) + 2) continue;
+    features.push({ kind: 'stone', x, y, rx, ry });
+    n++;
+  }
+
+  // Twigs, wholly in the new area; the first is big (as in generateTerrain, scaled).
+  const twigCount = count(6, 9, 1);
+  const bigTwigs = Math.max(1, Math.min(2, Math.round(2 * k)));
+  for (let n = 0, tries = 0; n < twigCount && tries < 500; tries++) {
+    const { x: x0, y: y0 } = point();
+    const ang = range(0, Math.PI * 2);
+    const len = range(25, 70);
+    const x1 = Math.max(0, Math.min(w - 1, x0 + Math.cos(ang) * len));
+    const y1 = Math.max(0, Math.min(h - 1, y0 + Math.sin(ang) * len));
+    const tk = n < bigTwigs ? int(4, 6) : int(1, 6);
+    if (segmentTouchesOld(x0, y0, x1, y1, tk / 2 + 1)) continue;
+    if (distToSegment(NEST.x, NEST.y, x0, y0, x1, y1) < CLEAR_R + tk / 2 + 2) continue;
+    features.push({ kind: 'twig', x0, y0, x1, y1, t: tk });
+    n++;
+  }
+
+  // Needle pairs, base point in the new area, needles not reaching into the old area.
+  const pairCount = count(40, 50);
+  for (let n = 0, tries = 0; n < pairCount && tries < 2000; tries++) {
+    const { x, y } = point();
+    const a = range(0, Math.PI * 2);
+    const spread = range(0.15, 0.4);
+    const len = range(6, 14);
+    const len2 = len * range(0.8, 1.1);
+    if (segmentTouchesOld(x, y, x + Math.cos(a) * len, y + Math.sin(a) * len, 0)) continue;
+    if (segmentTouchesOld(x, y, x + Math.cos(a + spread) * len2, y + Math.sin(a + spread) * len2, 0)) continue;
+    features.push({ kind: 'needle', x, y, a, len });
+    features.push({ kind: 'needle', x, y, a: a + spread, len: len2 });
+    n++;
+  }
+
+  // Decoration, skipped near the nest.
+  const decor = (n: number, make: (x: number, y: number) => Feature) => {
+    for (let i = 0; i < n; i++) {
+      const p = point();
+      const x = Math.min(p.x, w - 1);
+      const y = Math.min(p.y, h - 1);
+      if (inClearZone(x, y)) continue;
+      features.push(make(x, y));
+    }
+  };
+  decor(count(12, 20), (x, y) => ({ kind: 'moss', x, y }));
+  decor(count(15, 25), (x, y) => ({ kind: 'leaf', x, y, c: int(0, 3) }));
+  decor(count(30, 50), (x, y) => ({ kind: 'grass', x, y }));
+
+  // Old cells copied row by row, new features drawn into the new cells only.
+  const surface = new Uint8Array(w * h);
+  const speed = new Float32Array(w * h);
+  for (let y = 0; y < oh; y++) {
+    surface.set(t.surface.subarray(y * ow, (y + 1) * ow), y * w);
+    speed.set(t.speed.subarray(y * ow, (y + 1) * ow), y * w);
+  }
+  rasterize(features, surface, w, h, inOld);
+  for (let y = 0; y < h; y++) {
+    for (let x = y < oh ? ow : 0; x < w; x++) speed[y * w + x] = SPEED[surface[y * w + x]];
+  }
+
+  return { seed: t.seed, w, h, surface, speed, features: [...t.features, ...features] };
 }
 
 export function speedAt(t: Terrain, x: number, y: number): number {

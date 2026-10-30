@@ -152,3 +152,64 @@ describe('easeCameraTo', () => {
     }
   });
 });
+
+describe('Camera map growth', () => {
+  it('clamps against the size given to the constructor and to setWorldSize', () => {
+    const c = new Camera(800, 600, 360, 225);
+    c.zoom = 8;
+    c.x = 1000;
+    c.y = 1000;
+    c.clamp();
+    expect(c.x).toBe(360);
+    expect(c.y).toBe(225);
+    c.setWorldSize(400, 250);
+    c.x = 1000;
+    c.y = 1000;
+    c.clamp();
+    expect(c.x).toBe(400);
+    expect(c.y).toBe(250);
+  });
+
+  it('setWorldSize keeps the view centre where it was and allows panning further', () => {
+    const c = new Camera(800, 600);
+    c.zoom = 8;
+    c.x = 300;
+    c.y = 190;
+    c.clamp();
+    c.setWorldSize(WORLD_W + 40, WORLD_H + 25);
+    expect(c.x).toBe(300);
+    expect(c.y).toBe(190);
+    c.panBy(-100000, -100000);
+    expect(c.x).toBe(WORLD_W + 40);
+    expect(c.y).toBe(WORLD_H + 25);
+  });
+
+  it('keeps zoom within the new minZoom after setWorldSize', () => {
+    const c = new Camera(1600, 1000);
+    c.fitWorld();
+    expect(c.zoom).toBe(5);
+    c.setWorldSize(640, 400); // fit is now 2.5
+    expect(c.minZoom).toBe(2.5);
+    expect(c.zoom).toBeGreaterThanOrEqual(2.5);
+    c.zoom = 2.5;
+    c.setWorldSize(960, 600); // fit 1.67 -> floor of 1
+    expect(c.minZoom).toBeCloseTo(1.6667, 3);
+    c.zoomAt(800, 500, 0.01);
+    expect(c.zoom).toBeCloseTo(c.minZoom, 9);
+  });
+
+  it('fitWorld fits the current world size', () => {
+    const c = new Camera(1600, 1000);
+    c.setWorldSize(640, 400);
+    c.fitWorld();
+    expect(c.zoom).toBe(2.5);
+    expect(c.x).toBe(320);
+    expect(c.y).toBe(200);
+  });
+
+  it('ignores an invalid world size', () => {
+    const c = new Camera(800, 600);
+    c.setWorldSize(NaN, 0);
+    expect(c.minZoom).toBe(new Camera(800, 600).minZoom);
+  });
+});

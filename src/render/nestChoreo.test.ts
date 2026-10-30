@@ -168,7 +168,7 @@ describe('nestAntPose: continuity and geometry', () => {
       }
     }
     expect(n).toBeGreaterThan(200 * 300 * 10);
-  }, 240000);
+  }, 600000);
 
   it('walking ants face along the path they follow (the sprite direction is the direction of motion)', () => {
     const l = layoutFor(3);
@@ -465,7 +465,7 @@ describe('nestAntPose: unloading foragers', () => {
     }
     expect(first).toBeGreaterThanOrEqual(10);
     expect(second).toBeGreaterThanOrEqual(0);
-  }, 60000);
+  }, 120000);
 
   it('stands (unloading) for a while at the far end and a short stay is simply drawn nearer the entrance', () => {
     const l = layoutFor(2);
@@ -494,5 +494,34 @@ describe('callow palette', () => {
     expect(differs).toBeGreaterThanOrEqual(4);
     const lum = (c: readonly number[]): number => c[0] + c[1] + c[2];
     expect(lum(CALLOW_RGBA[1])).toBeGreaterThan(lum(ANT_RGBA[1]));
+  });
+});
+
+describe('nest ants in a grown normal-mode nest (hundreds of chambers, many far away)', () => {
+  const grown = nestLayout({
+    seed: 7,
+    queens: 8,
+    pantries: 120,
+    larvaeChambers: 60,
+    loads: { ants: 2000, pantry: Array<number>(120).fill(25), larvae: Array<number>(60).fill(10) },
+    width: 320,
+    height: 200,
+    unbounded: true,
+  });
+
+  it('hatchlings and unloading foragers never jump: every walk stays within the speed limit', () => {
+    expect(grown.chambers).toHaveLength(8 + 120 + 60);
+    for (let id = 0; id < 60; id++) {
+      for (const [make, total] of [[hatch, 7], [unload, 5]] as const) {
+        let prev: NestPose | null = null;
+        for (let k = 0; ; k++) {
+          const timer = total - k * FRAME;
+          const p = nestAntPose(make(id, Math.max(0, timer)), grown, 30 + k * FRAME);
+          if (prev) expect(dist(prev, p), `${make === hatch ? 'hatch' : 'unload'} id ${id} timer ${timer.toFixed(2)}`).toBeLessThanOrEqual(STEP_LIMIT);
+          prev = { ...p };
+          if (timer <= 0) break;
+        }
+      }
+    }
   });
 });

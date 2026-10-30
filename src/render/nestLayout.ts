@@ -10,9 +10,19 @@
  * every subset is connected. The size of a chamber follows its own load (ants, food in that pantry, larvae in that chamber);
  * its largest size is reserved when it is placed, so chambers never overlap however big they grow.
  * There is no bedroom: ants live on the surface and only walk through.
+ *
+ * Normal mode (`unbounded`) has no 6 / 4 limit: pantries and larvae chambers beyond the plan are dug into NEW area to the
+ * right of and below the base picture, which grows by whole steps of NEST_STEP_W x NEST_STEP_H (see nestSceneSize). The new
+ * area is a grid of NEST_STEP_W x NEST_STEP_H cells, one chamber per cell, handed out shell by shell (two pantries, then a
+ * larvae chamber: the colony needs them in that ratio), so chamber k of a kind always gets the same cell however many of the
+ * other kind there are. A "trunk" leaves the shaft through soil that the whole plan leaves free, down to the main gallery
+ * below the base picture; straight, gently waving galleries run along the top and left edges of the cells and every new
+ * chamber hangs from the gallery of its row. It sits in the rest of its cell, so nothing overlaps and nothing dug ever moves.
  */
 import { createRng } from '../sim/rng';
-import { LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_PANTRIES, PANTRY_CAPACITY } from '../sim/constants';
+import {
+  LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_NORMAL_LARVAE_CHAMBERS, MAX_NORMAL_PANTRIES, MAX_PANTRIES, PANTRY_CAPACITY,
+} from '../sim/constants';
 import type { Pt } from './nestGraph';
 
 export type { Pt } from './nestGraph';
@@ -71,11 +81,21 @@ export interface NestInput {
   pantries: number;
   larvaeChambers: number;
   loads: NestLoads;
+  /** Loads that size the chambers (the peaks, so they never shrink); defaults to `loads`. `Chamber.load` always follows `loads`. */
+  sizeLoads?: NestLoads;
+  /** The base picture (320 x 200 in the game); a normal-mode nest grows beyond it, see `NestLayout.width / height`. */
   width: number;
   height: number;
+  /**
+   * Normal mode: any number of pantries and larvae chambers (up to the safety caps MAX_NORMAL_PANTRIES /
+   * MAX_NORMAL_LARVAE_CHAMBERS); the ones beyond the plan are dug into new area and the scene grows (nestSceneSize).
+   * Without it the counts are clamped to the plan (6 pantries, 4 larvae chambers) as in sandbox.
+   */
+  unbounded?: boolean;
 }
 
 export interface NestLayout {
+  /** Size of the scene: the base picture, grown by whole steps in normal mode (nestSceneSize). */
   width: number;
   height: number;
   seed: number;
@@ -96,6 +116,9 @@ export const MAX_NEST_PANTRIES = MAX_PANTRIES;
 export const MAX_NEST_LARVAE = MAX_LARVAE_CHAMBERS;
 /** Larvae drawn in one chamber at most. */
 export const MAX_SHOWN_LARVAE = LARVAE_PER_CHAMBER;
+/** The scene of a normal-mode nest grows by whole steps of this many layout units (one shell of cells; 8 : 5 like the picture). */
+export const NEST_STEP_W = 80;
+export const NEST_STEP_H = 50;
 /** Position of the flat floor relative to the centre, in units of ry. */
 export const FLOOR = 0.68;
 
@@ -551,18 +574,357 @@ const subsetCache = new Map<string, Subset>();
 const whole = (v: number, def: number): number => (Number.isFinite(v) ? Math.round(v) : def);
 const num = (v: number | undefined): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0);
 
+// ---- normal mode: the nest grows into new area -------------------------------------------------------------------------------
+
+/**
+ * The grid of the new area, in cells of NEST_STEP_W x NEST_STEP_H: cell (j, r) has its top-left corner at
+ * (baseW + j * NEST_STEP_W, baseH + r * NEST_STEP_H). The base picture is j < 0 and r < 0; the cells right of it (j >= 0,
+ * r < 0) start at y >= 50, well below the soil line. Shell s (s >= 1) is everything with max(j, r) = s - 1, and the scene
+ * after s steps is (baseW + s * NEST_STEP_W) x (baseH + s * NEST_STEP_H).
+ */
+interface Grid {
+  baseW: number;
+  baseH: number;
+  /** Columns below the base picture (j = -left .. -1) and rows right of it (r = -up .. -1). */
+  left: number;
+  up: number;
+}
+
+const gridOf = (baseW: number, baseH: number): Grid => ({
+  baseW,
+  baseH,
+  left: Math.floor(baseW / NEST_STEP_W),
+  up: Math.max(0, Math.floor((baseH - 50) / NEST_STEP_H)),
+});
+
+/** The new area needs at least one column below the base picture (the trunk comes down there). */
+const canGrow = (g: Grid): boolean => g.left >= 1;
+
+/** Cells of shell s: the new column (top to bottom), then the new row (right to left). */
+const shellCells = (g: Grid, s: number): number => 2 * s + g.up + g.left - 1;
+
+/** Cell and shell of the n-th cell of the new area (shell by shell). */
+function cellAt(gr: Grid, n: number): { j: number; r: number; shell: number } {
+  let s = 1;
+  let k = n;
+  while (k >= shellCells(gr, s)) k -= shellCells(gr, s++);
+  const column = s + gr.up;
+  if (k < column) return { j: s - 1, r: -gr.up + k, shell: s };
+  return { j: s - 2 - (k - column), r: s - 1, shell: s };
+}
+
+type Grown = 'pantry' | 'larvae';
+
+/** Index of the cell of a new chamber (`extra` = its index minus the planned ones): pantries get two cells of every three. */
+const cellIndex = (kind: Grown, extra: number): number => (kind === 'larvae' ? 3 * extra + 2 : 3 * Math.floor(extra / 2) + (extra % 2));
+
+const countIn = (v: number, max: number): number => clamp(whole(v, 1), 1, max);
+
+/**
+ * Size of the scene of a normal-mode nest with this many pantries and larvae chambers: the base picture grown by `step`
+ * whole steps of NEST_STEP_W x NEST_STEP_H, just enough for the cells of every chamber beyond the plan. Never shrinks when a
+ * count grows. Counts are clamped as nestLayout clamps them.
+ */
+export function nestSceneSize(pantries: number, larvaeChambers: number, baseW = NEST_W, baseH = NEST_H): { width: number; height: number; step: number } {
+  const gr = gridOf(baseW, baseH);
+  if (!canGrow(gr)) return { width: baseW, height: baseH, step: 0 };
+  const pe = countIn(pantries, MAX_NORMAL_PANTRIES) - MAX_NEST_PANTRIES;
+  const le = countIn(larvaeChambers, MAX_NORMAL_LARVAE_CHAMBERS) - MAX_NEST_LARVAE;
+  const last = Math.max(pe > 0 ? cellIndex('pantry', pe - 1) : -1, le > 0 ? cellIndex('larvae', le - 1) : -1);
+  const step = last < 0 ? 0 : cellAt(gr, last).shell;
+  return { width: baseW + step * NEST_STEP_W, height: baseH + step * NEST_STEP_H, step };
+}
+
+interface Extension {
+  /** From point `from` of the shaft to the main gallery, ending at (xE, baseH + 6). */
+  trunk: Pt[];
+  from: number;
+  xE: number;
+  /** The new chambers of each kind, made on demand and in order (chamber index = MAX_NEST_* + position). */
+  slots: Record<Grown, Slot[]>;
+  /** Keys of every point on the ways to the new chambers made so far, per kind (a new chamber branches from them). */
+  seen: Record<Grown, Set<string>>;
+}
+
+const extCache = new Map<string, Extension>();
+const ptKey = (p: Pt): string => `${Math.round(p.x * 100)},${Math.round(p.y * 100)}`;
+
+/** Points every ~2 units along straight segments through the control points (every control point is kept exactly). */
+function straight(ctrl: readonly Pt[]): Pt[] {
+  const out: Pt[] = [{ x: ctrl[0].x, y: ctrl[0].y }];
+  for (let i = 1; i < ctrl.length; i++) {
+    const a = ctrl[i - 1];
+    const b = ctrl[i];
+    const n = Math.max(1, Math.round(Math.hypot(b.x - a.x, b.y - a.y) / 2));
+    for (let k = 1; k < n; k++) out.push({ x: Math.round((a.x + ((b.x - a.x) * k) / n) * 100) / 100, y: Math.round((a.y + ((b.y - a.y) * k) / n) * 100) / 100 });
+    out.push({ x: b.x, y: b.y });
+  }
+  return out;
+}
+
+/**
+ * The trunk from the shaft to the main gallery: a shortest way (BFS) through soil that no chamber or tunnel of the WHOLE plan
+ * claims (so no chamber that appears later is in its way). It leaves the base picture straight down a "chute" at the left
+ * edge of one of the cell columns below it. Depends on the plan only.
+ */
+function digTrunk(g: Geometry, gr: Grid): { pts: Pt[]; from: number; xE: number } {
+  const W = gr.baseW;
+  const H = gr.baseH;
+  const HB = H + 7;
+  const occ = new Uint8Array(W * HB);
+  const mark = (x: number, y: number, v: number): void => {
+    if (x >= 0 && y >= 0 && x < W && y < HB && occ[y * W + x] === 0) occ[y * W + x] = v;
+  };
+  const disc = (p: Pt, r: number, v: number): void => {
+    for (let yy = Math.floor(p.y - r); yy <= Math.ceil(p.y + r); yy++) {
+      for (let xx = Math.floor(p.x - r); xx <= Math.ceil(p.x + r); xx++) if ((xx - p.x) ** 2 + (yy - p.y) ** 2 <= r * r) mark(xx, yy, v);
+    }
+  };
+  // 3 = a room (at its largest size, with the gap the plan keeps), 1 = the shaft, 2 = another tunnel
+  for (const s of g.slots) {
+    const b = { cx: s.cx, cy: s.cy, rx: s.rxMax, ry: s.ryMax, lobes: s.lobes };
+    const e = maxExtent(b);
+    for (let yy = Math.floor(b.cy - e.ry - 3); yy <= Math.ceil(b.cy + e.ry + 3); yy++) {
+      for (let xx = Math.floor(b.cx - e.rx - 3); xx <= Math.ceil(b.cx + e.rx + 3); xx++) if (insideChamber(b, xx + 0.5, yy + 0.5, 2.2)) mark(xx, yy, 3);
+    }
+  }
+  g.shaft.points.forEach((p, i) => disc(p, g.shaft.widths[i] / 2 + 1.2, 1));
+  for (const s of g.slots) s.tunnel.points.forEach((p, i) => disc(p, s.tunnel.widths[i] / 2 + 1.2, 2));
+  const chutes: number[] = [];
+  for (let j = -gr.left; j < 0; j++) chutes.push(W + j * NEST_STEP_W + 5);
+  const inChute = (x: number): boolean => chutes.some((c) => Math.abs(x - c) <= 1);
+  /** 1 where the trunk's centre may not be: closer than `pad` to a room (and to any tunnel unless `tunnels` is false). */
+  const blockedMap = (pad: number, tunnels: boolean): Uint8Array => {
+    const out = new Uint8Array(W * HB);
+    for (let y = 0; y < HB; y++) {
+      for (let x = 0; x < W; x++) {
+        const v = occ[y * W + x];
+        if (v === 0 || (!tunnels && v !== 3)) continue;
+        for (let yy = Math.max(0, y - pad); yy <= Math.min(HB - 1, y + pad); yy++) out.fill(1, yy * W + Math.max(0, x - pad), yy * W + Math.min(W - 1, x + pad) + 1);
+      }
+    }
+    return out;
+  };
+  // where the trunk may join the shaft: within 7 units of a shaft point deep enough (the deepest such point wins)
+  const join = new Int32Array(W * HB).fill(-1);
+  g.shaft.points.forEach((p, i) => {
+    if (i < 3 || p.y < SURFACE_Y + 20) return;
+    for (let yy = Math.floor(p.y - 7); yy <= Math.ceil(p.y + 7); yy++) {
+      for (let xx = Math.floor(p.x - 7); xx <= Math.ceil(p.x + 7); xx++) {
+        if (xx < 0 || yy < 0 || xx >= W || yy >= HB || (xx - p.x) ** 2 + (yy - p.y) ** 2 > 49) continue;
+        if (join[yy * W + xx] < i) join[yy * W + xx] = i;
+      }
+    }
+  });
+  /** The straight hop from a cell to its shaft point crosses nothing but the shaft. */
+  const hopFree = (x: number, y: number, p: Pt): boolean => {
+    const n = Math.max(1, Math.ceil(Math.hypot(p.x - x, p.y - y)));
+    for (let k = 0; k <= n; k++) {
+      const v = occ[Math.round(y + ((p.y - y) * k) / n) * W + Math.round(x + ((p.x - x) * k) / n)];
+      if (v !== 0 && v !== 1) return false;
+    }
+    return true;
+  };
+  const search = (blocked: Uint8Array): { pts: Pt[]; from: number; xE: number } | null => {
+    const prev = new Int32Array(W * HB).fill(-2);
+    const queue: number[] = [];
+    for (const c of chutes) {
+      prev[(H + 6) * W + c] = -1;
+      queue.push((H + 6) * W + c);
+    }
+    const free = (x: number, y: number): boolean => {
+      if (x < 3 || x >= W - 3 || y < SURFACE_Y + 12 || y >= HB) return false;
+      if (y >= H - 4) return inChute(x) && (y >= H || blocked[y * W + x] === 0);
+      return blocked[y * W + x] === 0;
+    };
+    for (let qi = 0; qi < queue.length; qi++) {
+      const i = queue[qi];
+      const x = i % W;
+      const y = (i - x) / W;
+      const at = join[i];
+      if (at >= 0 && y < H - 4 && hopFree(x, y, g.shaft.points[at])) {
+        // walk back to the chute; pull the staircase of cells tight (the farthest cell in sight, again and again)
+        const cells: Pt[] = [];
+        for (let k = i; k >= 0; k = prev[k]) cells.push({ x: k % W, y: Math.floor(k / W) });
+        const sight = (a: Pt, b: Pt): boolean => {
+          const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) * 2);
+          for (let k = 1; k < n; k++) if (!free(Math.round(a.x + ((b.x - a.x) * k) / n), Math.round(a.y + ((b.y - a.y) * k) / n))) return false;
+          return true;
+        };
+        const ctrl: Pt[] = [g.shaft.points[at], cells[0]];
+        for (let a = 0; a < cells.length - 1; ) {
+          let b = cells.length - 1;
+          while (b > a + 1 && !sight(cells[a], cells[b])) b--;
+          ctrl.push(cells[b]);
+          a = b;
+        }
+        // a smooth curve through the corners when it stays in the free soil, else the straight pieces
+        const smooth = curve(ctrl);
+        const ok = smooth.every((p, k) => k < 4 || free(Math.round(p.x), Math.round(p.y)));
+        const end = cells[cells.length - 1];
+        return { pts: ok ? smooth : straight(ctrl), from: at, xE: end.x };
+      }
+      for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]] as const) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!free(nx, ny) || prev[ny * W + nx] !== -2) continue;
+        prev[ny * W + nx] = i;
+        queue.push(ny * W + nx);
+      }
+    }
+    return null;
+  };
+  const found = search(blockedMap(4, true)) ?? search(blockedMap(2, true)) ?? search(blockedMap(3, false));
+  if (found) return found;
+  // no free way at all (never seen): straight down from the bottom of the shaft to the nearest chute
+  const last = g.shaft.points.length - 1;
+  const p = g.shaft.points[last];
+  const xE = chutes.reduce((b, c) => (Math.abs(c - p.x) < Math.abs(b - p.x) ? c : b), chutes[0]);
+  return { pts: straight([p, { x: xE, y: p.y }, { x: xE, y: H + 6 }]), from: last, xE };
+}
+
+function extensionFor(seed: number, g: Geometry, gr: Grid): Extension {
+  const key = `${seed}|${gr.baseW}x${gr.baseH}`;
+  let e = extCache.get(key);
+  if (!e) {
+    const t = digTrunk(g, gr);
+    e = { trunk: t.pts, from: t.from, xE: t.xE, slots: { pantry: [], larvae: [] }, seen: { pantry: new Set(), larvae: new Set() } };
+    if (extCache.size >= 40) extCache.delete(extCache.keys().next().value as string);
+    extCache.set(key, e);
+  }
+  return e;
+}
+
+/** Width of a gallery at a point (3.5..5, a slow swell): the same for every way that passes that point. */
+const galleryWidth = (p: Pt, ph: number): number => clamp(Math.round((4.3 + 0.6 * Math.sin(p.x / 4.1 + p.y / 6.3 + ph)) * 2) / 2, 3.5, 5);
+
+/** Control points of the short drop from a gallery into a chamber: the middle pushed a little sideways. */
+function dropCtrl(rng: () => number, P: Pt, C: Pt): Pt[] {
+  const L = Math.hypot(C.x - P.x, C.y - P.y) || 1;
+  const off = (rng() - 0.5) * Math.min(4, 0.12 * L);
+  return [P, { x: Math.round((P.x + C.x) / 2 - ((C.y - P.y) / L) * off), y: Math.round((P.y + C.y) / 2 + ((C.x - P.x) / L) * off) }, C];
+}
+
+/** Makes the next new chamber of a kind (in order: each one may branch from the ways to the earlier ones of its kind). */
+function growSlot(seed: number, gr: Grid, e: Extension, kind: Grown): void {
+  const list = e.slots[kind];
+  const extra = list.length;
+  const index = (kind === 'pantry' ? MAX_NEST_PANTRIES : MAX_NEST_LARVAE) + extra;
+  const n = cellIndex(kind, extra);
+  const cell = cellAt(gr, n);
+  const x0 = gr.baseW + cell.j * NEST_STEP_W;
+  const y0 = gr.baseH + cell.r * NEST_STEP_H;
+  const rng = createRng(mix(seed, 100000 + n));
+  const lobes = makeLobes(rng);
+  // a little smaller than the planned chambers: the cell is the limit
+  const rxMax = kind === 'larvae' ? 21 : 15;
+  const [lo, hi] = kind === 'larvae' ? [0.58, 0.66] : [0.58, 0.7];
+  const aspect = lo + (hi - lo) * rng();
+  const ryMax = rxMax * aspect;
+  const minF = kind === 'larvae' ? 0.68 : 0.6;
+  const amp = 1 + ampSum(lobes);
+  // the room and its rim keep clear of the galleries along the top and left edges of its cell and of the next cells
+  const ex = rxMax * amp + 2.5;
+  const pick = (a: number, b: number): number => Math.round(b < a ? (a + b) / 2 : a + (b - a) * rng());
+  const cx = pick(Math.ceil(x0 + 13 + ex), Math.floor(x0 + NEST_STEP_W - 2 - ex));
+  const cy = pick(Math.ceil(y0 + 14 + ryMax * amp + 2.5), Math.floor(y0 + NEST_STEP_H - 2 - FLOOR * ryMax - 2.5));
+
+  // the way: trunk, main gallery, the gallery of the row (down / up a side gallery first), then the drop into the chamber
+  const yG = gr.baseH + 6;
+  const xE = e.xE;
+  const xR = gr.baseW + 5;
+  // gentle waves (at most 2 units, within the edge bands of the cells) that are 0 at every junction, so the ways to
+  // different chambers share their points exactly
+  const hy = (row: number, x: number): number => {
+    const u = x - xE;
+    return gr.baseH + row * NEST_STEP_H + 6 + Math.round(2.2 * Math.sin((Math.PI * u) / 40) * (0.6 + 0.4 * Math.sin(u / 89 + row * 1.7 + seed)));
+  };
+  const vx = (xc: number, y: number): number => {
+    const v = y - yG;
+    return xc + Math.round(1.8 * Math.sin((Math.PI * v) / 25) * (0.6 + 0.4 * Math.sin(v / 37 + xc + seed)));
+  };
+  const path: Pt[] = [...e.trunk];
+  const add = (p: Pt): void => {
+    const last = path[path.length - 1];
+    if (last.x !== p.x || last.y !== p.y) path.push(p);
+  };
+  const along = (row: number, from: number, to: number): void => {
+    for (let x = from; ; x += to > from ? 2 : -2) {
+      add({ x, y: hy(row, x) });
+      if (x === to) break;
+    }
+  };
+  const vertical = (xc: number, from: number, to: number): void => {
+    for (let y = from; ; y += to > from ? 2 : -2) {
+      add({ x: vx(xc, y), y });
+      if (y === to) break;
+    }
+  };
+  const xd = xE + 2 * Math.round((cx - xE) / 2);
+  const yRow = gr.baseH + cell.r * NEST_STEP_H + 6;
+  if (cell.r === 0) along(0, xE, xd);
+  else if (cell.r > 0) {
+    vertical(xE, yG, yRow);
+    along(cell.r, xE, xd);
+  } else {
+    along(0, xE, xR);
+    vertical(xR, yG, yRow);
+    along(cell.r, xR, xd);
+  }
+  const gallery = path.length;
+  const drop = curve(dropCtrl(rng, path[gallery - 1], { x: cx, y: cy }));
+  for (let i = 1; i < drop.length; i++) path.push(drop[i]);
+  const ph = (Math.abs(seed) % 1000) / 159;
+  const dw = widthsFor(drop.length, 3.4 + rng() * 1.2, rng() * 6, rng() * 6);
+  const widths = path.map((p, i) => (i < gallery ? galleryWidth(p, ph) : dw[i - gallery + 1]));
+
+  // branch from the deepest point that the ways to the earlier new chambers of this kind reach (the first one: the shaft)
+  const seen = e.seen[kind];
+  let k = 0;
+  while (k + 1 < path.length && seen.has(ptKey(path[k + 1]))) k++;
+  for (const p of path) seen.add(ptKey(p));
+  const pts = path.slice(k);
+  const ws = widths.slice(k);
+  const id = `${kind}${index}`;
+  list.push({
+    id,
+    kind,
+    index,
+    cx,
+    cy,
+    rxMax,
+    ryMax,
+    rxMin: rxMax * minF,
+    ryMin: ryMax * minF,
+    lobes,
+    tunnel: { to: id, width: meanOf(ws), points: pts, widths: ws },
+    parentOwner: k === 0 ? 1 : 0,
+    parentIdx: k === 0 ? e.from : -1,
+  });
+}
+
 export function nestLayout(inp: NestInput): NestLayout {
   const W = Number.isFinite(inp.width) && inp.width > 0 ? inp.width : NEST_W;
   const H = Number.isFinite(inp.height) && inp.height > 0 ? inp.height : NEST_H;
   const seed = Number.isFinite(inp.seed) ? inp.seed | 0 : 0;
+  const gr = gridOf(W, H);
+  const grows = inp.unbounded === true && canGrow(gr);
   const q = clamp(whole(inp.queens, 1), 1, MAX_NEST_QUEENS);
-  const p = clamp(whole(inp.pantries, 1), 1, MAX_NEST_PANTRIES);
-  const l = clamp(whole(inp.larvaeChambers, 1), 1, MAX_NEST_LARVAE);
+  const p = countIn(inp.pantries, grows ? MAX_NORMAL_PANTRIES : MAX_NEST_PANTRIES);
+  const l = countIn(inp.larvaeChambers, grows ? MAX_NORMAL_LARVAE_CHAMBERS : MAX_NEST_LARVAE);
   const g = plan(seed, W, H);
-  const key = `${seed}|${W}x${H}|${q}.${p}.${l}`;
+  const scene = grows ? nestSceneSize(p, l, W, H) : { width: W, height: H, step: 0 };
+  // the scene size is part of the key once the nest grew (before, it is the base picture that the key names already)
+  const key = `${seed}|${W}x${H}|${q}.${p}.${l}${scene.step > 0 ? `|${scene.width}x${scene.height}` : ''}`;
   let sub = subsetCache.get(key);
   if (!sub) {
     const slots = g.slots.filter((x) => x.index < (x.kind === 'queen' ? q : x.kind === 'pantry' ? p : l));
+    if (p > MAX_NEST_PANTRIES || l > MAX_NEST_LARVAE) {
+      const e = extensionFor(seed, g, gr);
+      while (e.slots.pantry.length < p - MAX_NEST_PANTRIES) growSlot(seed, gr, e, 'pantry');
+      while (e.slots.larvae.length < l - MAX_NEST_LARVAE) growSlot(seed, gr, e, 'larvae');
+      slots.push(...e.slots.pantry.slice(0, Math.max(0, p - MAX_NEST_PANTRIES)), ...e.slots.larvae.slice(0, Math.max(0, l - MAX_NEST_LARVAE)));
+    }
     // the shaft is dug only as deep as the deepest branching point of a needed chamber
     let deep = 1;
     for (const x of slots) if (x.parentOwner === 1) deep = Math.max(deep, x.parentIdx);
@@ -572,7 +934,8 @@ export function nestLayout(inp: NestInput): NestLayout {
     subsetCache.set(key, sub);
   }
   const ants = num(inp.loads?.ants);
-  const antF = Math.min(1, Math.sqrt(ants) / 12);
+  const sz = inp.sizeLoads ?? inp.loads;
+  const antF = Math.min(1, Math.sqrt(num(sz?.ants)) / 12);
   const chambers: Chamber[] = sub.slots.map((s) => {
     let load: number;
     let f: number;
@@ -581,10 +944,10 @@ export function nestLayout(inp: NestInput): NestLayout {
       f = antF;
     } else if (s.kind === 'pantry') {
       load = Math.min(PANTRY_CAPACITY, num(inp.loads?.pantry?.[s.index]));
-      f = Math.sqrt(load / PANTRY_CAPACITY);
+      f = Math.sqrt(Math.min(PANTRY_CAPACITY, num(sz?.pantry?.[s.index])) / PANTRY_CAPACITY);
     } else {
       load = Math.min(LARVAE_PER_CHAMBER, num(inp.loads?.larvae?.[s.index]));
-      f = Math.sqrt(load / LARVAE_PER_CHAMBER);
+      f = Math.sqrt(Math.min(LARVAE_PER_CHAMBER, num(sz?.larvae?.[s.index])) / LARVAE_PER_CHAMBER);
     }
     return {
       id: s.id,
@@ -600,7 +963,7 @@ export function nestLayout(inp: NestInput): NestLayout {
       load,
     };
   });
-  return { width: W, height: H, seed, key: sub.key, surfaceY: SURFACE_Y, entrance: g.entrance, chambers, tunnels: sub.tunnels,  };
+  return { width: scene.width, height: scene.height, seed, key: sub.key, surfaceY: SURFACE_Y, entrance: g.entrance, chambers, tunnels: sub.tunnels,  };
 }
 
 /**

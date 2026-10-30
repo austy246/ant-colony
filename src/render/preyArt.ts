@@ -360,6 +360,27 @@ function buildMushroom(): Sprite {
   return toSprite(R);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Sugar: a small white cube (front face, shaded right side, light top) with a tiny highlight.
+// ---------------------------------------------------------------------------------------------------------------------
+const SUGAR = '#f2efe6';
+const SUGAR_SHADE = '#cfc9b8';
+
+function buildSugar(): Sprite {
+  const R = newR();
+  R.ell(2, 5, 8, 3.2, SH);
+  R.rect(-5, -3, 8, 8, SUGAR); // front face
+  R.rect(3, -3, 3, 8, SUGAR_SHADE); // right side
+  R.rect(-5, 4, 11, 1, SUGAR_SHADE); // lower edge
+  R.rect(-4, -5, 9, 2, '#fbf9f2'); // top face
+  R.rect(5, -5, 1, 2, SUGAR_SHADE);
+  R.px(-4, -2, '#ffffff'); // highlight
+  R.px(-3, -2, '#ffffff');
+  R.px(-1, 1, SUGAR_SHADE, 0.6); // grain
+  R.px(1, 2, SUGAR_SHADE, 0.6);
+  return toSprite(R);
+}
+
 const BUILDERS: Record<FoodKind, () => Sprite> = {
   beetle: buildBeetle,
   caterpillar: buildCaterpillar,
@@ -367,6 +388,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   carrion: buildCarrion,
   berry: buildBerry,
   mushroom: buildMushroom,
+  sugar: buildSugar,
 };
 
 const cache = new Map<FoodKind, Sprite>();

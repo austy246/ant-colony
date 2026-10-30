@@ -1,15 +1,27 @@
-import { LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_PANTRIES, PANTRY_CAPACITY } from './constants';
+import {
+  LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_NORMAL_LARVAE_CHAMBERS, MAX_NORMAL_PANTRIES, MAX_PANTRIES, PANTRY_CAPACITY,
+} from './constants';
+import type { GameMode } from './world';
 
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+/** ceil(peak / capacity) clamped to 1..max; a non-finite peak counts as 0. */
+const chambersFor = (peak: number, capacity: number, max: number): number =>
+  clamp(Math.ceil((Number.isFinite(peak) ? peak : 0) / capacity), 1, max);
 
-/** Storage chambers the colony needs for the most food it ever held: 1..MAX_PANTRIES, PANTRY_CAPACITY food each. */
-export function pantriesNeeded(peakStock: number): number {
-  return clamp(Math.ceil(peakStock / PANTRY_CAPACITY), 1, MAX_PANTRIES);
+/**
+ * Storage chambers the colony needs for the most food it ever held, PANTRY_CAPACITY food each: 1..MAX_PANTRIES in sandbox,
+ * no limit in normal mode (the underground grows; only the safety cap MAX_NORMAL_PANTRIES).
+ */
+export function pantriesNeeded(peakStock: number, mode: GameMode = 'sandbox'): number {
+  return chambersFor(peakStock, PANTRY_CAPACITY, mode === 'normal' ? MAX_NORMAL_PANTRIES : MAX_PANTRIES);
 }
 
-/** Brood chambers needed for the most larvae ever waiting: 1..MAX_LARVAE_CHAMBERS, LARVAE_PER_CHAMBER each. */
-export function larvaeChambersNeeded(peakLarvae: number): number {
-  return clamp(Math.ceil(peakLarvae / LARVAE_PER_CHAMBER), 1, MAX_LARVAE_CHAMBERS);
+/**
+ * Brood chambers needed for the most larvae ever waiting, LARVAE_PER_CHAMBER each: 1..MAX_LARVAE_CHAMBERS in sandbox,
+ * no limit in normal mode (only the safety cap MAX_NORMAL_LARVAE_CHAMBERS).
+ */
+export function larvaeChambersNeeded(peakLarvae: number, mode: GameMode = 'sandbox'): number {
+  return chambersFor(peakLarvae, LARVAE_PER_CHAMBER, mode === 'normal' ? MAX_NORMAL_LARVAE_CHAMBERS : MAX_LARVAE_CHAMBERS);
 }
 
 /**

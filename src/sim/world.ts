@@ -1,13 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
+import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
-import { generateTerrain, speedAt, type Terrain } from './terrain';
+import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
 /** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
 export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry' | 'nest';
@@ -24,12 +25,16 @@ export interface Ant {
   /** Seconds lived (informational only: ants do not die of old age). */
   age: number;
   carry: number;
+  /** Set while the carried piece is sugar; delivering it starts the colony speed boost. */
+  carrySugar?: true;
   targetFood: number | null;
   /** Seconds of gnawing left while state is 'gnaw', seconds left inside while state is 'nest' (hatch / unload); 0 otherwise. */
   timer: number;
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
   role: AntRole;
+  /** A major (big soldier ant): always kills living prey on touch and survives, ignores touch cooldowns, carries MAJOR_CARRY_PIECES pieces. Absent on ordinary ants and old saves. */
+  major?: true;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
   speedMul: number;
   /** Scales heading jitter, the chance to stray off a trail, the pull of unexplored ground and the weave of a carrier. */
@@ -66,9 +71,6 @@ const YOUNG_GROW = 1.5;
 const YOUNG_SPAN = 60;
 const YOUNG_K = 0.15;
 const YOUNG_MAX = 0.6;
-/** Cells of the explored grid (EXPLORE_CELL px each). */
-const EXPLORE_W = Math.ceil(WORLD_W / EXPLORE_CELL);
-const EXPLORE_H = Math.ceil(WORLD_H / EXPLORE_CELL);
 /** Per-substep decay factor of the explored grid (half-life EXPLORE_HALF_LIFE_S). */
 const EXPLORE_DECAY = Math.exp((-STEP_S * Math.LN2) / EXPLORE_HALF_LIFE_S);
 /** Explored value a wandering ant adds to its cell per second spent there. */
@@ -119,6 +121,8 @@ function wrapAngle(a: number): number {
   return a - Math.PI;
 }
 
+export type GameMode = 'sandbox' | 'normal';
+
 export class World {
   terrain: Terrain;
   pher: PheromoneField;
@@ -141,6 +145,8 @@ export class World {
   peakStock: number;
   /** Highest `larvae` count ever reached (never decreases; saved). Sizes the brood chambers. */
   peakLarvae: number;
+  /** Highest number of ants ever alive (never decreases; saved, restored as at least the live count). Sizes the queen chambers. */
+  peakAnts = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
   /** Ants killed so far by a defending beetle (transient: not saved, 0 after a load). */
@@ -151,13 +157,29 @@ export class World {
   nextId = 1;
   rng: Rng;
   seed: number;
+  /** 'sandbox': MAX_ANTS, rescue on, never extinct. 'normal': MAX_ANTS_NORMAL, no rescue, the colony can die out. */
+  mode: GameMode = 'sandbox';
+  /** Map growth step 0..MAX_MAP_STEP; grown by the colony in normal mode, see terrainSize. */
+  mapStep = 0;
+  /** Bumped on every map growth step (the terrain, pheromone field and explored grid are new objects then). */
+  mapVersion = 0;
+  /** Normal mode: seconds until the next spontaneous prey / food appearance (0 = draw a new wait now). */
+  spawnTimer = 0;
+  /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
+  sugarReadyAt = 0;
+  /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
+  boostUntil = 0;
   /**
-   * Coarse "where have ants been" map (EXPLORE_W x EXPLORE_H cells of EXPLORE_CELL px, row-major): wandering ants add
+   * Coarse "where have ants been" map (exploreW x exploreH cells of EXPLORE_CELL px, row-major): wandering ants add
    * to their cell, values decay with half-life EXPLORE_HALF_LIFE_S and are capped at EXPLORE_CAP; wanderers prefer
    * headings toward less explored ground. TRANSIENT: never saved, empty after a load (it refills within a minute).
-   * Treat as read-only outside the world (tests may poke values to arrange a situation).
+   * Treat as read-only outside the world (tests may poke values to arrange a situation). Covers the whole current
+   * map: a map growth step replaces it with a bigger grid (old cells kept at the same cell coordinates).
    */
-  readonly explored = new Float32Array(EXPLORE_W * EXPLORE_H);
+  explored: Float32Array;
+  /** Columns / rows of the explored grid (ceil of the terrain size / EXPLORE_CELL). */
+  private exploreW: number;
+  private exploreH: number;
   private acc = 0;
   /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
   private rescueTimer = 0;
@@ -169,13 +191,37 @@ export class World {
     this.terrain = terrain;
     this.pher = pher;
     this.rng = rng;
+    this.exploreW = Math.ceil(terrain.w / EXPLORE_CELL);
+    this.exploreH = Math.ceil(terrain.h / EXPLORE_CELL);
+    this.explored = new Float32Array(this.exploreW * this.exploreH);
     this.peakStock = this.stock;
     this.peakLarvae = this.larvae;
   }
 
-  static create(seed: number): World {
+  static create(seed: number, mode: GameMode = 'sandbox'): World {
     const terrain = generateTerrain(seed);
-    return new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
+    const w = new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
+    w.mode = mode;
+    return w;
+  }
+
+  get maxAnts(): number {
+    return this.mode === 'normal' ? MAX_ANTS_NORMAL : MAX_ANTS;
+  }
+
+  /** Normal mode only: the colony started, has no ants and not enough food for another. Evaluated on every call. */
+  get extinct(): boolean {
+    return this.mode === 'normal' && this.started && this.ants.length === 0 && this.stock + STOCK_EPS < FOOD_PER_ANT;
+  }
+
+  /** Seconds until sugar can be placed again (>= 0). */
+  get sugarCooldownLeft(): number {
+    return Math.max(0, this.sugarReadyAt - this.time);
+  }
+
+  /** Seconds of sugar speed boost left (>= 0). */
+  get boostLeft(): number {
+    return Math.max(0, this.boostUntil - this.time);
   }
 
   /** Fed larvae waiting to hatch (stock is fractional, hence the epsilon). */
@@ -202,8 +248,8 @@ export class World {
   get nestNeeds(): { queens: number; pantries: number; larvaeChambers: number } {
     return {
       queens: this.queens,
-      pantries: pantriesNeeded(this.peakStock),
-      larvaeChambers: larvaeChambersNeeded(this.peakLarvae),
+      pantries: pantriesNeeded(this.peakStock, this.mode),
+      larvaeChambers: larvaeChambersNeeded(this.peakLarvae, this.mode),
     };
   }
 
@@ -219,6 +265,13 @@ export class World {
     const need = this.queens * NURSES_PER_QUEEN + Math.ceil(this.larvae / LARVAE_PER_NURSE);
     const cap = Math.floor(this.ants.length * NURSE_MAX_FRACTION + 1e-9);
     return Math.max(0, Math.min(need, cap));
+  }
+
+  /** Ants that are majors. They count in `ants.length` (and so toward `maxAnts`) too. */
+  get majors(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.major) n++;
+    return n;
   }
 
   /** Ants on the surface (everything but state 'nest'). */
@@ -285,6 +338,14 @@ export class World {
     return item;
   }
 
+  /** Normal mode only, and only when the cooldown is over: places a piece of sugar and starts the cooldown. */
+  placeSugar(x: number, y: number): FoodItem | null {
+    if (this.mode !== 'normal' || this.time < this.sugarReadyAt) return null;
+    const item = this.placeFood('sugar', x, y);
+    if (item) this.sugarReadyAt = this.time + SUGAR_COOLDOWN_S;
+    return item;
+  }
+
   moveFood(id: number, x: number, y: number): boolean {
     const item = this.food.find((f) => f.id === id);
     if (!item) return false;
@@ -308,8 +369,32 @@ export class World {
     }
   }
 
+  /**
+   * Grows the map step by step from `mapStep` up to min(step, MAX_MAP_STEP); a lower or equal step does nothing.
+   * Each step extends the terrain to the right and down (all coordinates stay valid) and replaces terrain, pheromone
+   * field and explored grid with bigger copies. Uses no randomness of the world's rng.
+   */
+  growMapTo(step: number): void {
+    const target = Math.min(MAX_MAP_STEP, Math.floor(step));
+    while (this.mapStep < target) {
+      const next = this.mapStep + 1;
+      this.terrain = extendTerrain(this.terrain, next);
+      this.pher = this.pher.grown(this.terrain.w, this.terrain.h);
+      const ow = this.exploreW;
+      const oh = this.exploreH;
+      const old = this.explored;
+      this.exploreW = Math.ceil(this.terrain.w / EXPLORE_CELL);
+      this.exploreH = Math.ceil(this.terrain.h / EXPLORE_CELL);
+      this.explored = new Float32Array(this.exploreW * this.exploreH);
+      for (let y = 0; y < oh; y++) this.explored.set(old.subarray(y * ow, (y + 1) * ow), y * this.exploreW);
+      this.mapStep = next;
+      this.mapVersion++;
+    }
+  }
+
   step(dt: number): void {
     if (!Number.isFinite(dt) || dt <= 0) return;
+    if (this.extinct) return; // the colony is dead: time stands still
     this.acc += Math.min(dt, MAX_DT);
     const n = Math.floor(this.acc / STEP_S + 1e-9);
     this.acc = Math.max(0, this.acc - n * STEP_S);
@@ -325,6 +410,12 @@ export class World {
     this.resolveTouches();
     this.hatch();
     this.rescue();
+    if (this.mode === 'normal') {
+      // The map follows the colony size, one step per substep at most, and never shrinks.
+      const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
+      if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
+      updateEnvironment(this);
+    }
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();
@@ -367,6 +458,7 @@ export class World {
     if (this.stock > this.peakStock) this.peakStock = this.stock;
     const l = this.larvae;
     if (l > this.peakLarvae) this.peakLarvae = l;
+    if (this.ants.length > this.peakAnts) this.peakAnts = this.ants.length;
   }
 
   /** Living creatures: cooldowns tick, hopping flies fly, beetles and caterpillars walk. */
@@ -451,21 +543,29 @@ export class World {
   private resolveTouches(): void {
     if (this.ants.length === 0) return;
     for (const f of this.food) {
-      if (!isAlive(f) || f.hop || (f.cooldown ?? 0) > 1e-9) continue;
+      if (!isAlive(f) || f.hop) continue;
+      const onCooldown = (f.cooldown ?? 0) > 1e-9;
+      let toucher: Ant | null = null;
       for (const ant of this.ants) {
         if (ant.state !== 'wander' && ant.state !== 'toFood') continue;
+        if (onCooldown && !ant.major) continue;
         if (Math.hypot(ant.x - f.x, ant.y - f.y) > TOUCH_DIST) continue;
-        this.touch(f, ant);
-        break;
+        // A major in reach wins over any ordinary ant (and ignores the cooldown); otherwise the first ant in array order.
+        if (ant.major) {
+          toucher = ant;
+          break;
+        }
+        if (!toucher) toucher = ant;
       }
+      if (toucher) this.touch(f, toucher);
     }
   }
 
   private touch(f: FoodItem, ant: Ant): void {
     f.touches = (f.touches ?? 0) + 1;
     f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
-    if (f.touches >= 2) {
-      // Second touch: the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
+    if (f.touches >= 2 || ant.major) {
+      // Second touch (or any touch of a major): the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
       const was = f.kind as PreyKind;
       f.alive = false;
       f.kind = 'carrion';
@@ -523,7 +623,7 @@ export class World {
 
   /** One hatching cycle per effective interval (HATCH_INTERVAL_S / queens) while there is food and room; at most one hatch per substep. */
   private hatch(): void {
-    if (!this.started || this.stock + STOCK_EPS < FOOD_PER_ANT || this.ants.length >= MAX_ANTS) {
+    if (!this.started || this.stock + STOCK_EPS < FOOD_PER_ANT || this.ants.length >= this.maxAnts) {
       this.hatchProgress = 0;
       return;
     }
@@ -534,14 +634,19 @@ export class World {
     this.hatchProgress += STEP_S;
     if (this.hatchProgress >= this.hatchInterval * this.hatchMul - 1e-9) {
       this.stock = Math.max(0, Math.round((this.stock - FOOD_PER_ANT) * 1e6) / 1e6);
-      this.spawnAnt(true);
+      const hatched = this.spawnAnt(true);
+      // Drawn after every other draw of this hatch; below MAJOR_MIN_ANTS nothing is drawn (seeded sequences stay unchanged).
+      if (this.ants.length >= MAJOR_MIN_ANTS && this.rng.next() < MAJOR_CHANCE
+        && this.majors + 1 <= Math.floor(this.ants.length * MAJOR_MAX_FRACTION + 1e-9)) {
+        hatched.major = true;
+      }
       this.hatchProgress = 0;
     }
   }
 
   /** Never soft-lock: an empty, foodless started colony gets one free ant after RESCUE_AFTER_S. */
   private rescue(): void {
-    if (!this.started || this.ants.length > 0 || this.stock + STOCK_EPS >= FOOD_PER_ANT) {
+    if (this.mode === 'normal' || !this.started || this.ants.length > 0 || this.stock + STOCK_EPS >= FOOD_PER_ANT) {
       this.rescueTimer = 0;
       return;
     }
@@ -668,7 +773,7 @@ export class World {
         desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
       }
       const range = YOUNG_R0 + YOUNG_GROW * ant.age;
-      if (homeD > range && range < WORLD_W + WORLD_H) {
+      if (homeD > range && range < this.terrain.w + this.terrain.h) {
         const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
@@ -693,6 +798,10 @@ export class World {
       delete ant.lostT;
       delete ant.lostH;
       this.deliveryCount++;
+      if (ant.carrySugar) {
+        this.boostUntil = this.time + SUGAR_BOOST_S;
+        delete ant.carrySugar;
+      }
       // The forager goes down into the nest to unload and rest; it keeps its food target if that food still exists.
       const f = this.findFood(ant.targetFood);
       if (!f || f.piecesLeft <= 0) ant.targetFood = null;
@@ -748,8 +857,10 @@ export class World {
     }
     ant.timer -= STEP_S;
     if (ant.timer > 1e-9) return;
-    f.piecesLeft--;
-    ant.carry = FOOD_TABLE[f.kind].value;
+    const pieces = ant.major ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES) : 1;
+    f.piecesLeft -= pieces;
+    ant.carry = pieces * FOOD_TABLE[f.kind].value;
+    if (f.kind === 'sugar') ant.carrySugar = true;
     ant.state = 'carry';
     ant.timer = 0;
     if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
@@ -757,9 +868,9 @@ export class World {
 
   /** Cell index of the explored grid under (x, y), clamped to the world. */
   private exploreIndex(x: number, y: number): number {
-    const cx = Math.max(0, Math.min(EXPLORE_W - 1, Math.floor(x / EXPLORE_CELL)));
-    const cy = Math.max(0, Math.min(EXPLORE_H - 1, Math.floor(y / EXPLORE_CELL)));
-    return cy * EXPLORE_W + cx;
+    const cx = Math.max(0, Math.min(this.exploreW - 1, Math.floor(x / EXPLORE_CELL)));
+    const cy = Math.max(0, Math.min(this.exploreH - 1, Math.floor(y / EXPLORE_CELL)));
+    return cy * this.exploreW + cx;
   }
 
   private markExplored(x: number, y: number): void {
@@ -794,7 +905,7 @@ export class World {
     }
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
-    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
+    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL : 1) * (this.time < this.boostUntil ? SUGAR_BOOST_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
     let nx = ant.x + Math.cos(ant.heading) * v;
     let ny = ant.y + Math.sin(ant.heading) * v;
     const maxX = this.terrain.w - 0.5;

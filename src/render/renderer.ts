@@ -1,4 +1,3 @@
-import { WORLD_H, WORLD_W } from '../sim/constants';
 import type { Terrain } from '../sim/terrain';
 import { isAlive } from '../sim/food';
 import type { Ant, World } from '../sim/world';
@@ -7,8 +6,8 @@ import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { advanceStride, frameFor, type StrideState } from './stride';
-import { AntSprites, drawAnt, drawQueen } from './sprites';
-import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
+import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
+import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
   buildSurfaceOverlayCanvas,
@@ -47,10 +46,13 @@ export class Renderer {
   private vignette: CanvasGradient | null = null;
   private sorted: Ant[] = [];
   private glowCanvas: CanvasLike | null = null;
+  /** Map size (art pixels) the glow and trail canvases were built for; they are rebuilt when the map grows. */
+  private viewCanvasW = 0;
+  private viewCanvasH = 0;
   private overlayCanvas: CanvasLike | null = null;
   private overlayRef: Terrain | null = null;
   private queen: QueenState | null = null;
-  /** Offscreen WORLD_W x WORLD_H canvas + reused pixel buffer for the pheromone trail (one pixel per cell). */
+  /** Offscreen map-sized canvas + reused pixel buffer for the pheromone trail (one pixel per cell). */
   private trailCanvas: CanvasLike | null = null;
   private trailImage: ImageData | null = null;
   private antSprites: AntSprites | null = null;
@@ -111,9 +113,15 @@ export class Renderer {
     c.fillRect(0, 0, w, h);
     c.imageSmoothingEnabled = false;
 
-    if (this.terrainRef !== this.world.terrain || !this.terrainCanvas) {
-      this.terrainRef = this.world.terrain;
-      this.terrainCanvas = renderTerrain(this.world.terrain, this.make);
+    const terrain = this.world.terrain;
+    if (this.terrainRef !== terrain || !this.terrainCanvas) {
+      // Map growth keeps the ground already painted and adds only the new strips (cheap, nothing on screen changes).
+      const prev = this.terrainRef;
+      this.terrainCanvas =
+        this.terrainCanvas && prev && isGrowthOf(prev, terrain)
+          ? extendTerrainCanvas(this.terrainCanvas, terrain, terrainStep(prev), this.make)
+          : renderTerrain(terrain, this.make);
+      this.terrainRef = terrain;
     }
 
     // CSS px -> device px, then camera.
@@ -122,9 +130,9 @@ export class Renderer {
     c.scale(zoom, zoom);
     c.imageSmoothingEnabled = false;
 
-    // The terrain canvas is on the fine grid (WORLD_W*FINE x WORLD_H*FINE); drawn into world space (art pixels) with
+    // The terrain canvas is on the fine grid (terrain.w*FINE x terrain.h*FINE); drawn into world space (art pixels) with
     // smoothing off, one fine pixel is half an art pixel, the same pixel size as the ants and sprites.
-    c.drawImage(this.terrainCanvas as unknown as CanvasImageSource, 0, 0, WORLD_W, WORLD_H);
+    c.drawImage(this.terrainCanvas as unknown as CanvasImageSource, 0, 0, this.world.terrain.w, this.world.terrain.h);
 
     if (this.view === 'pheromone') this.drawPheromoneView(c);
     else if (this.view === 'terrain') this.drawTerrainView(c);
@@ -147,7 +155,7 @@ export class Renderer {
         const st = advanceStride(this.strides.get(a.id), a.x, a.y);
         st.gen = gen;
         this.strides.set(a.id, st);
-        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0);
+        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0, a.major ? MAJOR_SCALE : 1);
       }
       if (this.strides.size > ants.length) {
         const kills = this.lastKilled >= 0 ? this.world.antsKilled - this.lastKilled : 0;
@@ -226,27 +234,34 @@ export class Renderer {
   }
 
   private drawPheromoneView(c: CanvasRenderingContext2D): void {
+    const { w, h, data } = this.world.pher; // replaced by a bigger instance when the map grows: read it fresh
+    if (this.viewCanvasW !== w || this.viewCanvasH !== h) {
+      this.viewCanvasW = w;
+      this.viewCanvasH = h;
+      this.glowCanvas = null;
+      this.trailCanvas = null;
+      this.trailImage = null;
+    }
     c.fillStyle = PHEROMONE_DARK;
-    c.fillRect(0, 0, WORLD_W, WORLD_H);
-    this.glowCanvas ??= buildHomeGlowCanvas(this.make);
+    c.fillRect(0, 0, w, h);
+    this.glowCanvas ??= buildHomeGlowCanvas(this.make, w, h);
     c.drawImage(this.glowCanvas as unknown as CanvasImageSource, 0, 0);
 
     // Trail: only cells inside the visible world rectangle, one art pixel each.
     const { zoom, x: camX, y: camY } = this.camera;
     const halfW = this.cssW / 2 / zoom;
     const halfH = this.cssH / 2 / zoom;
-    const { w, h, data } = this.world.pher;
     const x0 = Math.max(0, Math.floor(camX - halfW));
     const x1 = Math.min(w - 1, Math.ceil(camX + halfW));
     const y0 = Math.max(0, Math.floor(camY - halfH));
     const y1 = Math.min(h - 1, Math.ceil(camY + halfH));
     if (!this.trailCanvas) {
-      this.trailCanvas = this.make(WORLD_W, WORLD_H);
+      this.trailCanvas = this.make(w, h);
       this.trailImage = null;
     }
     const tc = this.trailCanvas.getContext('2d');
     if (tc) {
-      this.trailImage ??= tc.createImageData(WORLD_W, WORLD_H);
+      this.trailImage ??= tc.createImageData(w, h);
       const buf = this.trailImage.data;
       buf.fill(0);
       for (let y = y0; y <= y1; y++) {
@@ -289,7 +304,7 @@ export class Renderer {
 
   private drawTerrainView(c: CanvasRenderingContext2D): void {
     c.fillStyle = TERRAIN_DARK;
-    c.fillRect(0, 0, WORLD_W, WORLD_H);
+    c.fillRect(0, 0, this.world.terrain.w, this.world.terrain.h);
     if (this.overlayRef !== this.world.terrain || !this.overlayCanvas) {
       this.overlayRef = this.world.terrain;
       this.overlayCanvas = buildSurfaceOverlayCanvas(this.world.terrain, this.make);

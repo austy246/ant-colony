@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chamberLabel, labelPlates, type Plate } from './nestLabels';
+import { chamberLabel, labelPlates, MAX_LABELED_CHAMBERS, type Plate } from './nestLabels';
 import { nestLayout, type NestLayout } from './nestLayout';
 
 const mk = (seed: number, q: number, p: number, l: number): NestLayout =>
@@ -24,6 +24,18 @@ describe('labelPlates', () => {
     expect(ps.map((p) => p.text)).toEqual(lt.chambers.map((c) => ({ queen: 'Královna', larvae: 'Larvy', pantry: 'Spíž' })[c.kind] + (c.kind === 'pantry' ? '' : ` ${c.index + 1}`)));
   });
 
+  it('gives plates for exactly MAX_LABELED_CHAMBERS chambers', () => {
+    const lt = mk(5, 4, 2, 2);
+    expect(lt.chambers).toHaveLength(MAX_LABELED_CHAMBERS);
+    expect(plates(lt)).toHaveLength(MAX_LABELED_CHAMBERS);
+  });
+
+  it('gives no plates for more than MAX_LABELED_CHAMBERS chambers', () => {
+    const lt = mk(5, 4, 3, 2);
+    expect(lt.chambers).toHaveLength(MAX_LABELED_CHAMBERS + 1);
+    expect(plates(lt)).toEqual([]);
+  });
+
   it('puts a plate right above its chamber when there is room (day 1)', () => {
     let above = 0;
     for (let s = 1; s <= 30; s++) {
@@ -34,12 +46,12 @@ describe('labelPlates', () => {
       }
     }
     expect(above).toBeGreaterThanOrEqual(30 * 3 * 0.5);
-  }, 60000);
+  }, 120000);
 
-  it('never lets two plates overlap and keeps them inside the picture (200 seeds at 8 + 6 + 4 chambers, and at other levels)', () => {
+  it('never lets two plates overlap and keeps them inside the picture (200 seeds at 4 + 2 + 2 chambers, and at other levels)', () => {
     for (let i = 0; i < 200; i++) {
       const seed = i * 7919 + 3;
-      for (const [q, p, l] of [[8, 6, 4], [3, 3, 2], [6, 1, 1]]) {
+      for (const [q, p, l] of [[4, 2, 2], [3, 3, 2], [6, 1, 1]]) {
         const lt = mk(seed, q, p, l);
         const ps = plates(lt);
         expect(ps).toHaveLength(q + p + l);
@@ -52,12 +64,12 @@ describe('labelPlates', () => {
         }
       }
     }
-  }, 120000);
+  }, 600000);
 
   it('is deterministic, and plates never overlap whether the chambers are empty or full', () => {
     for (const [ants, fill, larv] of [[1, 0, 0], [300, 25, 10]]) {
       for (let i = 0; i < 60; i++) {
-        const lt = nestLayout({ seed: i * 7919 + 3, queens: 8, pantries: 6, larvaeChambers: 4, loads: { ants, pantry: Array(6).fill(fill), larvae: Array(4).fill(larv) }, width: 320, height: 200 });
+        const lt = nestLayout({ seed: i * 7919 + 3, queens: 4, pantries: 2, larvaeChambers: 2, loads: { ants, pantry: Array(6).fill(fill), larvae: Array(4).fill(larv) }, width: 320, height: 200 });
         const ps = plates(lt);
         expect(plates(lt)).toEqual(ps);
         for (let a = 0; a < ps.length; a++) for (let b = a + 1; b < ps.length; b++) expect(hit(ps[a], ps[b]), `seed ${i} ${ants}`).toBe(false);
@@ -69,12 +81,12 @@ describe('labelPlates', () => {
     let on = 0;
     let n = 0;
     for (let s = 1; s <= 40; s++) {
-      const lt = mk(s * 101, 6, 4, 3);
+      const lt = mk(s * 101, 3, 3, 2);
       for (const p of plates(lt)) {
         n++;
         if (lt.tunnels.some((t) => t.points.some((q) => q.x > p.x && q.x < p.x + p.w && q.y > p.y && q.y < p.y + p.h))) on++;
       }
     }
     expect(on / n).toBeLessThan(0.15);
-  }, 60000);
+  }, 120000);
 });

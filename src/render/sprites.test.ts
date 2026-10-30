@@ -2,7 +2,8 @@ import { createCanvas } from '@napi-rs/canvas';
 import { describe, expect, it } from 'vitest';
 import type { FoodKind } from '../sim/food';
 import { FINE } from './fine';
-import { AntSprites, drawAnt, drawFood, drawQueen, type Ctx2D } from './sprites';
+import { ANT_SIZE } from './antArt';
+import { AntSprites, drawAnt, drawFood, drawQueen, MAJOR_SCALE, type Ctx2D } from './sprites';
 import type { CanvasLike } from './terrainRender';
 
 const makeCanvas = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
@@ -58,7 +59,7 @@ function anyPainted(d: Uint8ClampedArray): number {
   return n / (CELL * CELL);
 }
 
-const KINDS: FoodKind[] = ['beetle', 'caterpillar', 'fly', 'carrion', 'berry', 'mushroom'];
+const KINDS: FoodKind[] = ['beetle', 'caterpillar', 'fly', 'carrion', 'berry', 'mushroom', 'sugar'];
 
 describe('worker ant (fine grid)', () => {
   const sprites = new AntSprites(makeCanvas);
@@ -167,6 +168,25 @@ describe('worker ant (fine grid)', () => {
     }
   });
 
+  it('drawAnt with scale draws a larger image', () => {
+    const calls: number[][] = [];
+    const fake = {
+      imageSmoothingEnabled: false,
+      drawImage: (_i: unknown, ...a: number[]) => calls.push(a),
+    } as unknown as Ctx2D;
+    drawAnt(fake, sprites, 20, 10, 0, 0, false);
+    drawAnt(fake, sprites, 20, 10, 0, 0, false, MAJOR_SCALE);
+    const [x1, y1, w1, h1] = calls[0];
+    const [x2, y2, w2, h2] = calls[1];
+    expect(MAJOR_SCALE).toBe(1.6);
+    expect(w1).toBe(ANT_SIZE / FINE);
+    expect(w2).toBeCloseTo((ANT_SIZE / FINE) * MAJOR_SCALE);
+    expect(h2).toBeCloseTo((ANT_SIZE / FINE) * MAJOR_SCALE);
+    // the centre stays on the same point
+    expect(x2 + w2 / 2).toBeCloseTo(x1 + w1 / 2);
+    expect(y2 + h2 / 2).toBeCloseTo(y1 + h1 / 2);
+  });
+
   it('builds its 128 sprites lazily, once: a second draw creates no canvases', () => {
     let made = 0;
     const counting = new AntSprites((w, h) => {
@@ -191,6 +211,7 @@ describe('prey sprites (fine grid)', () => {
     carrion: [350, 650],
     berry: [260, 500],
     mushroom: [230, 440],
+    sugar: [40, 220],
   };
 
   it.each(KINDS)('%s paints a plausible number of opaque pixels', (kind) => {
@@ -243,6 +264,10 @@ describe('prey sprites (fine grid)', () => {
         }
       }
     }
+  });
+
+  it('drawFood sugar is not blank', () => {
+    expect(anyPainted(render((c) => drawFood(c, 'sugar', AX, AX)))).toBeGreaterThan(0);
   });
 
   it('every kind looks different', () => {

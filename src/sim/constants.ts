@@ -1,5 +1,14 @@
+import type { FoodKind } from './food';
+
 export const WORLD_W = 320;
 export const WORLD_H = 200;
+/** Normal mode: each map growth step adds MAP_STEP_W x MAP_STEP_H px to the map (to the right and down), see terrainSize. */
+export const MAP_STEP_W = 40;
+export const MAP_STEP_H = 25;
+/** Upper bound of the map growth step. */
+export const MAX_MAP_STEP = 8;
+/** The colony needs this many ants per map growth step (step = floor(ants / MAP_STEP_ANTS), never shrinks). */
+export const MAP_STEP_ANTS = 100;
 export const SCALE = 4;
 export const NEST = { x: 40, y: 150, r: 6 } as const;
 /** Food the queen spends on one new ant (and the minimum stock needed for a hatching cycle to run). */
@@ -15,6 +24,34 @@ export const STARTER_STOCK = 10;
 /** A started colony with no ants and too little food for one gets a free ant after this many seconds. */
 export const RESCUE_AFTER_S = 15;
 export const MAX_ANTS = 300;
+/** Majors (big soldier ants) can hatch only once the colony has at least this many ants. */
+export const MAJOR_MIN_ANTS = 50;
+/** Chance that a hatching ant (with at least MAJOR_MIN_ANTS ants) is a major. */
+export const MAJOR_CHANCE = 0.08;
+/** Majors never exceed this fraction of all ants. */
+export const MAJOR_MAX_FRACTION = 0.1;
+/** Pieces of food a major takes per bite (an ordinary ant takes 1). */
+export const MAJOR_CARRY_PIECES = 2;
+/** Ant limit in normal mode. */
+export const MAX_ANTS_NORMAL = 2000;
+/** Normal mode: seconds of sim time before another sugar piece can be placed. */
+export const SUGAR_COOLDOWN_S = 300;
+/** Seconds of colony-wide speed boost after an ant delivers sugar to the nest. */
+export const SUGAR_BOOST_S = 60;
+/** Movement speed multiplier of every ant while the sugar boost lasts. */
+export const SUGAR_BOOST_MUL = 1.5;
+/** Normal mode: seconds between two spontaneous prey / food appearances (uniform in MIN..MAX). */
+export const SPAWN_MIN_S = 20;
+export const SPAWN_MAX_S = 45;
+/** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar'>, number> = {
+  berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1,
+};
+/** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
+export const SPAWN_MAX_FOOD_BASE = 12;
+export const SPAWN_MAX_FOOD_PER_STEP = 2;
+/** Living beetles on the map at most BASE + mapStep. */
+export const SPAWN_MAX_BEETLES_BASE = 1;
 export const MAX_PHEROMONE = 5;
 export const STEP_S = 1 / 30;
 /** Seconds an ant gnaws at its food before it takes a piece (each ant: GNAW_S * (0.75 + 0.5 * random)). */
@@ -93,3 +130,10 @@ export const PANTRY_CAPACITY = 25;
 export const LARVAE_PER_CHAMBER = 10;
 export const MAX_PANTRIES = 6;
 export const MAX_LARVAE_CHAMBERS = 4;
+/**
+ * Normal mode has no 6 / 4 limit: the underground grows with the colony. These are only safety caps that keep the layout
+ * (and the cost of drawing it) bounded: with MAX_QUEENS queens at most 392 chambers, under 400. 256 pantries hold 6400 food,
+ * 128 brood chambers 1280 larvae (the larvae of that food), far more than a colony of MAX_ANTS_NORMAL ants keeps.
+ */
+export const MAX_NORMAL_PANTRIES = 256;
+export const MAX_NORMAL_LARVAE_CHAMBERS = 128;

@@ -1,9 +1,9 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { describe, expect, it } from 'vitest';
 import { NEST, WORLD_H, WORLD_W } from '../sim/constants';
-import { generateTerrain, Surface, type Feature } from '../sim/terrain';
+import { extendTerrain, generateTerrain, Surface, type Feature } from '../sim/terrain';
 import { FINE } from './fine';
-import { renderTerrain, type CanvasLike } from './terrainRender';
+import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasLike } from './terrainRender';
 
 const make = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
 const FW = WORLD_W * FINE;
@@ -194,5 +194,63 @@ describe('terrain features map 1:1 onto the fine grid', () => {
     }
     expect(greyCells / stoneCells).toBeGreaterThan(0.8);
     expect(brownCells / twigCells).toBeGreaterThan(0.8);
+  });
+});
+
+describe('map growth repaints only the new strips', () => {
+  const sub = (c: CanvasLike, w: number, h: number): Uint8ClampedArray => c.getContext('2d')!.getImageData(0, 0, w, h).data;
+  const t0 = generateTerrain(12345);
+  const c0 = renderTerrain(t0, make);
+  const t1 = extendTerrain(t0, 1);
+  const c1 = extendTerrainCanvas(c0, t1, 0, make);
+  const t2 = extendTerrain(t1, 2);
+  const c2 = extendTerrainCanvas(c1, t2, 1, make);
+
+  it('terrainStep reads the growth step from the size (custom sizes count as step 0)', () => {
+    expect(terrainStep(t0)).toBe(0);
+    expect(terrainStep(t1)).toBe(1);
+    expect(terrainStep(t2)).toBe(2);
+    expect(terrainStep({ ...t0, w: 50, h: 30 })).toBe(0);
+  });
+
+  it('isGrowthOf accepts only an extendTerrain result of the same terrain', () => {
+    expect(isGrowthOf(t0, t1)).toBe(true);
+    expect(isGrowthOf(t0, t2)).toBe(true);
+    expect(isGrowthOf(t1, t0)).toBe(false);
+    expect(isGrowthOf(t1, t1)).toBe(false);
+    expect(isGrowthOf(generateTerrain(1), extendTerrain(generateTerrain(1), 1))).toBe(false); // different feature objects
+    expect(isGrowthOf(t0, extendTerrain(generateTerrain(7), 1))).toBe(false);
+  });
+
+  it('the grown canvas has the new size and keeps the old rectangle byte-identical', () => {
+    expect([c1.width, c1.height]).toEqual([t1.w * FINE, t1.h * FINE]);
+    expect(hash(sub(c1, c0.width, c0.height))).toBe(hash(pixels(c0)));
+    expect(hash(sub(c2, c1.width, c1.height))).toBe(hash(pixels(c1)));
+  });
+
+  it('the new strips are painted (fully opaque, forest palette, not one flat colour)', () => {
+    const d = pixels(c2);
+    const W = c2.width;
+    const colours = new Set<number>();
+    for (let y = 0; y < c2.height; y++) {
+      for (let x = 0; x < W; x++) {
+        if (x < FW && y < FH) continue;
+        const i = (y * W + x) * 4;
+        if (d[i + 3] !== 255) throw new Error(`transparent pixel at ${x},${y}`);
+        if (d[i + 2] > d[i] + 20) throw new Error(`blue pixel at ${x},${y}`);
+        colours.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]);
+      }
+    }
+    expect(colours.size).toBeGreaterThan(30);
+  });
+
+  it('incremental growth equals the render of the grown terrain from scratch (loaded save)', () => {
+    expect(hash(pixels(renderTerrain(t2, make)))).toBe(hash(pixels(c2)));
+    // two steps at once (save loaded with mapStep 2 after a base render) give the same pixels too
+    expect(hash(pixels(extendTerrainCanvas(c0, t2, 0, make)))).toBe(hash(pixels(c2)));
+  });
+
+  it('is deterministic', () => {
+    expect(hash(pixels(extendTerrainCanvas(c0, t1, 0, make)))).toBe(hash(pixels(c1)));
   });
 });
