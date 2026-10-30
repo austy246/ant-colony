@@ -13,9 +13,21 @@ npm test         # testy (vitest)
 npm run build    # kontrola typů + produkční build do dist/
 ```
 
+## Módy hry
+
+Na začátku nové hry si vybereš mód.
+
+- **Sandbox**: vše jako dosud. Kořist si pokládáš sám, počet mravenců je nejvýše 300 a kolonie nikdy nezahyne (prázdné hnízdo bez jídla dostane po 15 s jednoho zachránce).
+- **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny i houby), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí**.
+
+**Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie.
+
+Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane i při poklesu zásob nebo larev.
+
 ## Ovládání
 
-- **Lišta kořisti** dole: Brouk, Housenka, Moucha, Zdechlina, Malina, Houba. Vyber druh a klikni do mapy. Počet kusů je neomezený.
+- **Lišta kořisti** dole (jen v Sandboxu): Brouk, Housenka, Moucha, Zdechlina, Malina, Houba. Vyber druh a klikni do mapy. Počet kusů je neomezený.
+- **Lišta v Normalu**: místo kořisti a nástrojů jen tlačítko **Cukr** (vybereš ho a klikneš do mapy; po položení běží 5min odpočet, který tlačítko ukazuje) a pohledy. Mapu posouváš tažením a zoomuješ kolečkem nebo pinchem.
 - **Přesunout**: tažením přemístíš položenou kořist. **Smazat**: kliknutím kořist odstraníš. **Posun**: tažení posouvá mapu.
 - **Kolečko myši** = zoom, **tažení** (v nástroji Posun nebo mimo kořist) = posun mapy, **pravé nebo prostřední tlačítko** = posun vždy. Na dotykovém displeji pinch = zoom, dva prsty = posun.
 - **Pohledy**: `1` běžný, `P` feromonový (pohled mravenců: ztmavená mapa, modrá stopa k potravě, oranžová záře kolem hnízda), `T` průchodnost terénu (červená kameny, oranžová větvičky, žlutá jehličí).
