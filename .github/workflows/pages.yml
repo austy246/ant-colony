@@ -1,8 +1,9 @@
 name: Pages
 
-# Deploy is manual until the owner enables GitHub Pages and decides the repository visibility;
-# re-enable `push: branches: [main]` then.
+# Deploys the game to GitHub Pages on every push to main (and on demand).
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
