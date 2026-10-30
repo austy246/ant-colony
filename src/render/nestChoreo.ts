@@ -7,8 +7,11 @@
  * a chamber and continued to a standing spot on the floor of that chamber. Small per-ant offsets exist only inside chambers
  * (they fade to nothing before the tunnel starts), so a walker is always on a tunnel centre line or inside a chamber.
  *
- * Units are layout units (= fine pixels of the 320 x 200 underground picture); 2 of them are one art pixel, so the walking
- * limit MAX_NEST_WALK = 80 units/s is 40 art px/s.
+ * Units are layout units (= fine pixels of the underground picture, 320 x 200 or grown in normal mode); 2 of them are one
+ * art pixel, so the walking limit MAX_NEST_WALK = 80 units/s is 40 art px/s.
+ *
+ * A grown normal-mode nest has hundreds of chambers, many of them far away: hatchlings then wait only in the larvae chambers
+ * from which the entrance can be reached in their last 5 s, and unloading foragers only look at the pantries near enough.
  *
  *  - hatch   a callow (young) ant: loiters on the floor of a larvae chamber (by id) until 5 s are left, then walks the
  *            tunnels to the entrance and is there exactly when the timer reaches 0 (the simulation puts it on the surface)
@@ -23,7 +26,7 @@ import { antDirection } from './antArt';
 import { buildGraph, distancesFrom, nearestNode, pathFrom, type Distances, type Graph } from './nestGraph';
 import { floorY } from './nestArt';
 import { insideChamber, type Chamber, type NestLayout, type Pt } from './nestLayout';
-import { PANTRY_CAPACITY } from '../sim/constants';
+import { MAX_LARVAE_CHAMBERS, MAX_PANTRIES, PANTRY_CAPACITY } from '../sim/constants';
 import { hash2 } from './raster';
 
 /** The shaft starts this far above the entrance (the open mouth in the mound); ants appear / disappear there. */
@@ -134,6 +137,8 @@ interface Net {
   dist: Map<number, Distances>;
   routes: Map<string, { sig: string; route: Route }>;
   ranks: Map<string, number[]>;
+  /** Indices (into the chambers of a kind) of those whose centre is at most this far from the entrance, by kind and distance. */
+  near: Map<string, number[]>;
 }
 
 const nets = new Map<string, Net>();
@@ -153,6 +158,7 @@ function netFor(l: NestLayout): Net | null {
     dist: new Map(),
     routes: new Map(),
     ranks: new Map(),
+    near: new Map(),
   };
   if (nets.size >= 8) nets.delete(nets.keys().next().value as string);
   nets.set(l.key, n);
@@ -169,6 +175,20 @@ function distFrom(n: Net, node: number): Distances {
 }
 
 const nodeOf = (n: Net, c: Chamber | null): number => (c ? (n.centre.get(c.id) as number) : n.entrance);
+
+/** Indices of the chambers of `list` whose centre is at most `limit` from the entrance along the tunnels (all, when none is). */
+function nearEntrance(n: Net, key: string, list: readonly Chamber[], limit: number): number[] {
+  const k = `${key}:${limit}`;
+  let r = n.near.get(k);
+  if (!r) {
+    const d = distFrom(n, n.entrance).dist;
+    r = [];
+    list.forEach((c, i) => d[nodeOf(n, c)] <= limit && r!.push(i));
+    if (!r.length) r = list.map((_, i) => i);
+    n.near.set(k, r);
+  }
+  return r;
+}
 
 /** The tunnel path between the centres of two chambers (or the entrance, `null`). */
 const pathOf = (n: Net, a: Chamber | null, b: Chamber | null): Pt[] => pathFrom(n.graph, distFrom(n, nodeOf(n, a)), nodeOf(n, b)) ?? [];
@@ -350,7 +370,9 @@ function loiter(id: number, time: number, c: Chamber): void {
 
 function hatchPose(ant: NestAntLike, cr: Crew, time: number, out: NestPose): NestPose {
   const timer = Number.isFinite(ant.timer) ? ant.timer : 0;
-  const c = cr.larvae[mod(ant.id, cr.larvae.length)];
+  // a grown nest: only the larvae chambers from which the walk out fits in the last 5 s at full speed
+  const pool = cr.larvae.length > MAX_LARVAE_CHAMBERS ? nearEntrance(cr.net, 'larvae', cr.larvae, MAX_NEST_WALK * HATCH_LEAVE_S - 20) : null;
+  const c = pool ? cr.larvae[pool[mod(ant.id, pool.length)]] : cr.larvae[mod(ant.id, cr.larvae.length)];
   if (timer > HATCH_LEAVE_S) {
     loiter(ant.id, time, c);
     return put(out, L.x, L.y, L.h, L.moving ? gait(L.walked) : standFrame(ant.id, time), null, L.moving ? 'walk' : 'stand', true, -1);
@@ -374,7 +396,10 @@ const UNLOAD_STAND_S = 0.7;
 
 /** The way to the pantry with the most free room among those that can be reached in time (quantised free room, lower index on ties). */
 function unloadRoute(cr: Crew): Route {
-  const routes = cr.pantries.map((p) =>
+  const reach = MAX_NEST_WALK * Math.min(UNLOAD_MIN_S - UNLOAD_UP_S - UNLOAD_STAND_S, UNLOAD_UP_S) + 1;
+  // a grown nest: only the pantries whose centre is near enough for the way in to be within reach (it ends inside the pantry)
+  const pantries = cr.pantries.length > MAX_PANTRIES ? nearEntrance(cr.net, 'pantries', cr.pantries, reach + 40).map((i) => cr.pantries[i]) : cr.pantries;
+  const routes = pantries.map((p) =>
     memoRoute(cr.net, `unload:${p.id}`, [p], () => {
       const pts: Pt[] = [cr.net.mouth, ...pathOf(cr.net, null, p)];
       // the way in ends where it is well inside the pantry
@@ -383,12 +408,11 @@ function unloadRoute(cr: Crew): Route {
       return mkRoute(end < pts.length ? pts.slice(0, end + 1) : pts, 0, 0);
     }),
   );
-  const reach = MAX_NEST_WALK * Math.min(UNLOAD_MIN_S - UNLOAD_UP_S - UNLOAD_STAND_S, UNLOAD_UP_S) + 1;
   let best = -1;
   let bestFree = -1;
   routes.forEach((r, i) => {
     if (r.len > reach) return;
-    const free = Math.floor(Math.max(0, PANTRY_CAPACITY - cr.pantries[i].load) / 2.5);
+    const free = Math.floor(Math.max(0, PANTRY_CAPACITY - pantries[i].load) / 2.5);
     if (free > bestFree) {
       bestFree = free;
       best = i;

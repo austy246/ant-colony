@@ -2,9 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { buildGraph, distancesFrom, nearestNode } from './nestGraph';
 import {
   CHAMBER_ORDER,
+  FLOOR,
   insideChamber,
   maxExtent,
+  NEST_H,
+  NEST_STEP_H,
+  NEST_STEP_W,
+  NEST_W,
   nestLayout,
+  nestSceneSize,
   type Chamber,
   type NestInput,
   type NestLayout,
@@ -443,4 +449,149 @@ describe('nestLayout: sizes follow sizeLoads, not the current loads', () => {
     }
     expect(hi.chambers.some((c, i) => c.rx > lo.chambers[i].rx)).toBe(true);
   });
+});
+
+describe('nestLayout: normal mode grows the underground with the colony', () => {
+  const fill = (n: number, v: number): number[] => Array<number>(n).fill(v);
+  /** A normal-mode layout with q queens, p pantries and l larvae chambers, all full. */
+  const grown = (seed: number, q: number, p: number, l: number, o: Partial<NestInput> = {}): NestLayout =>
+    lay({ seed, queens: q, pantries: p, larvaeChambers: l, unbounded: true, loads: { ants: 2000, pantry: fill(p, 25), larvae: fill(l, 10) }, ...o });
+  const growSeeds = [3, 5, 7922, 15841, 123457, 99991];
+
+  it('scene size grows in steps of NEST_STEP_W x NEST_STEP_H and never shrinks for increasing counts', () => {
+    expect(nestSceneSize(1, 1)).toEqual({ width: NEST_W, height: NEST_H, step: 0 });
+    expect(nestSceneSize(6, 4)).toEqual({ width: NEST_W, height: NEST_H, step: 0 });
+    expect(nestSceneSize(7, 4).step).toBe(1);
+    expect(nestSceneSize(6, 5).step).toBe(1);
+    let prev = nestSceneSize(1, 1);
+    for (let n = 1; n <= 256; n++) {
+      const s = nestSceneSize(n, Math.ceil(n / 2));
+      expect(s.width).toBe(NEST_W + s.step * NEST_STEP_W);
+      expect(s.height).toBe(NEST_H + s.step * NEST_STEP_H);
+      expect(s.step).toBeGreaterThanOrEqual(prev.step);
+      expect(nestSceneSize(n + 1, Math.ceil(n / 2)).step).toBeGreaterThanOrEqual(s.step);
+      expect(nestSceneSize(n, Math.ceil(n / 2) + 1).step).toBeGreaterThanOrEqual(s.step);
+      prev = s;
+    }
+    // the safety cap still fits a sensible picture
+    expect(nestSceneSize(256, 128).width).toBeLessThanOrEqual(2000);
+    for (const [p, l] of [[1, 1], [7, 5], [20, 12], [80, 40]]) {
+      const lt = grown(5, 8, p, l);
+      const s = nestSceneSize(p, l);
+      expect([lt.width, lt.height]).toEqual([s.width, s.height]);
+    }
+  });
+
+  it('layout with 20 pantries and 12 larvae chambers has no overlapping chambers', () => {
+    for (const seed of growSeeds) {
+      const lt = grown(seed, 8, 20, 12);
+      expect(lt.chambers.filter((c) => c.kind === 'pantry')).toHaveLength(20);
+      expect(lt.chambers.filter((c) => c.kind === 'larvae')).toHaveLength(12);
+      expect(new Set(lt.chambers.map((c) => c.id)).size).toBe(lt.chambers.length);
+      const big = lt.chambers.map((c) => ({ ...c, rx: c.rxMax, ry: c.ryMax }));
+      for (let a = 0; a < big.length; a++) {
+        const A = big[a];
+        const ea = maxExtent(A);
+        // inside the scene and below the soil line
+        expect(A.cx - ea.rx, `${seed} ${A.id}`).toBeGreaterThanOrEqual(3);
+        expect(A.cx + ea.rx, `${seed} ${A.id}`).toBeLessThanOrEqual(lt.width - 3);
+        expect(A.cy - ea.ry, `${seed} ${A.id}`).toBeGreaterThan(lt.surfaceY + 8);
+        expect(A.cy + FLOOR * A.ry, `${seed} ${A.id}`).toBeLessThanOrEqual(lt.height - 3); // the floor is flat
+        for (let b = a + 1; b < big.length; b++) {
+          const B = big[b];
+          const eb = maxExtent(B);
+          if (Math.abs(A.cx - B.cx) > ea.rx + eb.rx + 4 || Math.abs(A.cy - B.cy) > ea.ry + eb.ry + 4) continue;
+          for (let y = Math.floor(A.cy - ea.ry); y <= Math.ceil(A.cy + ea.ry); y++) {
+            for (let x = Math.floor(A.cx - ea.rx); x <= Math.ceil(A.cx + ea.rx); x++) {
+              if (insideChamber(A, x, y, 1) && insideChamber(B, x, y, 1)) throw new Error(`seed ${seed}: ${A.id} overlaps ${B.id}`);
+            }
+          }
+        }
+      }
+      // no tunnel runs through another chamber
+      for (const t of lt.tunnels) {
+        for (const c of big) {
+          if (t.to === c.id) continue;
+          for (const p of t.points) if (insideChamber(c, p.x, p.y, 0.5)) throw new Error(`seed ${seed}: tunnel ${t.to} runs through ${c.id}`);
+        }
+        for (const p of t.points) {
+          expect(p.x).toBeGreaterThanOrEqual(2);
+          expect(p.x).toBeLessThanOrEqual(lt.width - 2);
+          expect(p.y).toBeLessThanOrEqual(lt.height - 2);
+        }
+      }
+    }
+  });
+
+  it('connects every chamber, also the new ones, to the entrance through the tunnel graph', () => {
+    for (const seed of growSeeds) {
+      for (const [p, l] of [[7, 4], [6, 5], [20, 12], [60, 30]]) {
+        const lt = grown(seed, 3, p, l);
+        const g = buildGraph(lt.tunnels.map((t) => t.points));
+        const d = distancesFrom(g, nearestNode(g, lt.entrance));
+        for (const c of lt.chambers) {
+          const n = nearestNode(g, { x: c.cx, y: c.cy });
+          expect(g.nodes[n], `seed ${seed} ${c.id}`).toEqual({ x: c.cx, y: c.cy });
+          expect(Number.isFinite(d.dist[n]), `seed ${seed} ${c.id} reachable`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('adding chambers keeps the positions of the existing ones', () => {
+    for (const seed of growSeeds) {
+      const small = grown(seed, 8, 6, 4);
+      const big = grown(seed, 8, 40, 20);
+      for (const c of small.chambers) {
+        const o = big.chambers.find((x) => x.id === c.id)!;
+        expect([o.cx, o.cy, o.rxMax, o.ryMax], `${seed} ${c.id}`).toEqual([c.cx, c.cy, c.rxMax, c.ryMax]);
+        expect(big.tunnels.find((t) => t.to === c.id)).toEqual(small.tunnels.find((t) => t.to === c.id));
+      }
+      // the new chambers too: growing one kind never moves the other, and more of a kind never moves the earlier ones
+      const mid = grown(seed, 8, 25, 9);
+      for (const c of mid.chambers) {
+        const o = big.chambers.find((x) => x.id === c.id)!;
+        expect([o.cx, o.cy], `${seed} ${c.id}`).toEqual([c.cx, c.cy]);
+        expect(big.tunnels.find((t) => t.to === c.id)).toEqual(mid.tunnels.find((t) => t.to === c.id));
+      }
+      const onlyPantries = grown(seed, 8, 40, 4);
+      for (const c of onlyPantries.chambers) {
+        const o = big.chambers.find((x) => x.id === c.id)!;
+        expect([o.cx, o.cy], `${seed} ${c.id}`).toEqual([c.cx, c.cy]);
+      }
+    }
+  });
+
+  it('layout is deterministic for the same seed and counts', () => {
+    for (const seed of growSeeds) {
+      const a = JSON.stringify(grown(seed, 5, 33, 17));
+      const b = JSON.stringify(grown(seed, 5, 33, 17));
+      expect(a).toBe(b);
+    }
+    expect(JSON.stringify(grown(5, 5, 33, 17).chambers.slice(18))).not.toBe(JSON.stringify(grown(6, 5, 33, 17).chambers.slice(18)));
+  });
+
+  it('is the same layout as today for counts within the old limits, and clamps them without the normal flag', () => {
+    for (const seed of growSeeds) {
+      for (const [q, p, l] of [[1, 1, 1], [3, 2, 4], [8, 6, 4]]) {
+        const loads = { ants: 50, pantry: [25, 10], larvae: [10, 3] };
+        const old = lay({ seed, queens: q, pantries: p, larvaeChambers: l, loads });
+        expect(lay({ seed, queens: q, pantries: p, larvaeChambers: l, loads, unbounded: true })).toEqual(old);
+        expect([old.width, old.height]).toEqual([320, 200]);
+      }
+      const clamped = lay({ seed, queens: 8, pantries: 40, larvaeChambers: 20 });
+      expect(clamped.chambers).toHaveLength(18);
+      expect([clamped.width, clamped.height]).toEqual([320, 200]);
+    }
+  });
+
+  it('builds the largest nest (the safety cap) quickly enough', () => {
+    const t0 = performance.now();
+    const lt = grown(5, 8, 256, 128);
+    expect(lt.chambers).toHaveLength(8 + 256 + 128);
+    expect(performance.now() - t0).toBeLessThan(5000);
+    const t1 = performance.now();
+    for (let k = 0; k < 50; k++) grown(5, 8, 256, 128);
+    expect(performance.now() - t1).toBeLessThan(500);
+  }, 30000);
 });

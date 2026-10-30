@@ -248,8 +248,8 @@ export class World {
   get nestNeeds(): { queens: number; pantries: number; larvaeChambers: number } {
     return {
       queens: this.queens,
-      pantries: pantriesNeeded(this.peakStock),
-      larvaeChambers: larvaeChambersNeeded(this.peakLarvae),
+      pantries: pantriesNeeded(this.peakStock, this.mode),
+      larvaeChambers: larvaeChambersNeeded(this.peakLarvae, this.mode),
     };
   }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FOOD_PER_ANT, LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_PANTRIES, PANTRY_CAPACITY, STEP_S,
+  FOOD_PER_ANT, LARVAE_PER_CHAMBER, MAX_LARVAE_CHAMBERS, MAX_NORMAL_LARVAE_CHAMBERS, MAX_NORMAL_PANTRIES, MAX_PANTRIES,
+  MAX_QUEENS, PANTRY_CAPACITY, STEP_S,
 } from './constants';
 import { chamberFills, larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
@@ -57,6 +58,43 @@ describe('pantriesNeeded / larvaeChambersNeeded', () => {
       p = pantriesNeeded(v);
       l = larvaeChambersNeeded(v);
     }
+  });
+});
+
+describe('pantriesNeeded / larvaeChambersNeeded in normal mode', () => {
+  it('normal pantriesNeeded has no upper limit', () => {
+    expect(pantriesNeeded(25 * 40, 'normal')).toBe(40);
+    expect(pantriesNeeded(0, 'normal')).toBe(1);
+    expect(pantriesNeeded(151, 'normal')).toBe(7);
+    expect(pantriesNeeded(25 * 40)).toBe(6);
+    expect(pantriesNeeded(25 * 40, 'sandbox')).toBe(6);
+  });
+
+  it('normal larvaeChambersNeeded has no upper limit', () => {
+    expect(larvaeChambersNeeded(10 * 30, 'normal')).toBe(30);
+    expect(larvaeChambersNeeded(0, 'normal')).toBe(1);
+    expect(larvaeChambersNeeded(41, 'normal')).toBe(5);
+    expect(larvaeChambersNeeded(10 * 30)).toBe(4);
+    expect(larvaeChambersNeeded(10 * 30, 'sandbox')).toBe(4);
+  });
+
+  it('normal mode stops only at the safety cap (with the queens at most 400 chambers), also for nonsense peaks', () => {
+    expect(MAX_NORMAL_PANTRIES + MAX_NORMAL_LARVAE_CHAMBERS + MAX_QUEENS).toBeLessThanOrEqual(400);
+    expect(pantriesNeeded(1e9, 'normal')).toBe(MAX_NORMAL_PANTRIES);
+    expect(larvaeChambersNeeded(1e9, 'normal')).toBe(MAX_NORMAL_LARVAE_CHAMBERS);
+    expect(pantriesNeeded(NaN, 'normal')).toBe(1);
+    expect(larvaeChambersNeeded(-5, 'normal')).toBe(1);
+  });
+
+  it('World.nestNeeds uses the mode of the world', () => {
+    const w = World.create(3, 'normal');
+    w.peakStock = 25 * 40;
+    w.peakLarvae = 10 * 30;
+    expect(w.nestNeeds).toEqual({ queens: 1, pantries: 40, larvaeChambers: 30 });
+    const s = World.create(3);
+    s.peakStock = 25 * 40;
+    s.peakLarvae = 10 * 30;
+    expect(s.nestNeeds).toEqual({ queens: 1, pantries: 6, larvaeChambers: 4 });
   });
 });
 

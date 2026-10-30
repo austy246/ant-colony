@@ -496,3 +496,32 @@ describe('callow palette', () => {
     expect(lum(CALLOW_RGBA[1])).toBeGreaterThan(lum(ANT_RGBA[1]));
   });
 });
+
+describe('nest ants in a grown normal-mode nest (hundreds of chambers, many far away)', () => {
+  const grown = nestLayout({
+    seed: 7,
+    queens: 8,
+    pantries: 120,
+    larvaeChambers: 60,
+    loads: { ants: 2000, pantry: Array<number>(120).fill(25), larvae: Array<number>(60).fill(10) },
+    width: 320,
+    height: 200,
+    unbounded: true,
+  });
+
+  it('hatchlings and unloading foragers never jump: every walk stays within the speed limit', () => {
+    expect(grown.chambers).toHaveLength(8 + 120 + 60);
+    for (let id = 0; id < 60; id++) {
+      for (const [make, total] of [[hatch, 7], [unload, 5]] as const) {
+        let prev: NestPose | null = null;
+        for (let k = 0; ; k++) {
+          const timer = total - k * FRAME;
+          const p = nestAntPose(make(id, Math.max(0, timer)), grown, 30 + k * FRAME);
+          if (prev) expect(dist(prev, p), `${make === hatch ? 'hatch' : 'unload'} id ${id} timer ${timer.toFixed(2)}`).toBeLessThanOrEqual(STEP_LIMIT);
+          prev = { ...p };
+          if (timer <= 0) break;
+        }
+      }
+    }
+  });
+});

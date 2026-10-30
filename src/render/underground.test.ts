@@ -557,6 +557,94 @@ describe('UndergroundView digging', () => {
   });
 });
 
+describe('UndergroundView normal mode: the underground grows with the colony', () => {
+  /** A normal-mode colony whose nest was sized for `peakStock` food (and a fifth of it in larvae). */
+  function normalColony(peakStock: number, seed = 5): World {
+    const w = World.create(seed, 'normal');
+    for (let i = 0; i < 20; i++) w.spawnAnt();
+    w.stock = 40;
+    w.peakStock = peakStock;
+    w.peakLarvae = Math.floor(peakStock / 5);
+    w.totalDelivered = 700;
+    return w;
+  }
+
+  it('underground view picks a zoom that fits the grown scene', () => {
+    for (const [peak, cw, ch] of [[600, 640, 400], [600, 1280, 800], [3000, 1280, 800], [3000, 640, 400], [6400, 1280, 800]]) {
+      const t = setup(normalColony(peak), cw, ch);
+      t.settle(2);
+      const l = t.view.currentLayout!;
+      const m = t.view.metrics;
+      expect(l.width, `${peak}`).toBeGreaterThan(320);
+      expect([m.width, m.height]).toEqual([l.width, l.height]);
+      expect(m.ox).toBeGreaterThanOrEqual(0);
+      expect(m.oy).toBeGreaterThanOrEqual(0);
+      expect(m.ox + l.width * m.zoom).toBeLessThanOrEqual(cw + 1e-6);
+      expect(m.oy + l.height * m.zoom).toBeLessThanOrEqual(ch + 1e-6);
+      // whole zooms whenever the picture fits at 1:1 or more
+      if (l.width <= cw && l.height <= ch) expect(Number.isInteger(m.zoom)).toBe(true);
+      for (const c of l.chambers) {
+        const x = m.ox + c.cx * m.zoom;
+        const y = m.oy + c.cy * m.zoom;
+        expect(x >= 0 && x < cw && y >= 0 && y < ch, `${peak} ${c.id}`).toBe(true);
+      }
+    }
+  });
+
+  it('sandbox keeps the fixed 320 x 200 picture however big the stock', () => {
+    const w = World.create(5);
+    w.peakStock = 3000;
+    w.peakLarvae = 600;
+    const t = setup(w, 1280, 800);
+    t.settle(2);
+    expect([t.view.metrics.width, t.view.metrics.height, t.view.metrics.zoom]).toEqual([320, 200, 4]);
+    expect(t.view.currentLayout!.chambers).toHaveLength(1 + 6 + 4);
+  });
+
+  it('a grown nest is painted in the new area and a chamber that becomes needed is dug there', () => {
+    const w = normalColony(300);
+    w.stock = 300; // every pantry full
+    const t = setup(w, 1280, 800);
+    t.settle(5);
+    const before = t.view.currentLayout!;
+    expect(before.chambers.some((c) => c.id === 'pantry11')).toBe(true);
+    expect(before.chambers.some((c) => c.id === 'pantry12')).toBe(false);
+    // the new area is painted: chamber pantry11 lies outside the old 320 x 200 picture and shows up on the canvas
+    const p11 = before.chambers.find((c) => c.id === 'pantry11')!;
+    expect(p11.cx > 320 || p11.cy > 200).toBe(true);
+    expect(t.count('pantry11', crumb)).toBeGreaterThan(0);
+    w.peakStock = 325; // pantry 13
+    t.view.draw(0.05);
+    expect(t.view.digProgress('pantry12')!).toBeLessThan(0.1);
+    expect(t.view.shownRadii('pantry12')).toBeUndefined();
+    for (let i = 0; i < 70; i++) t.view.draw(0.05);
+    expect(t.view.digProgress('pantry12')).toBe(1);
+    expect(t.view.shownRadii('pantry12')!.rx).toBeGreaterThan(0);
+    // nothing that was there moved
+    for (const c of before.chambers) {
+      const o = t.view.currentLayout!.chambers.find((x) => x.id === c.id)!;
+      expect([o.cx, o.cy]).toEqual([c.cx, c.cy]);
+    }
+  });
+
+  it('draws a nest at the safety cap within a sane time per frame', () => {
+    const w = normalColony(1e6);
+    for (let i = 0; i < 80; i++) {
+      const a = w.spawnAnt();
+      a.state = 'nest';
+      a.nestKind = i % 3 === 0 ? 'nurse' : i % 3 === 1 ? 'hatch' : 'unload';
+      if (a.nestKind === 'nurse') a.role = 'nurse';
+      a.timer = 3 + (i % 7);
+    }
+    const t = setup(w, 1280, 800);
+    t.settle(3);
+    expect(t.view.currentLayout!.chambers.length).toBeGreaterThan(300);
+    const t0 = performance.now();
+    t.settle(20);
+    expect((performance.now() - t0) / 20).toBeLessThan(150);
+  }, 60000);
+});
+
 describe('UndergroundView robustness', () => {
   it('survives a 0-size canvas', () => {
     const t = setup(colony(1, 10), 0, 0);

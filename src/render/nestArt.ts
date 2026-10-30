@@ -72,8 +72,15 @@ function setRgb(R: Raster, x: number, y: number, col: string): void {
   R.px(x, y, col);
 }
 
-export function renderBackdrop(w: number, h: number, seed: number): Raster {
+/**
+ * The soil picture, w x h. `base` is the part the plan of the nest covers (the whole picture unless a normal-mode nest grew):
+ * there the picture is exactly the one of a base-sized backdrop (stones, roots and cracks keep clear of the planned chambers),
+ * beyond it the soil continues with only a few pebbles (the new chambers and galleries are painted over them).
+ */
+export function renderBackdrop(w: number, h: number, seed: number, base: { w: number; h: number } = { w, h }): Raster {
   const R = new Raster(w, h);
+  const bw = Math.min(w, base.w);
+  const bh = Math.min(h, base.h);
   const free = clearance(seed);
   const T = colonyTint(seed);
   const rng = createRng((seed ^ 0x5eed) >>> 0);
@@ -93,7 +100,7 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
       }
       const d = y - g;
       const warp = vnoise(x, y, 22, seed + 3) * 9 - 4.5 + vnoise(x, y, 7, seed + 9) * 4 - 2;
-      const t = ((d + warp) / (h - GROUND_Y)) * 7.4 + (hash2(x, y, seed + 17) - 0.5) * 0.9;
+      const t = ((d + warp) / (bh - GROUND_Y)) * 7.4 + (hash2(x, y, seed + 17) - 0.5) * 0.9;
       let k = Math.max(0, Math.min(SOIL.length - 1, Math.floor(t)));
       const n = hash2(x >> 0, y >> 0, seed + 23);
       if (n > 0.955) k = Math.max(0, k - 1);
@@ -108,8 +115,8 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
   for (let tries = 0; tries < 800 && placed < 13; tries++) {
     const rx = 3 + Math.floor(rng() * 6);
     const ry = Math.max(2, Math.round(rx * (0.55 + rng() * 0.2)));
-    const x = Math.floor(rx + 2 + rng() * (w - 2 * rx - 4));
-    const y = Math.floor(GROUND_Y + 12 + ry + rng() * (h - GROUND_Y - 14 - 2 * ry));
+    const x = Math.floor(rx + 2 + rng() * (bw - 2 * rx - 4));
+    const y = Math.floor(GROUND_Y + 12 + ry + rng() * (bh - GROUND_Y - 14 - 2 * ry));
     if (!free(x, y, Math.max(rx, ry))) continue;
     placed++;
     R.ell(x + 1, y + 1, rx + 1, ry + 1, '#1c120a', 0.55);
@@ -119,8 +126,8 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
 
   // 3. pebbles
   for (let i = 0, p = 0; i < 400 && p < 70; i++) {
-    const x = Math.floor(rng() * w);
-    const y = Math.floor(GROUND_Y + 6 + rng() * (h - GROUND_Y - 8));
+    const x = Math.floor(rng() * bw);
+    const y = Math.floor(GROUND_Y + 6 + rng() * (bh - GROUND_Y - 8));
     if (!free(x, y, 2)) continue;
     p++;
     const c = T(PEBBLE[Math.floor(rng() * PEBBLE.length)]);
@@ -134,7 +141,7 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
   const rootAt = [22, 52, 93, 128, 205, 238, 276, 304];
   for (const sx of rootAt) {
     let x = sx + rng() * 6;
-    let y = gy[Math.min(w - 1, Math.floor(x))] + 1;
+    let y = gy[Math.min(bw - 1, Math.floor(x))] + 1;
     let dir = (rng() - 0.5) * 0.7;
     const len = 26 + Math.floor(rng() * 34);
     for (let i = 0; i < len; i++) {
@@ -166,8 +173,8 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
 
   // 5. worm-like cracks in the subsoil
   for (let i = 0, c = 0; i < 80 && c < 6; i++) {
-    let x = rng() * w;
-    let y = GROUND_Y + 40 + rng() * (h - GROUND_Y - 60);
+    let x = rng() * bw;
+    let y = GROUND_Y + 40 + rng() * (bh - GROUND_Y - 60);
     if (!free(x, y, 2)) continue;
     c++;
     let a = rng() * Math.PI * 2;
@@ -207,6 +214,22 @@ export function renderBackdrop(w: number, h: number, seed: number): Raster {
     const g = gy[x];
     for (let j = 0; j < 3; j++) setRgb(R, x, g + j, T(j === 0 ? '#7d6244' : j === 1 ? '#6b5238' : '#5f4a33'));
     if (hash2(x, 41, seed) < 0.25) setRgb(R, x, g - 1, '#8d7152');
+  }
+
+  // 8. a grown nest: pebbles in the new soil (right of and below the planned part)
+  const extra = w * h - bw * bh;
+  if (extra > 0) {
+    const prng = createRng((seed ^ 0x9e66) >>> 0);
+    for (let i = 0; i < Math.round(extra / 900); i++) {
+      const x = Math.floor(prng() * w);
+      const y = Math.floor(GROUND_Y + 6 + prng() * (h - GROUND_Y - 8));
+      if (x < bw && y < bh) continue;
+      const c = T(PEBBLE[Math.floor(prng() * PEBBLE.length)]);
+      R.px(x, y, c);
+      R.px(x + 1, y, c);
+      if (prng() < 0.5) R.px(x, y + 1, T(PEBBLE[0]));
+      if (prng() < 0.35) R.px(x, y - 1, T(PEBBLE[3]));
+    }
   }
   return R;
 }

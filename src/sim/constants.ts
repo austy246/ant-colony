@@ -130,3 +130,10 @@ export const PANTRY_CAPACITY = 25;
 export const LARVAE_PER_CHAMBER = 10;
 export const MAX_PANTRIES = 6;
 export const MAX_LARVAE_CHAMBERS = 4;
+/**
+ * Normal mode has no 6 / 4 limit: the underground grows with the colony. These are only safety caps that keep the layout
+ * (and the cost of drawing it) bounded: with MAX_QUEENS queens at most 392 chambers, under 400. 256 pantries hold 6400 food,
+ * 128 brood chambers 1280 larvae (the larvae of that food), far more than a colony of MAX_ANTS_NORMAL ants keeps.
+ */
+export const MAX_NORMAL_PANTRIES = 256;
+export const MAX_NORMAL_LARVAE_CHAMBERS = 128;
