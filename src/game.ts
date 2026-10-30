@@ -8,6 +8,7 @@ import { worldFromSave, worldToSave } from './sim/serialize';
 import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
+import { showExtinct, handleExtinction } from './ui/extinct';
 import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
 import { createViewController } from './ui/viewController';
@@ -240,6 +241,14 @@ export async function startGame(): Promise<void> {
       if (intro.consumeSpawn()) world.spawnAnt();
     }
     world.step(dt);
+    if (world.extinct && !resetting) {
+      resetting = true; // stops autosave
+      void handleExtinction({
+        inFlight: () => inFlight,
+        clear: clearSave,
+        show: () => showExtinct(ui, () => location.reload()),
+      });
+    }
     if (world.mapVersion !== seenMapVersion) {
       seenMapVersion = world.mapVersion;
       camera.setWorldSize(world.terrain.w, world.terrain.h);

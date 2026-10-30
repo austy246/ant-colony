@@ -394,6 +394,7 @@ export class World {
 
   step(dt: number): void {
     if (!Number.isFinite(dt) || dt <= 0) return;
+    if (this.extinct) return; // the colony is dead: time stands still
     this.acc += Math.min(dt, MAX_DT);
     const n = Math.floor(this.acc / STEP_S + 1e-9);
     this.acc = Math.max(0, this.acc - n * STEP_S);

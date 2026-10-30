@@ -45,6 +45,32 @@ describe('world mode', () => {
     expect(w.extinct).toBe(false);
   });
 
+  it('world.step does nothing when extinct', () => {
+    const w = emptyColony('normal');
+    expect(w.extinct).toBe(true);
+    const t = w.time;
+    const stock = w.stock;
+    const hatch = w.hatchProgress;
+    for (let i = 0; i < 100; i++) w.step(STEP_S);
+    expect(w.time).toBe(t);
+    expect(w.stock).toBe(stock);
+    expect(w.hatchProgress).toBe(hatch);
+  });
+
+  it('normal world stays extinct and does not hatch/rescue', () => {
+    const w = emptyColony('normal');
+    for (let t = 0; t < RESCUE_AFTER_S + 60; t += 1) w.step(1);
+    expect(w.extinct).toBe(true);
+    expect(w.ants.length).toBe(0);
+  });
+
+  it('sandbox world with no ants and no stock still steps', () => {
+    const w = emptyColony('sandbox');
+    const t = w.time;
+    for (let i = 0; i < 10; i++) w.step(STEP_S);
+    expect(w.time).toBeGreaterThan(t);
+  });
+
   it('normal rescue does not spawn an ant after RESCUE_AFTER_S (sandbox does)', () => {
     const n = emptyColony('normal');
     const s = emptyColony('sandbox');
