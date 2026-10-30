@@ -1,8 +1,10 @@
 name: Pages
 
-# Deploys the game to GitHub Pages on every push to main (and on demand).
+# Deploys the game to GitHub Pages once CI has passed on main (and on demand).
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -17,9 +19,14 @@ concurrency:
 
 jobs:
   build:
+    # Skip when CI failed; a manual run (workflow_dispatch) always goes ahead.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run starts from the default branch head; deploy the commit CI actually tested.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
