@@ -19,8 +19,14 @@ concurrency:
 
 jobs:
   build:
-    # Skip when CI failed; a manual run (workflow_dispatch) always goes ahead.
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Skip when CI failed; a manual run (workflow_dispatch) always goes ahead. `branches: [main]` above only matches the
+    # triggering run's branch NAME, so a fork pull request from a branch called `main` would pass it: deploy only CI runs
+    # of a push to this repository itself, never pull_request runs or fork code.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
