@@ -1,4 +1,4 @@
-import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import { terrainSize } from './terrain';
@@ -161,8 +161,10 @@ export function worldFromSave(s: SaveV1): World {
     w.ants.push(ant);
   }
   // The spider only exists in normal mode; without a living one nobody can be stuck in a web.
-  w.spider = w.mode === 'normal' && s.spider ? { ...s.spider } : null;
-  if (!w.spider?.alive) for (const a of w.ants) delete a.caughtT;
+  // Clamped to one full respawn from now, like the sugar clocks.
+  w.spider = w.mode === 'normal' && s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
+  // Ants inside the nest are never in the web either.
+  for (const a of w.ants) if (!w.spider?.alive || a.state === 'nest') delete a.caughtT;
   w.peakAnts = Math.max(s.peakAnts ?? 0, w.ants.length);
   w.food.length = 0;
   for (const f of s.food) w.food.push(foodToSave(f));

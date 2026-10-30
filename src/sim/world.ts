@@ -453,7 +453,7 @@ export class World {
     if (!sp.alive) {
       sp.respawnT -= STEP_S;
       if (sp.respawnT <= 1e-9) {
-        // The replacement's corner depends on the seed and the (whole-second) time of death, so it is reproducible.
+        // The replacement's corner depends on the seed and the (whole-second) time of the respawn, so it is reproducible.
         const index = 1 + Math.floor(this.time);
         const c = spiderCorner(this.seed, index);
         this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, index) };

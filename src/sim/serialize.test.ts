@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, WORLD_H, WORLD_W } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, WORLD_H, WORLD_W } from './constants';
 import { terrainSize } from './terrain';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { FOOD_TABLE } from './food';
@@ -568,6 +568,24 @@ describe('spider fields', () => {
     const r = worldFromSave(validateSave(json(worldToSave(sb, EXTRA)))!);
     expect(r.spider).toBeNull();
     expect(r.ants[0].caughtT).toBeUndefined();
+  });
+
+  it('clamps a restored respawn clock to one full respawn', () => {
+    const w = spiderSave();
+    w.spider!.alive = false;
+    w.spider!.respawnT = 1e9;
+    for (const a of w.ants) delete a.caughtT;
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.spider!.respawnT).toBe(SPIDER_RESPAWN_S);
+  });
+
+  it('drops caughtT from ants that are inside the nest', () => {
+    const w = spiderSave();
+    w.ants[2].state = 'nest';
+    w.ants[2].caughtT = 1;
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.ants[2].caughtT).toBeUndefined();
+    expect(r.ants[1].caughtT).toBe(3.25);
   });
 
   it('invalid spider field is rejected', () => {
