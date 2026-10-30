@@ -43,7 +43,8 @@ export async function startGame(): Promise<void> {
     h: Math.max(1, canvas.clientHeight || window.innerHeight || 1),
   });
   const v0 = viewSize();
-  const camera = new Camera(v0.w, v0.h);
+  const camera = new Camera(v0.w, v0.h, world.terrain.w, world.terrain.h);
+  let seenMapVersion = world.mapVersion;
   const renderer = new Renderer(canvas, world, camera);
   if (save) {
     camera.x = save.camera.x;
@@ -234,6 +235,10 @@ export async function startGame(): Promise<void> {
       if (intro.consumeSpawn()) world.spawnAnt();
     }
     world.step(dt);
+    if (world.mapVersion !== seenMapVersion) {
+      seenMapVersion = world.mapVersion;
+      camera.setWorldSize(world.terrain.w, world.terrain.h);
+    }
     if (intro && !introDone && intro.done) finishIntro();
     if (settle) {
       settle.t += dt;

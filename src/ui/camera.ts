@@ -26,13 +26,20 @@ export function easeCameraTo(from: CameraPose, to: CameraPose, u: number): Camer
  * `zoom` = screen pixels per world pixel.
  */
 export class Camera {
-  x = WORLD_W / 2;
-  y = WORLD_H / 2;
+  x: number;
+  y: number;
   zoom: number;
   private viewW: number;
   private viewH: number;
 
-  constructor(viewW: number, viewH: number) {
+  constructor(
+    viewW: number,
+    viewH: number,
+    private worldW = WORLD_W,
+    private worldH = WORLD_H,
+  ) {
+    this.x = this.worldW / 2;
+    this.y = this.worldH / 2;
     this.viewW = ok(viewW) && viewW > 0 ? viewW : 1;
     this.viewH = ok(viewH) && viewH > 0 ? viewH : 1;
     this.zoom = SCALE;
@@ -40,7 +47,7 @@ export class Camera {
   }
 
   get minZoom(): number {
-    return Math.max(1, Math.min(this.viewW / WORLD_W, this.viewH / WORLD_H));
+    return Math.max(1, Math.min(this.viewW / this.worldW, this.viewH / this.worldH));
   }
 
   get maxZoom(): number {
@@ -54,12 +61,20 @@ export class Camera {
     this.clamp();
   }
 
+  /** The map grew (to the right and down): the view centre stays put, only the limits and the clamp change. */
+  setWorldSize(worldW: number, worldH: number): void {
+    if (!ok(worldW) || !ok(worldH) || worldW <= 0 || worldH <= 0) return;
+    this.worldW = worldW;
+    this.worldH = worldH;
+    this.clamp();
+  }
+
   /** Clamps zoom into limits and the view centre into the map. */
   clamp(): void {
     if (!ok(this.zoom)) this.zoom = SCALE;
     this.zoom = Math.min(MAX_ZOOM, Math.max(this.minZoom, this.zoom));
-    this.x = this.clampAxis(this.x, this.viewW, WORLD_W);
-    this.y = this.clampAxis(this.y, this.viewH, WORLD_H);
+    this.x = this.clampAxis(this.x, this.viewW, this.worldW);
+    this.y = this.clampAxis(this.y, this.viewH, this.worldH);
   }
 
   private clampAxis(c: number, viewPx: number, worldSize: number): number {
@@ -98,9 +113,9 @@ export class Camera {
   }
 
   fitWorld(): void {
-    this.zoom = Math.min(this.viewW / WORLD_W, this.viewH / WORLD_H);
-    this.x = WORLD_W / 2;
-    this.y = WORLD_H / 2;
+    this.zoom = Math.min(this.viewW / this.worldW, this.viewH / this.worldH);
+    this.x = this.worldW / 2;
+    this.y = this.worldH / 2;
     this.clamp();
   }
 }

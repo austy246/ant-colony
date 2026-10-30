@@ -1,4 +1,4 @@
-import { MAX_PHEROMONE, WORLD_H, WORLD_W } from '../sim/constants';
+import { MAX_PHEROMONE } from '../sim/constants';
 import { homeGlow } from '../sim/pheromone';
 import { Surface, type Terrain } from '../sim/terrain';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
@@ -30,13 +30,13 @@ export function surfaceOverlayColor(s: number): string | null {
 /** Straight (non-premultiplied) RGB of a trail cell; alpha comes from pheromoneAlpha. */
 export const TRAIL_RGB = [127, 209, 255] as const;
 
-/** Soft orange radial glow around the nest, WORLD_W x WORLD_H, built from homeGlow. */
-export function buildHomeGlowCanvas(make: CanvasFactory): CanvasLike {
-  const canvas = make(WORLD_W, WORLD_H);
+/** Soft orange radial glow around the nest, w x h (the map size), built from homeGlow. */
+export function buildHomeGlowCanvas(make: CanvasFactory, w: number, h: number): CanvasLike {
+  const canvas = make(w, h);
   const c = canvas.getContext('2d');
   if (!c) throw new Error('2d context unavailable');
-  for (let y = 0; y < WORLD_H; y++) {
-    for (let x = 0; x < WORLD_W; x++) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       const g = homeGlow(x + 0.5, y + 0.5);
       if (g <= 0) continue;
       c.fillStyle = `rgba(255,150,60,${(0.35 * g * g).toFixed(3)})`;
@@ -46,9 +46,9 @@ export function buildHomeGlowCanvas(make: CanvasFactory): CanvasLike {
   return canvas;
 }
 
-/** Per-cell terrain-cost overlay (stones red, twigs orange, needles yellow), WORLD_W x WORLD_H. */
+/** Per-cell terrain-cost overlay (stones red, twigs orange, needles yellow), the size of the terrain. */
 export function buildSurfaceOverlayCanvas(t: Terrain, make: CanvasFactory): CanvasLike {
-  const canvas = make(WORLD_W, WORLD_H);
+  const canvas = make(t.w, t.h);
   const c = canvas.getContext('2d');
   if (!c) throw new Error('2d context unavailable');
   for (let y = 0; y < t.h; y++) {

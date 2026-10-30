@@ -1,4 +1,4 @@
-import { NEST, WORLD_H, WORLD_W } from '../sim/constants';
+import { NEST } from '../sim/constants';
 import { createRng } from '../sim/rng';
 import type { Feature, Terrain } from '../sim/terrain';
 import { FINE as F } from './fine';
@@ -412,13 +412,13 @@ function paintCrater(R: Raster, r: () => number): void {
 
 /**
  * Prerenders the whole ground (soil texture, stones, twigs, needles, leaf litter, moss, grass, nest crater) into
- * one WORLD_W*FINE x WORLD_H*FINE canvas (fine pixels = half art pixels), pixel by pixel in a software raster.
+ * one t.w*FINE x t.h*FINE canvas (fine pixels = half art pixels), pixel by pixel in a software raster.
  * A feature at (x, y) in art pixels lies at (x*FINE, y*FINE) here, sizes scale by FINE, so what is drawn matches the
  * simulation's speed map exactly; only the amount of detail differs. Deterministic for a given terrain (seed ^ 0x51ed).
  */
 export function renderTerrain(t: Terrain, make: CanvasFactory = defaultMake): CanvasLike {
-  const W = WORLD_W * F;
-  const H = WORLD_H * F;
+  const W = t.w * F;
+  const H = t.h * F;
   const R = new Raster(W, H);
   const r = createRng(t.seed ^ 0x51ed);
   const sk = t.seed & 255;

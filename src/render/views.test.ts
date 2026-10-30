@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_PHEROMONE } from '../sim/constants';
-import { Surface } from '../sim/terrain';
-import { pheromoneAlpha, surfaceOverlayColor } from './views';
+import { createCanvas } from '@napi-rs/canvas';
+import { extendTerrain, generateTerrain, Surface } from '../sim/terrain';
+import type { CanvasLike } from './terrainRender';
+import { buildHomeGlowCanvas, buildSurfaceOverlayCanvas, pheromoneAlpha, surfaceOverlayColor } from './views';
 
 describe('pheromoneAlpha', () => {
   it('is 0 below the 0.05 threshold and faintly visible at it', () => {
@@ -48,5 +50,25 @@ describe('surfaceOverlayColor', () => {
   it('returns null for unknown values', () => {
     expect(surfaceOverlayColor(99)).toBeNull();
     expect(surfaceOverlayColor(NaN)).toBeNull();
+  });
+});
+
+describe('view canvases take their size from the map', () => {
+  const rec = (log: number[][]) => (w: number, h: number) => {
+    log.push([w, h]);
+    return createCanvas(w, h) as unknown as CanvasLike;
+  };
+
+  it('buildHomeGlowCanvas uses the given width and height', () => {
+    const log: number[][] = [];
+    buildHomeGlowCanvas(rec(log), 360, 225);
+    expect(log).toEqual([[360, 225]]);
+  });
+
+  it('buildSurfaceOverlayCanvas uses the terrain size', () => {
+    const log: number[][] = [];
+    const t = extendTerrain(generateTerrain(3), 1);
+    buildSurfaceOverlayCanvas(t, rec(log));
+    expect(log).toEqual([[t.w, t.h]]);
   });
 });

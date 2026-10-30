@@ -292,3 +292,71 @@ describe('Renderer worker ants (rotation, walking, cache)', () => {
     expect(made.length).toBe(afterFirst);
   });
 });
+
+describe('Renderer follows the map size', () => {
+  function growSetup() {
+    const made: CanvasLike[] = [];
+    const rec = (w: number, h: number): CanvasLike => {
+      const c = make(w, h);
+      made.push(c);
+      return c;
+    };
+    const canvas = createCanvas(1, 1);
+    Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
+    const world = World.create(7);
+    const camera = new Camera(640, 400);
+    const r = new Renderer(canvas as unknown as HTMLCanvasElement, world, camera, rec);
+    return { world, r, made, camera };
+  }
+  const sized = (made: CanvasLike[], w: number, h: number): CanvasLike[] =>
+    made.filter((c) => (c as unknown as { width: number }).width === w && (c as unknown as { height: number }).height === h);
+
+  it('rebuilds the terrain canvas when the map grows', () => {
+    const { world, r, made } = growSetup();
+    r.draw();
+    expect(sized(made, 640, 400).length).toBe(1);
+    world.growMapTo(1);
+    r.draw();
+    expect(sized(made, world.terrain.w * 2, world.terrain.h * 2).length).toBe(1);
+    r.draw();
+    expect(sized(made, world.terrain.w * 2, world.terrain.h * 2).length).toBe(1);
+  });
+
+  it('trail canvas, glow and overlay have the size of the map and are rebuilt on growth', () => {
+    const { world, r, made } = growSetup();
+    r.setView('pheromone');
+    r.draw();
+    expect(sized(made, 320, 200).length).toBe(2); // glow + trail
+    world.growMapTo(1);
+    world.pher.deposit(world.terrain.w - 2.5, world.terrain.h - 2.5, 5);
+    r.draw();
+    const { w, h } = world.terrain;
+    expect(sized(made, w, h).length).toBe(2);
+    r.setView('terrain');
+    r.draw();
+    expect(sized(made, w, h).length).toBe(3);
+    world.growMapTo(2);
+    r.draw();
+    expect(sized(made, world.terrain.w, world.terrain.h).length).toBe(1);
+  });
+
+  it('pheromone deposited in the new area is drawn', () => {
+    const canvas = createCanvas(1, 1);
+    Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
+    const world = World.create(7);
+    const camera = new Camera(640, 400);
+    const r = new Renderer(canvas as unknown as HTMLCanvasElement, world, camera, make);
+    world.growMapTo(1);
+    camera.setWorldSize(world.terrain.w, world.terrain.h);
+    camera.zoom = 4;
+    camera.x = 350;
+    camera.y = 210;
+    camera.clamp();
+    world.pher.deposit(350.5, 210.5, 5);
+    r.setView('pheromone');
+    r.draw();
+    const s = camera.worldToScreen(350.25, 210.25);
+    const d = canvas.getContext('2d').getImageData(Math.floor(s.x), Math.floor(s.y), 1, 1).data;
+    expect(d[2]).toBeGreaterThan(d[0] + 40);
+  });
+});
