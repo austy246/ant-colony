@@ -204,3 +204,43 @@ describe('Input camera', () => {
     expect(world.food).toHaveLength(0);
   });
 });
+
+describe('Input sugar', () => {
+  it('places sugar via placeSugar and not placeFood', () => {
+    const w2 = World.create(7, 'normal');
+    w2.food.length = 0;
+    let foodCalls = 0;
+    const origFood = w2.placeFood.bind(w2);
+    w2.placeFood = (k, x, y) => {
+      foodCalls++;
+      return origFood(k, x, y);
+    };
+    let sugarCalls = 0;
+    const origSugar = w2.placeSugar.bind(w2);
+    w2.placeSugar = (x, y) => {
+      sugarCalls++;
+      return origSugar(x, y);
+    };
+    input.detach();
+    tool = { kind: 'sugar' };
+    input = new Input(canvas, camera, w2, () => tool);
+    input.attach();
+    click(400, 300);
+    expect(sugarCalls).toBe(1);
+    expect(foodCalls).toBe(1); // only via placeSugar internally
+    expect(w2.food.some((f) => f.kind === 'sugar')).toBe(true);
+  });
+
+  it('dragging with the sugar tool pans instead of placing', () => {
+    const w2 = World.create(7, 'normal');
+    w2.food.length = 0;
+    input.detach();
+    tool = { kind: 'sugar' };
+    input = new Input(canvas, camera, w2, () => tool);
+    input.attach();
+    canvas.dispatchEvent(ptr('pointerdown', 400, 300));
+    canvas.dispatchEvent(ptr('pointermove', 450, 300));
+    canvas.dispatchEvent(ptr('pointerup', 450, 300));
+    expect(w2.food).toHaveLength(0);
+  });
+});

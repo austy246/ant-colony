@@ -5,9 +5,10 @@ import { nestHud, UndergroundView } from './render/underground';
 import { clearSave, loadGame, saveGame } from './save';
 import { NEST, SCALE } from './sim/constants';
 import { worldFromSave, worldToSave } from './sim/serialize';
-import { World } from './sim/world';
+import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
+import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
 import { createViewController } from './ui/viewController';
 
@@ -34,7 +35,8 @@ export async function startGame(): Promise<void> {
   const ui = document.getElementById('ui') as HTMLElement;
 
   const save = await loadGame();
-  const world = save ? worldFromSave(save) : World.create(Date.now() >>> 0);
+  const chosen: GameMode | null = save ? null : await showModeSelect(ui);
+  const world = save ? worldFromSave(save) : World.create(Date.now() >>> 0, chosen ?? 'sandbox');
   let introDone = save !== null;
   const intro = introDone ? null : new Intro();
 
@@ -63,6 +65,7 @@ export async function startGame(): Promise<void> {
   const hudMain = el('span', '', '', hud);
   const hudSmall = el('span', 'hud-small', '', hud);
   const hudRest = el('span', '', '', hud);
+  el('span', 'hud-mode', world.mode === 'normal' ? 'Normal' : 'Sandbox', hud);
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
@@ -163,6 +166,7 @@ export async function startGame(): Promise<void> {
       ui,
       (t) => (tool = t),
       (v) => views.setView(v),
+      { mode: world.mode, sugarLeft: () => world.sugarCooldownLeft },
     );
     renderer.setQueen(null);
     settle = {
@@ -188,6 +192,7 @@ export async function startGame(): Promise<void> {
       ui,
       (t) => (tool = t),
       (v) => views.setView(v),
+      { mode: world.mode, sugarLeft: () => world.sugarCooldownLeft },
     );
     updateHud();
   }

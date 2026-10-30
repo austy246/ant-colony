@@ -156,3 +156,66 @@ describe('underground view button', () => {
     expect(onTool).not.toHaveBeenCalled();
   });
 });
+
+describe('buildToolbar normal mode', () => {
+  it('has only Cukr and the four view buttons', () => {
+    buildToolbar(root, () => {}, () => {}, { mode: 'normal', sugarLeft: () => 0 });
+    expect(buttons().map((b) => b.textContent)).toEqual([
+      'Cukr', 'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
+    ]);
+  });
+
+  it('Cukr button is disabled and shows the countdown while sugarLeft > 0', () => {
+    let left = 75;
+    const tools: Tool[] = [];
+    buildToolbar(root, (t) => tools.push(t), () => {}, { mode: 'normal', sugarLeft: () => left });
+    const cukr = buttons()[0];
+    expect(cukr.textContent).toBe('Cukr (1:15)');
+    expect(cukr.classList.contains('disabled')).toBe(true);
+    cukr.click();
+    expect(tools.some((t) => t.kind === 'sugar')).toBe(false);
+    left = 0;
+    vi.useFakeTimers();
+    try {
+      document.body.innerHTML = '';
+      root = document.createElement('div');
+      document.body.appendChild(root);
+      buildToolbar(root, (t) => tools.push(t), () => {}, { mode: 'normal', sugarLeft: () => left });
+      expect(buttons()[0].textContent).toBe('Cukr');
+      expect(buttons()[0].classList.contains('disabled')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('placing sugar returns the active tool to pan', () => {
+    vi.useFakeTimers();
+    try {
+      let left = 0;
+      const tools: Tool[] = [];
+      const cleanup = buildToolbar(root, (t) => tools.push(t), () => {}, { mode: 'normal', sugarLeft: () => left });
+      buttons()[0].click();
+      expect(tools.at(-1)).toEqual({ kind: 'sugar' });
+      expect(buttons()[0].classList.contains('active')).toBe(true);
+      left = 90;
+      vi.advanceTimersByTime(600);
+      expect(tools.at(-1)).toEqual({ kind: 'pan' });
+      expect(buttons()[0].classList.contains('active')).toBe(false);
+      expect(buttons()[0].textContent).toBe('Cukr (1:30)');
+      cleanup();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cleanup stops the refresh timer', () => {
+    vi.useFakeTimers();
+    try {
+      const cleanup = buildToolbar(root, () => {}, () => {}, { mode: 'normal', sugarLeft: () => 0 });
+      cleanup();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

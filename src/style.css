@@ -243,3 +243,69 @@ body {
 [hidden] {
   display: none !important;
 }
+
+.hud-mode {
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #1a120b;
+  background: #c98a2b;
+  border-radius: 8px;
+}
+
+.mode-select {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 7, 4, 0.7);
+  font-family: system-ui, sans-serif;
+  color: #f2e6d0;
+}
+
+.mode-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  padding: 16px;
+  background: rgba(20, 14, 8, 0.8);
+  border: 1px solid #6b4f33;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mode-title {
+  font-size: 18px;
+}
+
+.mode-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-item button {
+  min-height: 44px;
+  padding: 8px 16px;
+  font-size: 16px;
+  color: #f2e6d0;
+  background: #3a2a1a;
+  border: 1px solid #6b4f33;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mode-item button:hover {
+  background: #c98a2b;
+  color: #1a120b;
+}
+
+.mode-desc {
+  font-size: 13px;
+  opacity: 0.8;
+}

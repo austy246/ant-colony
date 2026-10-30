@@ -1,3 +1,4 @@
+import type { GameMode } from '../sim/world';
 import type { Tool } from './input';
 
 export type ViewName = 'normal' | 'pheromone' | 'terrain' | 'underground';
@@ -35,7 +36,9 @@ export function buildToolbar(
   root: HTMLElement,
   onTool: (t: Tool) => void,
   onView: (v: ViewName) => void,
+  opts: { mode?: GameMode; sugarLeft?: () => number } = {},
 ): () => void {
+  if (opts.mode === 'normal') return buildNormalToolbar(root, onTool, onView, opts.sugarLeft ?? (() => 0));
   const bar = document.createElement('div');
   bar.className = 'toolbar';
 
@@ -90,6 +93,90 @@ export function buildToolbar(
   selectTool(toolEls[0], TOOL_BUTTONS[0].tool);
 
   return () => {
+    document.removeEventListener('keydown', onKey);
+    bar.remove();
+  };
+}
+
+const SUGAR_REFRESH_MS = 500;
+
+function formatCountdown(sec: number): string {
+  const s = Math.ceil(sec);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Normal mode: the player only drops sugar (with a cooldown) and switches views. */
+function buildNormalToolbar(
+  root: HTMLElement,
+  onTool: (t: Tool) => void,
+  onView: (v: ViewName) => void,
+  sugarLeft: () => number,
+): () => void {
+  const bar = document.createElement('div');
+  bar.className = 'toolbar';
+
+  let active = false;
+  let under = false;
+  const sugarEl = makeButton('Cukr');
+  bar.appendChild(sugarEl);
+
+  const refresh = (): void => {
+    const left = sugarLeft();
+    if (left > 0 && active) {
+      active = false;
+      onTool({ kind: 'pan' });
+    }
+    const label = left > 0 ? `Cukr (${formatCountdown(left)})` : 'Cukr';
+    if (sugarEl.textContent !== label) sugarEl.textContent = label;
+    sugarEl.classList.toggle('disabled', left > 0 || under);
+    sugarEl.classList.toggle('active', active);
+  };
+
+  sugarEl.addEventListener('click', () => {
+    if (sugarEl.classList.contains('disabled')) return;
+    active = true;
+    refresh();
+    onTool({ kind: 'sugar' });
+  });
+
+  const viewEls = VIEW_BUTTONS.map(({ label, view }) => {
+    const b = makeButton(label);
+    b.addEventListener('click', () => selectView(b, view));
+    bar.appendChild(b);
+    return b;
+  });
+
+  function selectView(el: HTMLButtonElement, view: ViewName): void {
+    for (const b of viewEls) b.classList.toggle('active', b === el);
+    under = view === 'underground';
+    bar.classList.toggle('underground', under);
+    if (under && active) {
+      active = false;
+      onTool({ kind: 'pan' });
+    }
+    refresh();
+    onView(view);
+  }
+
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    const k = e.key.toLowerCase();
+    const byCode = CODE_TO_KEY[e.code];
+    const idx = VIEW_BUTTONS.findIndex((v) => v.key === k || (byCode !== undefined && v.key === byCode));
+    if (idx >= 0) selectView(viewEls[idx], VIEW_BUTTONS[idx].view);
+  };
+  document.addEventListener('keydown', onKey);
+
+  root.appendChild(bar);
+  viewEls[0].classList.add('active');
+  onTool({ kind: 'pan' });
+  refresh();
+  const timer = setInterval(refresh, SUGAR_REFRESH_MS);
+
+  return () => {
+    clearInterval(timer);
     document.removeEventListener('keydown', onKey);
     bar.remove();
   };
