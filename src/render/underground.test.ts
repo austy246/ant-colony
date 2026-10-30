@@ -376,12 +376,12 @@ describe('UndergroundView nest ants', () => {
 
 describe('UndergroundView labels', () => {
   it('draws a label plate per chamber (numbered only when there are several of a kind) and the plates never overlap', () => {
-    const t = setup(colony(60, 80, 3));
+    // few enough chambers to keep their labels (more than MAX_LABELED_CHAMBERS shown hides them all)
+    const t = setup(colony(40, 40, 3));
     t.settle(60);
     const texts = t.view.labelPlatesShown.map((p) => p.text);
     expect(texts).toContain('Spíž 1');
     expect(texts).toContain('Královna 3');
-    expect(texts).toContain('Larvy 2');
     const single = setup(colony(1, 10));
     single.settle(10);
     expect(single.view.labelPlatesShown.map((p) => p.text).sort()).toEqual(['Královna', 'Larvy', 'Spíž']);
@@ -393,6 +393,14 @@ describe('UndergroundView labels', () => {
         expect(A.x < B.x + B.w && B.x < A.x + A.w && A.y < B.y + B.h && B.y < A.y + A.h).toBe(false);
       }
     }
+  });
+});
+
+describe('UndergroundView many chambers', () => {
+  it('shows no label plates when more than MAX_LABELED_CHAMBERS chambers are shown', () => {
+    const t = setup(colony(60, 80, 3));
+    t.settle(60);
+    expect(t.view.labelPlatesShown).toEqual([]);
   });
 });
 

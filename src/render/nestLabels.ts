@@ -31,6 +31,9 @@ export const PLATE_H = 9;
 const overlap = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }, pad: number): boolean =>
   a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
 
+/** With more shown chambers than this the labels are left out (too many plates clutter the picture). */
+export const MAX_LABELED_CHAMBERS = 8;
+
 export function labelPlates(
   chambers: readonly Chamber[],
   tunnels: readonly Tunnel[],
@@ -38,6 +41,7 @@ export function labelPlates(
   height: number,
   surfaceY: number,
 ): Plate[] {
+  if (chambers.length > MAX_LABELED_CHAMBERS) return [];
   const counts = { queen: 0, larvae: 0, pantry: 0 };
   for (const c of chambers) counts[c.kind]++;
   const rooms = chambers;
