@@ -2,6 +2,13 @@ import type { FoodKind } from './food';
 
 export const WORLD_W = 320;
 export const WORLD_H = 200;
+/** Normal mode: each map growth step adds MAP_STEP_W x MAP_STEP_H px to the map (to the right and down), see terrainSize. */
+export const MAP_STEP_W = 40;
+export const MAP_STEP_H = 25;
+/** Upper bound of the map growth step. */
+export const MAX_MAP_STEP = 8;
+/** The colony needs this many ants per map growth step (step = floor(ants / MAP_STEP_ANTS), never shrinks). */
+export const MAP_STEP_ANTS = 100;
 export const SCALE = 4;
 export const NEST = { x: 40, y: 150, r: 6 } as const;
 /** Food the queen spends on one new ant (and the minimum stock needed for a hatching cycle to run). */

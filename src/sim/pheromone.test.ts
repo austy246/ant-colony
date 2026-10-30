@@ -85,6 +85,21 @@ describe('PheromoneField', () => {
     expect(f.sampleMax(0, 0, 3)).toBe(0);
   });
 
+  it('PheromoneField.grown keeps old values at the same x, y', () => {
+    const f = new PheromoneField(10, 6);
+    for (let i = 0; i < f.data.length; i++) f.data[i] = (i % 7) * 0.5;
+    const g = f.grown(14, 9);
+    expect(g).not.toBe(f);
+    expect(g.w).toBe(14);
+    expect(g.h).toBe(9);
+    expect(g.data.length).toBe(14 * 9);
+    for (let y = 0; y < 9; y++) {
+      for (let x = 0; x < 14; x++) {
+        expect(g.sample(x, y)).toBe(x < 10 && y < 6 ? f.sample(x, y) : 0);
+      }
+    }
+  });
+
   it('sample outside returns 0', () => {
     const f = new PheromoneField(10, 10);
     f.data.fill(1);

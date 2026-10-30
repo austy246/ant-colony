@@ -1,14 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
-import { generateTerrain, speedAt, type Terrain } from './terrain';
+import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
 /** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
 export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry' | 'nest';
@@ -71,9 +71,6 @@ const YOUNG_GROW = 1.5;
 const YOUNG_SPAN = 60;
 const YOUNG_K = 0.15;
 const YOUNG_MAX = 0.6;
-/** Cells of the explored grid (EXPLORE_CELL px each). */
-const EXPLORE_W = Math.ceil(WORLD_W / EXPLORE_CELL);
-const EXPLORE_H = Math.ceil(WORLD_H / EXPLORE_CELL);
 /** Per-substep decay factor of the explored grid (half-life EXPLORE_HALF_LIFE_S). */
 const EXPLORE_DECAY = Math.exp((-STEP_S * Math.LN2) / EXPLORE_HALF_LIFE_S);
 /** Explored value a wandering ant adds to its cell per second spent there. */
@@ -164,6 +161,8 @@ export class World {
   mode: GameMode = 'sandbox';
   /** Map growth step 0..MAX_MAP_STEP; grown by the colony in normal mode, see terrainSize. */
   mapStep = 0;
+  /** Bumped on every map growth step (the terrain, pheromone field and explored grid are new objects then). */
+  mapVersion = 0;
   /** Normal mode: seconds until the next spontaneous prey / food appearance (0 = draw a new wait now). */
   spawnTimer = 0;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
@@ -171,12 +170,16 @@ export class World {
   /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
   boostUntil = 0;
   /**
-   * Coarse "where have ants been" map (EXPLORE_W x EXPLORE_H cells of EXPLORE_CELL px, row-major): wandering ants add
+   * Coarse "where have ants been" map (exploreW x exploreH cells of EXPLORE_CELL px, row-major): wandering ants add
    * to their cell, values decay with half-life EXPLORE_HALF_LIFE_S and are capped at EXPLORE_CAP; wanderers prefer
    * headings toward less explored ground. TRANSIENT: never saved, empty after a load (it refills within a minute).
-   * Treat as read-only outside the world (tests may poke values to arrange a situation).
+   * Treat as read-only outside the world (tests may poke values to arrange a situation). Covers the whole current
+   * map: a map growth step replaces it with a bigger grid (old cells kept at the same cell coordinates).
    */
-  readonly explored = new Float32Array(EXPLORE_W * EXPLORE_H);
+  explored: Float32Array;
+  /** Columns / rows of the explored grid (ceil of the terrain size / EXPLORE_CELL). */
+  private exploreW: number;
+  private exploreH: number;
   private acc = 0;
   /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
   private rescueTimer = 0;
@@ -188,6 +191,9 @@ export class World {
     this.terrain = terrain;
     this.pher = pher;
     this.rng = rng;
+    this.exploreW = Math.ceil(terrain.w / EXPLORE_CELL);
+    this.exploreH = Math.ceil(terrain.h / EXPLORE_CELL);
+    this.explored = new Float32Array(this.exploreW * this.exploreH);
     this.peakStock = this.stock;
     this.peakLarvae = this.larvae;
   }
@@ -363,6 +369,29 @@ export class World {
     }
   }
 
+  /**
+   * Grows the map step by step from `mapStep` up to min(step, MAX_MAP_STEP); a lower or equal step does nothing.
+   * Each step extends the terrain to the right and down (all coordinates stay valid) and replaces terrain, pheromone
+   * field and explored grid with bigger copies. Uses no randomness of the world's rng.
+   */
+  growMapTo(step: number): void {
+    const target = Math.min(MAX_MAP_STEP, Math.floor(step));
+    while (this.mapStep < target) {
+      const next = this.mapStep + 1;
+      this.terrain = extendTerrain(this.terrain, next);
+      this.pher = this.pher.grown(this.terrain.w, this.terrain.h);
+      const ow = this.exploreW;
+      const oh = this.exploreH;
+      const old = this.explored;
+      this.exploreW = Math.ceil(this.terrain.w / EXPLORE_CELL);
+      this.exploreH = Math.ceil(this.terrain.h / EXPLORE_CELL);
+      this.explored = new Float32Array(this.exploreW * this.exploreH);
+      for (let y = 0; y < oh; y++) this.explored.set(old.subarray(y * ow, (y + 1) * ow), y * this.exploreW);
+      this.mapStep = next;
+      this.mapVersion++;
+    }
+  }
+
   step(dt: number): void {
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.acc += Math.min(dt, MAX_DT);
@@ -380,7 +409,12 @@ export class World {
     this.resolveTouches();
     this.hatch();
     this.rescue();
-    if (this.mode === 'normal') updateEnvironment(this);
+    if (this.mode === 'normal') {
+      // The map follows the colony size, one step per substep at most, and never shrinks.
+      const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
+      if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
+      updateEnvironment(this);
+    }
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();
@@ -738,7 +772,7 @@ export class World {
         desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
       }
       const range = YOUNG_R0 + YOUNG_GROW * ant.age;
-      if (homeD > range && range < WORLD_W + WORLD_H) {
+      if (homeD > range && range < this.terrain.w + this.terrain.h) {
         const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
@@ -833,9 +867,9 @@ export class World {
 
   /** Cell index of the explored grid under (x, y), clamped to the world. */
   private exploreIndex(x: number, y: number): number {
-    const cx = Math.max(0, Math.min(EXPLORE_W - 1, Math.floor(x / EXPLORE_CELL)));
-    const cy = Math.max(0, Math.min(EXPLORE_H - 1, Math.floor(y / EXPLORE_CELL)));
-    return cy * EXPLORE_W + cx;
+    const cx = Math.max(0, Math.min(this.exploreW - 1, Math.floor(x / EXPLORE_CELL)));
+    const cy = Math.max(0, Math.min(this.exploreH - 1, Math.floor(y / EXPLORE_CELL)));
+    return cy * this.exploreW + cx;
   }
 
   private markExplored(x: number, y: number): void {

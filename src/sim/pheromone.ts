@@ -16,6 +16,13 @@ export class PheromoneField {
     this.data = new Float32Array(w * h);
   }
 
+  /** A new w x h field (at least the current size) with every old value at the same x, y; new cells are 0. */
+  grown(w: number, h: number): PheromoneField {
+    const g = new PheromoneField(Math.max(w, this.w), Math.max(h, this.h));
+    for (let y = 0; y < this.h; y++) g.data.set(this.data.subarray(y * this.w, (y + 1) * this.w), y * g.w);
+    return g;
+  }
+
   private index(x: number, y: number): number {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return -1;
     const cx = Math.floor(x);
