@@ -7,7 +7,7 @@ import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_ST
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
-import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
+import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
   buildSurfaceOverlayCanvas,
@@ -113,9 +113,15 @@ export class Renderer {
     c.fillRect(0, 0, w, h);
     c.imageSmoothingEnabled = false;
 
-    if (this.terrainRef !== this.world.terrain || !this.terrainCanvas) {
-      this.terrainRef = this.world.terrain;
-      this.terrainCanvas = renderTerrain(this.world.terrain, this.make);
+    const terrain = this.world.terrain;
+    if (this.terrainRef !== terrain || !this.terrainCanvas) {
+      // Map growth keeps the ground already painted and adds only the new strips (cheap, nothing on screen changes).
+      const prev = this.terrainRef;
+      this.terrainCanvas =
+        this.terrainCanvas && prev && isGrowthOf(prev, terrain)
+          ? extendTerrainCanvas(this.terrainCanvas, terrain, terrainStep(prev), this.make)
+          : renderTerrain(terrain, this.make);
+      this.terrainRef = terrain;
     }
 
     // CSS px -> device px, then camera.

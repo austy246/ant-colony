@@ -1,6 +1,6 @@
-import { NEST } from '../sim/constants';
+import { MAX_MAP_STEP, NEST } from '../sim/constants';
 import { createRng } from '../sim/rng';
-import type { Feature, Terrain } from '../sim/terrain';
+import { terrainSize, type Feature, type Terrain } from '../sim/terrain';
 import { FINE as F } from './fine';
 import { hash2, Raster, shade, vnoise } from './raster';
 import { SHADOW, type Ctx2D } from './sprites';
@@ -32,16 +32,41 @@ const BARK = { shade: '#2e1d10', under: '#3a2517', base: '#4c3320', mid: '#6b4a2
 const RIM = ['#4b3a28', '#5f4a33', '#6b5238', '#7d6244', '#8d7152'];
 const PEBBLE = ['#4a4036', '#645a4c', '#7d7262', '#968a76'];
 
-function paintGround(R: Raster, r: () => number, seed: number): void {
+/** Rectangle in fine px, end exclusive. */
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/**
+ * What one paint pass covers (fine px): the rectangle 0..W x 0..H minus the old rectangle 0..OW x 0..OH (empty for the
+ * base pass). `n` scales the clod / pebble / crack counts (1 = the base map).
+ */
+interface PassArea {
+  W: number;
+  H: number;
+  OW: number;
+  OH: number;
+  n: number;
+}
+
+/**
+ * Ground texture of the pass area (only the pixels inside `clip`), then clods, pebbles and cracks scattered over the
+ * pass area (pixels outside the raster are dropped). The texture is hashed by coordinates, so neighbouring passes join
+ * seamlessly; the base pass draws its scatter exactly as the single-pass renderer always did (r()*W, r()*H).
+ */
+function paintGround(R: Raster, r: () => number, seed: number, a: PassArea, clip: Box): void {
   const s1 = (seed * 7 + 1) | 0;
   const s2 = (seed * 13 + 2) | 0;
   const s3 = (seed * 29 + 3) | 0;
   const s4 = (seed * 31 + 4) | 0;
   const s5 = (seed * 37 + 5) | 0;
-  const W = R.w;
-  const H = R.h;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
+  const { W, H, OW, OH } = a;
+  for (let y = Math.max(0, clip.y0); y < Math.min(H, clip.y1); y++) {
+    for (let x = Math.max(0, clip.x0); x < Math.min(W, clip.x1); x++) {
+      if (x < OW && y < OH) continue;
       // Soft patches of lighter / darker soil (three octaves of value noise), dithered at the band borders.
       const n = 0.45 * vnoise(x, y, 70, s1) + 0.33 * vnoise(x, y, 26, s2) + 0.22 * vnoise(x, y, 9, s3);
       const v = n + (hash2(x, y, s4) - 0.5) * 0.09;
@@ -52,35 +77,55 @@ function paintGround(R: Raster, r: () => number, seed: number): void {
       R.px(x, y, col);
     }
   }
+  // A uniform point of the pass area: the whole rectangle (base) or the right / bottom strip by area.
+  const rightA = (W - OW) * H;
+  const bottomA = OW * (H - OH);
+  const point = (): [number, number] => {
+    if (OW === 0 && OH === 0) {
+      const x = r() * W;
+      return [x, r() * H];
+    }
+    if (r() * (rightA + bottomA) < rightA) {
+      const x = OW + r() * (W - OW);
+      return [x, r() * H];
+    }
+    const x = r() * OW;
+    return [x, OH + r() * (H - OH)];
+  };
+  const near = (x: number, y: number, m: number): boolean =>
+    x + m >= clip.x0 && x - m < clip.x1 && y + m >= clip.y0 && y - m < clip.y1;
   // Clods: small shaded lumps of earth.
-  for (let i = 0; i < 1500; i++) {
-    const cx = r() * W;
-    const cy = r() * H;
+  const clods = Math.round(1500 * a.n);
+  for (let i = 0; i < clods; i++) {
+    const [cx, cy] = point();
     const rx = 1.3 + r() * 2.1;
     const ry = 1 + r() * 1.3;
+    const bias = (r() - 0.5) * 0.18;
+    if (!near(cx, cy, 6)) continue;
     R.ell(cx + 1, cy + 1, rx, ry, '#1c120a', 0.3);
-    R.dome(cx, cy, rx, ry, CLOD, { jitter: 0.25, seed: i, bias: (r() - 0.5) * 0.18 });
+    R.dome(cx, cy, rx, ry, CLOD, { jitter: 0.25, seed: i, bias });
   }
   // Tiny pebbles with a lit corner and a contact shadow.
-  for (let i = 0; i < 240; i++) {
-    const cx = r() * W;
-    const cy = r() * H;
+  const pebbles = Math.round(240 * a.n);
+  for (let i = 0; i < pebbles; i++) {
+    const [cx, cy] = point();
     const rx = 1.2 + r() * 0.9;
     const ry = 0.9 + r() * 0.6;
+    if (!near(cx, cy, 5)) continue;
     R.ell(cx + 1, cy + 1, rx, ry, '#1a1008', 0.5);
     R.dome(cx, cy, rx, ry, PEBBLE, { jitter: 0.2, seed: i + 9 });
   }
   // Hairline cracks / root scratches.
-  for (let i = 0; i < 110; i++) {
-    let x = r() * W;
-    let y = r() * H;
-    let a = r() * 6.28;
+  const cracks = Math.round(110 * a.n);
+  for (let i = 0; i < cracks; i++) {
+    let [x, y] = point();
+    let ang = r() * 6.28;
     const len = 5 + r() * 9;
     for (let k = 0; k < len; k++) {
       R.px(x, y, '#2a1c11', 0.55);
-      a += (r() - 0.5) * 0.7;
-      x += Math.cos(a);
-      y += Math.sin(a) * 0.6;
+      ang += (r() - 0.5) * 0.7;
+      x += Math.cos(ang);
+      y += Math.sin(ang) * 0.6;
     }
   }
 }
@@ -284,27 +329,30 @@ function paintTwig(R: Raster, w: Twig, k: number): void {
 
 type Stone = Extract<Feature, { kind: 'stone' }>;
 
-function paintStone(R: Raster, s: Stone, k: number, r: () => number): void {
+/** `body` false skips the (costly) shaded body when it lies outside the raster; the rng draws stay the same. */
+function paintStone(R: Raster, s: Stone, k: number, r: () => number, body = true): void {
   const cx = s.x * F;
   const cy = s.y * F;
   const rx = s.rx * F;
   const ry = s.ry * F;
-  // Ground darkening + contact shadow.
-  R.ell(cx + 1, cy + 2, rx + 3, ry + 2.5, SHADOW, 0.35);
-  R.ell(cx + 2, cy + 3, rx + 1.2, ry + 0.8, SHADOW);
-  R.dome(cx, cy, rx, ry, STONE, {
-    jitter: 0.2,
-    seed: k,
-    bias: -0.28,
-    contrast: 1.45,
-    noise: (x, y) => (vnoise(x, y, 6, k) - 0.5) * 0.3,
-  });
-  // Dark lower rim (touching the ground) and a thin lit upper-left rim.
-  R.eachInEllipse(cx, cy, rx, ry, (ix, iy, nx, ny) => {
-    const q = Math.hypot(nx, ny);
-    if (q > 0.84 && ny > 0.15 && nx > -0.7) R.px(ix, iy, '#34362f', q > 0.92 ? 0.95 : 0.6);
-    else if (q > 0.9 && nx + ny < -0.85) R.px(ix, iy, '#a9aba5', 0.8);
-  });
+  if (body) {
+    // Ground darkening + contact shadow.
+    R.ell(cx + 1, cy + 2, rx + 3, ry + 2.5, SHADOW, 0.35);
+    R.ell(cx + 2, cy + 3, rx + 1.2, ry + 0.8, SHADOW);
+    R.dome(cx, cy, rx, ry, STONE, {
+      jitter: 0.2,
+      seed: k,
+      bias: -0.28,
+      contrast: 1.45,
+      noise: (x, y) => (vnoise(x, y, 6, k) - 0.5) * 0.3,
+    });
+    // Dark lower rim (touching the ground) and a thin lit upper-left rim.
+    R.eachInEllipse(cx, cy, rx, ry, (ix, iy, nx, ny) => {
+      const q = Math.hypot(nx, ny);
+      if (q > 0.84 && ny > 0.15 && nx > -0.7) R.px(ix, iy, '#34362f', q > 0.92 ? 0.95 : 0.6);
+      else if (q > 0.9 && nx + ny < -0.85) R.px(ix, iy, '#a9aba5', 0.8);
+    });
+  }
   // Cracks walking inwards from the rim, never reaching the centre.
   const cracks = 1 + ((r() * 2) | 0);
   for (let c = 0; c < cracks; c++) {
@@ -411,26 +459,88 @@ function paintCrater(R: Raster, r: () => number): void {
 }
 
 /**
- * Prerenders the whole ground (soil texture, stones, twigs, needles, leaf litter, moss, grass, nest crater) into
- * one t.w*FINE x t.h*FINE canvas (fine pixels = half art pixels), pixel by pixel in a software raster.
- * A feature at (x, y) in art pixels lies at (x*FINE, y*FINE) here, sizes scale by FINE, so what is drawn matches the
- * simulation's speed map exactly; only the amount of detail differs. Deterministic for a given terrain (seed ^ 0x51ed).
+ * Growth step of a terrain, read from its size: terrainSize(s) for s = 1..MAX_MAP_STEP; any other size (the base map,
+ * custom test terrains) counts as step 0 and is painted in one pass over the whole map.
  */
-export function renderTerrain(t: Terrain, make: CanvasFactory = defaultMake): CanvasLike {
-  const W = t.w * F;
-  const H = t.h * F;
-  const R = new Raster(W, H);
-  const r = createRng(t.seed ^ 0x51ed);
-  const sk = t.seed & 255;
-  paintGround(R, r, t.seed);
+export function terrainStep(t: Pick<Terrain, 'w' | 'h'>): number {
+  for (let s = 1; s <= MAX_MAP_STEP; s++) {
+    const z = terrainSize(s);
+    if (z.w === t.w && z.h === t.h) return s;
+  }
+  return 0;
+}
+
+/** True if `t` is `prev` grown by extendTerrain (same seed, bigger step, the old features kept as they are). */
+export function isGrowthOf(prev: Terrain, t: Terrain): boolean {
+  const ps = terrainStep(prev);
+  const base = terrainSize(ps);
+  if (prev.w !== base.w || prev.h !== base.h) return false;
+  if (t.seed !== prev.seed || terrainStep(t) <= ps) return false;
+  const n = prev.features.length;
+  return t.features.length >= n && (n === 0 || t.features[n - 1] === prev.features[n - 1]);
+}
+
+/** Pass p covers terrainSize(p) minus terrainSize(p - 1); pass 0 is the base map (the whole map at step 0). */
+function passArea(t: Terrain, p: number): PassArea {
+  if (p === 0) {
+    const z = terrainStep(t) === 0 ? { w: t.w, h: t.h } : terrainSize(0);
+    return { W: z.w * F, H: z.h * F, OW: 0, OH: 0, n: 1 };
+  }
+  const o = terrainSize(p - 1);
+  const z = terrainSize(p);
+  const b = terrainSize(0);
+  return { W: z.w * F, H: z.h * F, OW: o.w * F, OH: o.h * F, n: (z.w * z.h - o.w * o.h) / (b.w * b.h) };
+}
+
+/** Features per pass, by anchor point: extendTerrain puts every new feature's anchor into the new L-shaped area. */
+function featuresByPass(t: Terrain): Feature[][] {
+  const step = terrainStep(t);
+  const out: Feature[][] = Array.from({ length: step + 1 }, () => []);
+  if (step === 0) {
+    out[0] = t.features;
+    return out;
+  }
+  for (const f of t.features) {
+    const x = f.kind === 'twig' ? f.x0 : f.x;
+    const y = f.kind === 'twig' ? f.y0 : f.y;
+    let p = 0;
+    for (; p < step; p++) {
+      const z = terrainSize(p);
+      if (x < z.w && y < z.h) break;
+    }
+    out[p].push(f);
+  }
+  return out;
+}
+
+/**
+ * One paint pass: the ground of the pass area and the pass's own features, clipped to `clip` (the raster). Pass 0 uses
+ * the terrain's render rng exactly as the single-pass renderer always did; pass p >= 1 has its own rng and seeds
+ * (deterministic in (seed, p)), so painting a later pass never changes how an earlier one looks. Features whose
+ * footprint misses the clip are skipped, but their rng draws are still made, so clipping never shifts the stream.
+ */
+function paintPass(R: Raster, t: Terrain, p: number, feats: Feature[], clip: Box): void {
+  const a = passArea(t, p);
+  const r = createRng(p === 0 ? t.seed ^ 0x51ed : (t.seed ^ 0x51ed ^ Math.imul(p, 0x2c1b3c6d)) >>> 0);
+  const sk = (t.seed & 255) + p * 1009;
+  const hit = (x0: number, y0: number, x1: number, y1: number): boolean =>
+    x1 >= clip.x0 && x0 < clip.x1 && y1 >= clip.y0 && y0 < clip.y1;
+  paintGround(R, r, t.seed, a, clip);
 
   const of = <K extends Feature['kind']>(kind: K) =>
-    t.features.filter((f): f is Extract<Feature, { kind: K }> => f.kind === kind);
+    feats.filter((f): f is Extract<Feature, { kind: K }> => f.kind === kind);
 
-  for (const [i, m] of of('moss').entries()) paintMoss(R, m.x * F, m.y * F, 100 + i * 17 + sk);
+  for (const [i, m] of of('moss').entries()) {
+    const cx = m.x * F;
+    const cy = m.y * F;
+    if (hit(cx - 52, cy - 28, cx + 52, cy + 28)) paintMoss(R, cx, cy, 100 + i * 17 + sk);
+  }
 
   for (const [i, l] of of('leaf').entries()) {
-    paintLeaf(R, l.x * F, l.y * F, LEAVES[l.c % LEAVES.length], r() * Math.PI * 2, 200 + i * 5 + sk);
+    const ang = r() * Math.PI * 2;
+    const cx = l.x * F;
+    const cy = l.y * F;
+    if (hit(cx - 20, cy - 20, cx + 20, cy + 20)) paintLeaf(R, cx, cy, LEAVES[l.c % LEAVES.length], ang, 200 + i * 5 + sk);
   }
 
   // Needle pairs: consecutive needles sharing a base point.
@@ -452,16 +562,84 @@ export function renderTerrain(t: Terrain, make: CanvasFactory = defaultMake): Ca
     paintNeedle(R, n.x * F, n.y * F, n.a, n.len * F, main, tip, second ? '#4c3320' : '#6b4a2c');
   }
 
-  for (const [i, w] of of('twig').entries()) paintTwig(R, w, 300 + i * 3 + sk);
-  for (const [i, s] of of('stone').entries()) paintStone(R, s, 400 + i * 3 + sk, r);
+  for (const [i, w] of of('twig').entries()) {
+    const m = (w.t * F) / 2 + 32;
+    const bx0 = Math.min(w.x0, w.x1) * F - m;
+    const by0 = Math.min(w.y0, w.y1) * F - m;
+    if (hit(bx0, by0, Math.max(w.x0, w.x1) * F + m, Math.max(w.y0, w.y1) * F + m)) paintTwig(R, w, 300 + i * 3 + sk);
+  }
+  for (const [i, s] of of('stone').entries()) {
+    const ex = s.rx * F + 5;
+    const ey = s.ry * F + 5;
+    paintStone(R, s, 400 + i * 3 + sk, r, hit(s.x * F - ex, s.y * F - ey, s.x * F + ex, s.y * F + ey));
+  }
   for (const g of of('grass')) paintGrass(R, g.x, g.y, r);
-  paintCrater(R, r);
+  // the crater draws last, so skipping it (when it misses the clip) cannot shift any later rng draw
+  if (p === 0 && hit(NEST.x * F - 32, NEST.y * F - 20, NEST.x * F + 32, NEST.y * F + 20)) paintCrater(R, r);
+}
 
-  const canvas = make(W, H);
+/** Paints the L-shaped area that growth step s adds (right strip, bottom strip) onto `c`; earlier passes spill over. */
+function paintStrip(c: Ctx2D, t: Terrain, s: number, byPass: Feature[][]): void {
+  const o = terrainSize(s - 1);
+  const z = terrainSize(s);
+  const boxes: Box[] = [
+    { x0: o.w * F, y0: 0, x1: z.w * F, y1: z.h * F },
+    { x0: 0, y0: o.h * F, x1: o.w * F, y1: z.h * F },
+  ];
+  for (const b of boxes) {
+    const R = new Raster(b.x1 - b.x0, b.y1 - b.y0, -b.x0, -b.y0);
+    for (let p = 0; p <= s; p++) paintPass(R, t, p, byPass[p], b);
+    const img = c.createImageData(R.w, R.h);
+    img.data.set(R.data);
+    c.putImageData(img, b.x0, b.y0);
+  }
+}
+
+function context(canvas: CanvasLike): Ctx2D {
   const c = canvas.getContext('2d');
   if (!c) throw new Error('2d context unavailable');
-  const img = c.createImageData(W, H);
+  return c;
+}
+
+/**
+ * Prerenders the whole ground (soil texture, stones, twigs, needles, leaf litter, moss, grass, nest crater) into
+ * one t.w*FINE x t.h*FINE canvas (fine pixels = half art pixels), pixel by pixel in a software raster.
+ * A feature at (x, y) in art pixels lies at (x*FINE, y*FINE) here, sizes scale by FINE, so what is drawn matches the
+ * simulation's speed map exactly; only the amount of detail differs. Deterministic for a given terrain (seed ^ 0x51ed).
+ * A grown terrain (terrainStep > 0) is painted as the base map followed by each growth step's strip, i.e. exactly what
+ * extendTerrainCanvas produces when the map grows during play.
+ */
+export function renderTerrain(t: Terrain, make: CanvasFactory = defaultMake): CanvasLike {
+  const step = terrainStep(t);
+  const byPass = featuresByPass(t);
+  const a = passArea(t, 0);
+  const R = new Raster(a.W, a.H);
+  paintPass(R, t, 0, byPass[0], { x0: 0, y0: 0, x1: a.W, y1: a.H });
+
+  const canvas = make(t.w * F, t.h * F);
+  const c = context(canvas);
+  const img = c.createImageData(a.W, a.H);
   img.data.set(R.data);
   c.putImageData(img, 0, 0);
+  for (let s = 1; s <= step; s++) paintStrip(c, t, s, byPass);
+  return canvas;
+}
+
+/**
+ * Map growth: `prev` is the canvas of the terrain at step `fromStep`, `t` the same terrain grown by extendTerrain.
+ * Returns a canvas of the new size with `prev` copied unchanged at 0,0 and only the new strips painted, so the ground
+ * already on screen stays pixel-identical and the cost follows the new area. Gives the same pixels as renderTerrain(t).
+ */
+export function extendTerrainCanvas(prev: CanvasLike, t: Terrain, fromStep: number, make: CanvasFactory = defaultMake): CanvasLike {
+  const o = terrainSize(fromStep);
+  const step = terrainStep(t);
+  if (step <= fromStep || prev.width !== o.w * F || prev.height !== o.h * F) {
+    throw new Error(`extendTerrainCanvas: ${prev.width}x${prev.height} canvas cannot grow from step ${fromStep} to ${t.w}x${t.h}`);
+  }
+  const canvas = make(t.w * F, t.h * F);
+  const c = context(canvas);
+  c.putImageData(context(prev).getImageData(0, 0, prev.width, prev.height), 0, 0);
+  const byPass = featuresByPass(t);
+  for (let s = fromStep + 1; s <= step; s++) paintStrip(c, t, s, byPass);
   return canvas;
 }

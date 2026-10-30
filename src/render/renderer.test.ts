@@ -4,7 +4,7 @@ import { Surface } from '../sim/terrain';
 import { World } from '../sim/world';
 import { Camera } from '../ui/camera';
 import { Renderer } from './renderer';
-import type { CanvasLike } from './terrainRender';
+import { renderTerrain, type CanvasLike } from './terrainRender';
 
 const make = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
 
@@ -320,6 +320,36 @@ describe('Renderer follows the map size', () => {
     expect(sized(made, world.terrain.w * 2, world.terrain.h * 2).length).toBe(1);
     r.draw();
     expect(sized(made, world.terrain.w * 2, world.terrain.h * 2).length).toBe(1);
+  });
+
+  it('on growth the ground already on screen stays pixel-identical and equals a from-scratch render', () => {
+    const { world, r, made } = growSetup();
+    r.draw();
+    const before = sized(made, 640, 400)[0];
+    const px = (c: CanvasLike, w: number, h: number) => c.getContext('2d')!.getImageData(0, 0, w, h).data;
+    const same = (a: Uint8ClampedArray, b: Uint8ClampedArray): boolean => a.length === b.length && a.every((v, i) => v === b[i]);
+    expect(same(px(before, 640, 400), px(renderTerrain(world.terrain, make), 640, 400))).toBe(true);
+    // mark the old canvas: the grown canvas must be built from it (copied), not repainted from scratch
+    const bc = before.getContext('2d')!;
+    bc.fillStyle = '#ff00ff';
+    bc.fillRect(10, 10, 1, 1);
+    const old = px(before, 640, 400);
+    world.growMapTo(1);
+    r.draw();
+    const after = sized(made, world.terrain.w * 2, world.terrain.h * 2)[0];
+    expect(same(px(after, 640, 400), old), 'old rectangle copied unchanged').toBe(true);
+    // the new strips are what a from-scratch render of the grown terrain shows there
+    const fresh = px(renderTerrain(world.terrain, make), after.width, after.height);
+    const got = px(after, after.width, after.height);
+    const W = after.width;
+    let diff = 0;
+    for (let y = 0; y < after.height; y++) {
+      for (let x = 0; x < W; x++) {
+        if (x < 640 && y < 400) continue;
+        for (let k = 0; k < 4; k++) if (got[(y * W + x) * 4 + k] !== fresh[(y * W + x) * 4 + k]) diff++;
+      }
+    }
+    expect(diff).toBe(0);
   });
 
   it('trail canvas, glow and overlay have the size of the map and are rebuilt on growth', () => {
