@@ -592,11 +592,18 @@ export class World {
     if (this.nurseSlot < 0) this.nurseSlot = slot; // fresh world or a load: wait for the next boundary
     if (slot <= this.nurseSlot) return;
     this.nurseSlot = slot;
+    // Majors (big soldiers) are not nest workers: any that were nurses go out to the surface.
+    for (const a of this.ants) {
+      if (a.role === 'nurse' && a.major) {
+        a.role = 'forager';
+        this.emerge(a, 'wander');
+      }
+    }
     const want = this.desiredNurses;
     const have = this.nurses;
     if (have < want) {
       const candidates = this.ants
-        .filter((a) => a.state === 'nest' && a.role !== 'nurse')
+        .filter((a) => a.state === 'nest' && a.role !== 'nurse' && !a.major)
         .sort((a, b) => (a.nestKind === b.nestKind ? 0 : a.nestKind === 'hatch' ? -1 : 1) || a.timer - b.timer);
       for (const a of candidates.slice(0, want - have)) {
         a.role = 'nurse';

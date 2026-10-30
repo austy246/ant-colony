@@ -194,12 +194,12 @@ describe('straying off a trail', () => {
     return { starts, durations };
   }
 
-  it('a pulled wanderer (curiosity 1, stubbornness 1) is distracted about once per 12 s: 3.3-6.5 times in 60 s on average', () => {
+  it('a pulled wanderer (curiosity 1, stubbornness 1) is distracted about once per 21 s: 2.1-4.2 times in 60 s on average', () => {
     const { starts } = strayEpisodes(21, 40, 60, 1, 1);
     const mean = starts.reduce((s, v) => s + v, 0) / starts.length;
-    // Expected cycle: 1 / (0.004 * 30) = 8.3 s pulled + 4 s distracted -> ~4.9 per minute.
-    expect(mean).toBeGreaterThan(3.3);
-    expect(mean).toBeLessThan(6.5);
+    // Expected cycle: 1 / (0.002 * 30) = 16.7 s pulled + 4 s distracted -> ~2.9 per minute.
+    expect(mean).toBeGreaterThan(2.1);
+    expect(mean).toBeLessThan(4.2);
   });
 
   it('curious ants stray more than stubborn ones', () => {

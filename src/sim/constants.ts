@@ -100,7 +100,7 @@ export const CURIOSITY_MAX = 1.6;
 export const STUBBORNNESS_MIN = 0.5;
 export const STUBBORNNESS_MAX = 1.5;
 /** Chance per substep that a wanderer pulled by pheromone gets distracted (times curiosity / stubbornness). */
-export const STRAY_P = 0.004;
+export const STRAY_P = 0.002;
 /** A pheromone pull (weight * trail strength) must exceed this for the ant to count as "following a trail". */
 export const STRAY_PULL_MIN = 0.05;
 /** A distracted ant ignores pheromone for STRAY_MIN_S + (STRAY_MAX_S - STRAY_MIN_S) * random seconds. */

@@ -22,7 +22,7 @@ Na začátku nové hry si vybereš mód.
 
 **Pavouk** (v Sandboxu vpravo dole, v Normalu vpravo nahoře nebo dole): je **velký**, chodí po své pavučině k chycené kořisti a sedí v rohu mapy a kolem něj je **pavučina**. Mravenec, který do ní vstoupí, se **chytí** a stojí na místě; pavouk chycené mravence postupně **sní**, jednoho každých **15 sekund** (tráví), obyčejné mravence dřív (nejdéle chyceného jako prvního). Chyceného **majora** si nechá viset **minutu**, než ho sní, takže mu na pomoc může přijít druhý major: když se do pavučiny chytí **dva majoři** najednou, pavouka **přemůžou**, všichni chycení se osvobodí a pavouk zmizí. Toulaví mravenci vlákna cítí a pavučině se vyhýbají (ne vždy úspěšně); mravenci, kteří jdou za jídlem nebo ho nesou, na ni nedbají. Brouci a housenky se pavučině vyhýbají, ale **mouchy** (které teď chodí) se do ní chytají; pavouk k nim dojde a po **6 sekundách** je sní, dřív než mravence. Po **10 minutách** se vrátí v některém z rohů.
 
-**Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie.
+**Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie. Majoři se **nestarají o hnízdo**: nikdy z nich nejsou ošetřovatelé a stále chodí po povrchu.
 
 Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane i při poklesu zásob nebo larev.
 

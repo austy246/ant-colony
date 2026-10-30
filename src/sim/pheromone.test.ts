@@ -63,16 +63,16 @@ describe('PheromoneField', () => {
     }
   });
 
-  it('half-life is 6 s', () => {
-    expect(PHEROMONE_HALF_LIFE_S).toBe(6);
+  it('half-life is 12 s', () => {
+    expect(PHEROMONE_HALF_LIFE_S).toBe(12);
   });
 
-  it('a fully fresh trail cell (5) is below 0.06 after 40 s and invisible after 45 s', () => {
+  it('a fully fresh trail cell (5) is below 0.06 after 80 s and invisible after 110 s', () => {
     const f = new PheromoneField(10, 10);
     f.deposit(5, 5, MAX_PHEROMONE);
-    for (let i = 0; i < 40 * 30; i++) f.step(STEP_S);
+    for (let i = 0; i < 80 * 30; i++) f.step(STEP_S);
     expect(f.sample(5, 5)).toBeLessThan(0.06);
-    for (let i = 0; i < 5 * 30; i++) f.step(STEP_S);
+    for (let i = 0; i < 30 * 30; i++) f.step(STEP_S);
     expect(pheromoneAlpha(f.sample(5, 5))).toBe(0);
   });
 

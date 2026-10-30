@@ -475,7 +475,7 @@ describe('World', () => {
     const food = deadFood(w, 'beetle', NEST.x + 60, NEST.y);
     expect(food).not.toBeNull();
     for (let i = 0; i < 5; i++) w.spawnAnt();
-    // With the 6 s half-life the trail only lives while ants keep carrying (beetle is eaten up by ~35 s; 90 s
+    // With the 12 s half-life the trail only lives while ants keep carrying (beetle is eaten up by ~35 s; 90 s
     // would measure an already evaporated trail). At 30 s measured: on-line sum ~59 vs 0 off the line.
     run(w, 30);
     const sumRow = (y: number) => {

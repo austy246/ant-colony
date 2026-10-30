@@ -234,3 +234,23 @@ describe('save: nurses', () => {
     expect(r.ants[1].state).toBe('nest');
   });
 });
+
+describe('majors and the nest', () => {
+  it('majors are never promoted to nurses, and a major nurse goes out to the surface', () => {
+    const w = World.create(41, 'normal');
+    w.noSpider = true;
+    w.stock = 1e6;
+    for (let i = 0; i < 12; i++) w.spawnAnt(true);
+    for (const a of w.ants) a.major = true;
+    for (let i = 0; i < 60; i++) w.step(0.5);
+    expect(w.ants.filter((a) => a.role === 'nurse' && a.major)).toHaveLength(0);
+
+    const m = w.spawnAnt(true);
+    m.major = true;
+    m.role = 'nurse';
+    m.nestKind = 'nurse';
+    for (let i = 0; i < 10; i++) w.step(0.5);
+    expect(m.role).toBe('forager');
+    expect(m.state).not.toBe('nest');
+  });
+});

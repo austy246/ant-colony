@@ -1,7 +1,8 @@
 import { MAX_PHEROMONE, NEST } from './constants';
 
-/** Evaporation half-life: a trail with no more traffic is essentially gone after ~40 s. */
-export const PHEROMONE_HALF_LIFE_S = 6;
+/** Evaporation half-life: a trail with no more traffic is essentially gone after ~80 s.
+ * (Doubled from 6 s so trails last longer and ants have time to find them.) */
+export const PHEROMONE_HALF_LIFE_S = 12;
 const MIN_VALUE = 0.01;
 const GLOW_RADIUS = 40;
 
