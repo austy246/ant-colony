@@ -1,7 +1,7 @@
 import { NEST } from './constants';
 import { Surface, type Terrain } from './terrain';
 
-export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom';
+export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar';
 
 /** pieces = number of carryable pieces; value = food per piece (pieces x value is the total food of an item). */
 export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
@@ -11,6 +11,7 @@ export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
   carrion: { pieces: 24, value: 2 / 3 },
   berry: { pieces: 3, value: 1 },
   mushroom: { pieces: 3, value: 1 },
+  sugar: { pieces: 1, value: 1 },
 };
 
 /** Kinds that exist as living creatures until they die. */

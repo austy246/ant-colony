@@ -367,6 +367,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   carrion: buildCarrion,
   berry: buildBerry,
   mushroom: buildMushroom,
+  sugar: buildBerry, // placeholder until Task 9 draws sugar properly
 };
 
 const cache = new Map<FoodKind, Sprite>();

@@ -25,6 +25,12 @@ export const MAJOR_MAX_FRACTION = 0.1;
 export const MAJOR_CARRY_PIECES = 2;
 /** Ant limit in normal mode. */
 export const MAX_ANTS_NORMAL = 2000;
+/** Normal mode: seconds of sim time before another sugar piece can be placed. */
+export const SUGAR_COOLDOWN_S = 300;
+/** Seconds of colony-wide speed boost after an ant delivers sugar to the nest. */
+export const SUGAR_BOOST_S = 60;
+/** Movement speed multiplier of every ant while the sugar boost lasts. */
+export const SUGAR_BOOST_MUL = 1.5;
 export const MAX_PHEROMONE = 5;
 export const STEP_S = 1 / 30;
 /** Seconds an ant gnaws at its food before it takes a piece (each ant: GNAW_S * (0.75 + 0.5 * random)). */

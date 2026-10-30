@@ -191,6 +191,7 @@ describe('prey sprites (fine grid)', () => {
     carrion: [350, 650],
     berry: [260, 500],
     mushroom: [230, 440],
+    sugar: [260, 500], // placeholder (berry sprite) until Task 9
   };
 
   it.each(KINDS)('%s paints a plausible number of opaque pixels', (kind) => {
