@@ -356,6 +356,7 @@ export class World {
   }
 
   placeFood(kind: FoodKind, x: number, y: number): FoodItem | null {
+    if (kind === 'leaf' && this.food.some((f) => f.kind === 'leaf')) return null; // one pile of leaves at a time
     const p = resolvePlacement(this.terrain, x, y);
     if (!p) return null;
     const item: FoodItem = { id: this.nextId++, kind, x: p.x, y: p.y, piecesLeft: FOOD_TABLE[kind].pieces };

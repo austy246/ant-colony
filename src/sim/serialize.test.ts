@@ -171,8 +171,8 @@ describe('validateSave', () => {
   it('piecesLeft accepts 0 up to the largest piece count in FOOD_TABLE (old saves hold smaller values)', () => {
     const g = good();
     const food = (g.food as Record<string, unknown>[])[0];
-    expect(MAX_PIECES).toBe(72);
-    for (const piecesLeft of [0, 2, 6, 20, 24, MAX_PIECES]) {
+    expect(MAX_PIECES).toBe(144);
+    for (const piecesLeft of [0, 2, 6, 20, 24, 72, MAX_PIECES]) {
       expect(validateSave({ ...g, food: [{ ...food, piecesLeft }] }), String(piecesLeft)).not.toBeNull();
     }
   });

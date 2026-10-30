@@ -179,14 +179,14 @@ describe('leaves and caterpillars', () => {
   it('a killed fattened caterpillar leaves all of its meat as carrion', () => {
     const w = flatWorld(34);
     const c = caterpillarAt(w, 150, 100);
-    c.piecesLeft = 60;
+    c.piecesLeft = 100;
     antNear(w, c.x, c.y);
     w.step(STEP_S);
     c.cooldown = 0;
     antNear(w, c.x, c.y);
     w.step(STEP_S);
     expect(c.kind).toBe('carrion');
-    expect(c.piecesLeft).toBe(60);
+    expect(c.piecesLeft).toBe(100);
   });
 
   it('a leaf pile that is eaten up disappears', () => {
@@ -197,6 +197,25 @@ describe('leaves and caterpillars', () => {
     run(w, 5);
     expect(w.food).not.toContain(leaf);
   });
+});
+
+describe('only one pile of leaves at a time', () => {
+  it('a second pile cannot be placed until the first one is eaten up or removed', () => {
+    const w = flatWorld(36);
+    const first = w.placeFood('leaf', 100, 100)!;
+    expect(first).not.toBeNull();
+    expect(w.placeFood('leaf', 150, 100)).toBeNull();
+    expect(w.food.filter((f) => f.kind === 'leaf')).toHaveLength(1);
+    w.removeFood(first.id);
+    expect(w.placeFood('leaf', 150, 100)).not.toBeNull();
+  });
+
+  it('spontaneous spawns never add a second pile of leaves', () => {
+    const w = World.create(37, 'normal');
+    w.noSpider = true;
+    for (let i = 0; i < 4000; i++) w.step(0.5);
+    expect(w.food.filter((f) => f.kind === 'leaf').length).toBeLessThanOrEqual(1);
+  }, 60000);
 });
 
 describe('fly (alive)', () => {

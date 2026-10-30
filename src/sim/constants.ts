@@ -3,8 +3,8 @@ import type { FoodKind } from './food';
 export const WORLD_W = 320;
 export const WORLD_H = 200;
 /** Normal mode: each map growth step adds MAP_STEP_W x MAP_STEP_H px to the map (to the right and down), see terrainSize. */
-export const MAP_STEP_W = 40;
-export const MAP_STEP_H = 25;
+export const MAP_STEP_W = 60;
+export const MAP_STEP_H = 38;
 /** Upper bound of the map growth step: the map keeps growing with the colony up to MAX_ANTS_NORMAL / MAP_STEP_ANTS = 20 steps (2000 ants). */
 export const MAX_MAP_STEP = 20;
 /** The colony needs this many ants per map growth step (step = floor(ants / MAP_STEP_ANTS), never shrinks). */
@@ -41,15 +41,15 @@ export const SUGAR_BOOST_S = 60;
 /** Movement speed multiplier of every ant while the sugar boost lasts. */
 export const SUGAR_BOOST_MUL = 1.5;
 /** Normal mode: seconds between two spontaneous prey / food appearances (uniform in MIN..MAX). */
-export const SPAWN_MIN_S = 20;
-export const SPAWN_MAX_S = 45;
+export const SPAWN_MIN_S = 12;
+export const SPAWN_MAX_S = 30;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
 export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar'>, number> = {
   berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
 export const SPAWN_MAX_FOOD_BASE = 12;
-export const SPAWN_MAX_FOOD_PER_STEP = 2;
+export const SPAWN_MAX_FOOD_PER_STEP = 4;
 /** Living beetles on the map at most BASE + mapStep. */
 export const SPAWN_MAX_BEETLES_BASE = 1;
 export const MAX_PHEROMONE = 5;
@@ -163,8 +163,8 @@ export const LEAF_SENSE = 60;
 export const LEAF_REACH = 2.5;
 /** Seconds a caterpillar needs per leaf unit; each one it eats adds CATERPILLAR_GAIN pieces of meat, up to CATERPILLAR_MAX_PIECES (a full caterpillar stops eating). */
 export const CATERPILLAR_BITE_S = 2.5;
-export const CATERPILLAR_GAIN = 2;
-export const CATERPILLAR_MAX_PIECES = 72;
+export const CATERPILLAR_GAIN = 4;
+export const CATERPILLAR_MAX_PIECES = 144;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

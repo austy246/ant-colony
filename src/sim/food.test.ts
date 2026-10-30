@@ -76,21 +76,21 @@ describe('FOOD_TABLE', () => {
   it('has exactly the six forest kinds plus sugar and leaves', () => {
     expect(Object.keys(FOOD_TABLE).sort()).toEqual(['beetle', 'berry', 'carrion', 'caterpillar', 'fly', 'leaf', 'mushroom', 'sugar']);
     expect(FOOD_TABLE.leaf).toEqual({ pieces: 24, value: 0 });
-    expect(FOOD_TABLE.beetle).toEqual({ pieces: 18 * 3, value: 2 / 3 });
-    expect(FOOD_TABLE.caterpillar).toEqual({ pieces: 12 * 3, value: 2 / 3 });
-    expect(FOOD_TABLE.fly).toEqual({ pieces: 6 * 3, value: 2 / 3 });
-    expect(FOOD_TABLE.carrion).toEqual({ pieces: 24 * 3, value: 2 / 3 });
-    expect(FOOD_TABLE.berry).toEqual({ pieces: 3 * 3, value: 1 });
-    expect(FOOD_TABLE.mushroom).toEqual({ pieces: 3 * 3, value: 1 });
+    expect(FOOD_TABLE.beetle).toEqual({ pieces: 18 * 6, value: 2 / 3 });
+    expect(FOOD_TABLE.caterpillar).toEqual({ pieces: 12 * 6, value: 2 / 3 });
+    expect(FOOD_TABLE.fly).toEqual({ pieces: 6 * 6, value: 2 / 3 });
+    expect(FOOD_TABLE.carrion).toEqual({ pieces: 24 * 6, value: 2 / 3 });
+    expect(FOOD_TABLE.berry).toEqual({ pieces: 3 * 6, value: 1 });
+    expect(FOOD_TABLE.mushroom).toEqual({ pieces: 3 * 6, value: 1 });
   });
 
-  it('total food per item is three times the base size (pieces x value)', () => {
+  it('total food per item is six times the base size (pieces x value)', () => {
     const total = (k: keyof typeof FOOD_TABLE) => FOOD_TABLE[k].pieces * FOOD_TABLE[k].value;
-    expect(total('beetle')).toBeCloseTo(36, 9);
-    expect(total('caterpillar')).toBeCloseTo(24, 9);
-    expect(total('fly')).toBeCloseTo(12, 9);
-    expect(total('carrion')).toBeCloseTo(48, 9);
-    expect(total('berry')).toBeCloseTo(9, 9);
-    expect(total('mushroom')).toBeCloseTo(9, 9);
+    expect(total('beetle')).toBeCloseTo(72, 9);
+    expect(total('caterpillar')).toBeCloseTo(48, 9);
+    expect(total('fly')).toBeCloseTo(24, 9);
+    expect(total('carrion')).toBeCloseTo(96, 9);
+    expect(total('berry')).toBeCloseTo(18, 9);
+    expect(total('mushroom')).toBeCloseTo(18, 9);
   });
 });

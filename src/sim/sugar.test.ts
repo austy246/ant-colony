@@ -28,7 +28,7 @@ describe('sugar', () => {
     expect(SUGAR_COOLDOWN_S).toBe(300);
     expect(SUGAR_BOOST_S).toBe(60);
     expect(SUGAR_BOOST_MUL).toBe(1.5);
-    expect(FOOD_TABLE.sugar).toEqual({ pieces: 3, value: 1 });
+    expect(FOOD_TABLE.sugar).toEqual({ pieces: 6, value: 1 });
   });
 
   it('placeSugar works only in normal mode', () => {
