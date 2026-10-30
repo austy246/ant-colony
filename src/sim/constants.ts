@@ -176,7 +176,7 @@ export const APHID_DROP_BASE_S = 270;
 export const APHID_DROP_MIN_S = 18;
 export const HONEY_MAX_ITEMS = 3;
 /** An ant carrying a leaf feeds the aphids once it is this close (px) to the bush. */
-export const BUSH_REACH = 5;
+export const BUSH_REACH = 14;
 
 // ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
 export const RAID_MIN_ANTS = 1000;

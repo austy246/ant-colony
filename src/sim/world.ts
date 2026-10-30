@@ -1296,7 +1296,7 @@ export class World {
     let n = 0;
     for (const f of this.food) if (f.kind === 'honeydew') n++;
     if (n >= HONEY_MAX_ITEMS) return;
-    this.placeFood('honeydew', b.x + (this.rng.next() - 0.5) * 8, b.y + 6 + this.rng.next() * 3);
+    this.placeFood('honeydew', b.x + (this.rng.next() - 0.5) * 24, b.y + 18 + this.rng.next() * 4);
   }
 
   /**
