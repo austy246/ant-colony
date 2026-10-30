@@ -1,3 +1,16 @@
+/**
+ * The world of a loaded save, or null when there is no save or its colony is already extinct (the save could not be
+ * deleted when the colony died): such a save starts a new game instead of showing the extinction overlay again.
+ */
+export function restoreLiveSave<S, W extends { extinct: boolean }>(
+  save: S | null,
+  restore: (s: S) => W,
+): { save: S; world: W } | null {
+  if (!save) return null;
+  const world = restore(save);
+  return world.extinct ? null : { save, world };
+}
+
 /** Overlay over the game: the colony died out. Returns a function that removes it. */
 export function showExtinct(root: HTMLElement, onNewGame: () => void): () => void {
   const overlay = document.createElement('div');

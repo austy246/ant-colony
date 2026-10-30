@@ -10,10 +10,14 @@ export function showModeSelect(root: HTMLElement): Promise<GameMode> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'mode-select';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'mode-title');
     const box = document.createElement('div');
     box.className = 'mode-box';
     const title = document.createElement('div');
     title.className = 'mode-title';
+    title.id = 'mode-title';
     title.textContent = 'Vyber režim hry';
     box.appendChild(title);
     for (const c of CHOICES) {
@@ -34,5 +38,6 @@ export function showModeSelect(root: HTMLElement): Promise<GameMode> {
     }
     overlay.appendChild(box);
     root.appendChild(overlay);
+    overlay.querySelector('button')?.focus();
   });
 }

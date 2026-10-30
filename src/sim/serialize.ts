@@ -1,4 +1,4 @@
-import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, STEP_S } from './constants';
+import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
@@ -136,8 +136,9 @@ export function worldFromSave(s: SaveV1): World {
   w.peakLarvae = Math.max(s.peakLarvae ?? 0, w.larvae);
   w.started = s.started ?? (s.ants.length > 0 || s.time > 30);
   w.nextId = s.nextId;
-  w.sugarReadyAt = s.sugarReadyAt ?? 0;
-  w.boostUntil = s.boostUntil ?? 0;
+  // Clamped to one full cooldown / boost from now, so a corrupt save cannot lock the sugar (or boost) forever.
+  w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
+  w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
   w.ants.length = 0;
   for (const a of s.ants) {

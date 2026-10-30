@@ -8,7 +8,7 @@ import { worldFromSave, worldToSave } from './sim/serialize';
 import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
-import { showExtinct, handleExtinction } from './ui/extinct';
+import { handleExtinction, restoreLiveSave, showExtinct } from './ui/extinct';
 import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
 import { createViewController } from './ui/viewController';
@@ -35,9 +35,10 @@ export async function startGame(): Promise<void> {
   const canvas = document.getElementById('game') as HTMLCanvasElement;
   const ui = document.getElementById('ui') as HTMLElement;
 
-  const save = await loadGame();
-  const chosen: GameMode | null = save ? null : await showModeSelect(ui);
-  const world = save ? worldFromSave(save) : World.create(Date.now() >>> 0, chosen ?? 'sandbox');
+  const restored = restoreLiveSave(await loadGame(), worldFromSave);
+  const save = restored?.save ?? null;
+  const chosen: GameMode | null = restored ? null : await showModeSelect(ui);
+  const world = restored ? restored.world : World.create(Date.now() >>> 0, chosen ?? 'sandbox');
   let introDone = save !== null;
   const intro = introDone ? null : new Intro();
 

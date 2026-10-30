@@ -145,7 +145,7 @@ export class World {
   peakStock: number;
   /** Highest `larvae` count ever reached (never decreases; saved). Sizes the brood chambers. */
   peakLarvae: number;
-  /** Highest number of ants ever alive (never decreases; not saved, the view also takes the live count). Sizes the queen chambers. */
+  /** Highest number of ants ever alive (never decreases; saved, restored as at least the live count). Sizes the queen chambers. */
   peakAnts = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
@@ -267,7 +267,6 @@ export class World {
     return Math.max(0, Math.min(need, cap));
   }
 
-  /** Ants on the surface (everything but state 'nest'). */
   /** Ants that are majors. They count in `ants.length` (and so toward `maxAnts`) too. */
   get majors(): number {
     let n = 0;
@@ -275,6 +274,7 @@ export class World {
     return n;
   }
 
+  /** Ants on the surface (everything but state 'nest'). */
   get antsOnSurface(): number {
     let n = 0;
     for (const a of this.ants) if (a.state !== 'nest') n++;

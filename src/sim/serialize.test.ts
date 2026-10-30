@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, WORLD_H, WORLD_W } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, WORLD_H, WORLD_W } from './constants';
 import { terrainSize } from './terrain';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { FOOD_TABLE } from './food';
@@ -415,6 +415,7 @@ describe('normal mode fields', () => {
     w.ants[0].major = true;
     w.ants[1].carrySugar = true;
     w.ants[1].state = 'carry';
+    w.time = 100; // cooldown and boost lie within one SUGAR_COOLDOWN_S / SUGAR_BOOST_S from now (else clamped on load)
     w.sugarReadyAt = 123.5;
     w.boostUntil = 77.25;
     w.spawnTimer = 4.5;
@@ -436,6 +437,17 @@ describe('normal mode fields', () => {
     expect(r.ants[0].major).toBe(true);
     expect(r.ants[1].carrySugar).toBe(true);
     expect(r.ants[2].major).toBeUndefined();
+  });
+
+  it('a corrupt far-future sugar cooldown / boost is clamped to one full cooldown / boost from now', () => {
+    const w = normalWorld(0);
+    const s = worldToSave(w, EXTRA);
+    s.sugarReadyAt = s.time + 1e9;
+    s.boostUntil = s.time + 1e9;
+    const r = worldFromSave(validateSave(json(s))!);
+    expect(r.sugarReadyAt).toBe(s.time + SUGAR_COOLDOWN_S);
+    expect(r.boostUntil).toBe(s.time + SUGAR_BOOST_S);
+    expect(r.sugarCooldownLeft).toBe(SUGAR_COOLDOWN_S);
   });
 
   it('peakAnts is restored as at least the ant count', () => {

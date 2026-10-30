@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { handleExtinction, showExtinct } from './extinct';
+import { handleExtinction, restoreLiveSave, showExtinct } from './extinct';
+import { worldFromSave, worldToSave } from '../sim/serialize';
+import { World } from '../sim/world';
 
 let root: HTMLElement;
 beforeEach(() => {
@@ -58,5 +60,34 @@ describe('handleExtinction', () => {
       show,
     });
     expect(show).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('restoreLiveSave', () => {
+  const EXTRA = { introDone: true, camera: { x: 10, y: 20, zoom: 2 } };
+  const deadColony = (): World => {
+    const w = World.create(1, 'normal');
+    w.spawnAnt();
+    w.ants.length = 0;
+    w.stock = 0;
+    return w;
+  };
+
+  it('no save -> null', () => {
+    expect(restoreLiveSave(null, worldFromSave)).toBeNull();
+  });
+
+  it('a living colony is restored', () => {
+    const w = World.create(1, 'normal');
+    w.spawnAnt();
+    const r = restoreLiveSave(worldToSave(w, EXTRA), worldFromSave);
+    expect(r?.world.ants.length).toBe(1);
+    expect(r?.save.camera.zoom).toBe(2);
+  });
+
+  it('an extinct colony (its save could not be cleared) counts as no save, so a new game starts', () => {
+    const s = worldToSave(deadColony(), EXTRA);
+    expect(worldFromSave(s).extinct).toBe(true);
+    expect(restoreLiveSave(s, worldFromSave)).toBeNull();
   });
 });

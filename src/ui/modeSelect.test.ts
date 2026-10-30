@@ -21,6 +21,17 @@ describe('showModeSelect', () => {
     expect(root.querySelector('.mode-select')).toBeNull();
   });
 
+  it('is an accessible modal dialog labelled by its title, focus on the first choice', () => {
+    void showModeSelect(root);
+    const overlay = root.querySelector('.mode-select') as HTMLElement;
+    expect(overlay.getAttribute('role')).toBe('dialog');
+    expect(overlay.getAttribute('aria-modal')).toBe('true');
+    const id = overlay.getAttribute('aria-labelledby');
+    expect(id).toBeTruthy();
+    expect(document.getElementById(id!)?.textContent).toBe('Vyber režim hry');
+    expect(document.activeElement).toBe(root.querySelector('button'));
+  });
+
   it("resolves 'sandbox' after clicking Sandbox", async () => {
     const p = showModeSelect(root);
     root.querySelectorAll('button')[0].click();
