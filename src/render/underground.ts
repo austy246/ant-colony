@@ -9,7 +9,7 @@
  * seconds with a few crumbs of soil flying back, then the chamber itself grows from nothing. Chambers that exist when the
  * view is opened (or the game is loaded) are simply there.
  */
-import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_ANTS, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
+import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
 import { chamberFills } from '../sim/nestNeeds';
 import type { World } from '../sim/world';
 import { CALLOW_RGBA } from './antArt';
@@ -59,7 +59,7 @@ export interface NestHud {
 export function nestHud(world: World): NestHud {
   const stock = Number.isFinite(world.stock) ? world.stock : 0;
   const ants = world.ants.length;
-  const canHatch = stock >= FOOD_PER_ANT && ants < MAX_ANTS;
+  const canHatch = stock >= FOOD_PER_ANT && ants < world.maxAnts;
   const missing = Math.max(1, Math.ceil(FOOD_PER_QUEEN - (world.totalDelivered % FOOD_PER_QUEEN)));
   return {
     line: `Královny: ${world.queens} · Larvy: ${world.larvae} · Zásoba: ${stock.toFixed(1)} · Mravenci: ${ants}`,
@@ -72,12 +72,18 @@ export function nestHud(world: World): NestHud {
 const finite = (v: number, def = 0): number => (Number.isFinite(v) ? v : def);
 
 /** What the colony needs right now: chamber counts (from the sim) and how full each pantry / larvae chamber is. */
-function needsOf(w: World): { queens: number; pantries: number; larvaeChambers: number; pantry: number[]; larvae: number[] } {
+function needsOf(w: World): {
+  queens: number; pantries: number; larvaeChambers: number;
+  pantry: number[]; larvae: number[]; sizePantry: number[]; sizeLarvae: number[];
+} {
   const n = w.nestNeeds;
   return {
     ...n,
     pantry: chamberFills(Math.max(0, finite(w.stock)), n.pantries, PANTRY_CAPACITY),
     larvae: chamberFills(Math.max(0, finite(w.larvae)), n.larvaeChambers, LARVAE_PER_CHAMBER),
+    // chamber size follows the peaks (never shrinks); what is drawn inside follows the current state
+    sizePantry: chamberFills(Math.max(0, finite(w.peakStock)), n.pantries, PANTRY_CAPACITY),
+    sizeLarvae: chamberFills(Math.max(0, finite(w.peakLarvae)), n.larvaeChambers, LARVAE_PER_CHAMBER),
   };
 }
 
@@ -228,6 +234,7 @@ export class UndergroundView {
       pantries: need.pantries,
       larvaeChambers: need.larvaeChambers,
       loads: { ants: w.ants.length, pantry: need.pantry, larvae: need.larvae },
+      sizeLoads: { ants: Math.max(finite(w.peakAnts), w.ants.length), pantry: need.sizePantry, larvae: need.sizeLarvae },
       width: NEST_W,
       height: NEST_H,
     });

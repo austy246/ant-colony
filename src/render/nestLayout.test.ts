@@ -419,3 +419,28 @@ describe('nestLayout: geometry at 8 queens + 6 pantries + 4 larvae chambers (200
     expect(performance.now() - t1).toBeLessThan(500);
   }, 90000);
 });
+
+describe('nestLayout: sizes follow sizeLoads, not the current loads', () => {
+  const sizeLoads = { ants: 100, pantry: [20, 10], larvae: [8] };
+  const a = lay({ queens: 2, pantries: 2, larvaeChambers: 1, sizeLoads, loads: { ants: 1, pantry: [0, 0], larvae: [0] } });
+  const b = lay({ queens: 2, pantries: 2, larvaeChambers: 1, sizeLoads, loads: { ants: 100, pantry: [25, 25], larvae: [10] } });
+
+  it('chamber size ignores current loads when sizeLoads is given', () => {
+    expect(a.chambers.length).toBe(b.chambers.length);
+    for (let i = 0; i < a.chambers.length; i++) {
+      expect(a.chambers[i].rx).toBe(b.chambers[i].rx);
+      expect(a.chambers[i].ry).toBe(b.chambers[i].ry);
+    }
+    expect(a.chambers.some((c, i) => c.load !== b.chambers[i].load)).toBe(true);
+  });
+
+  it('chamber grows with larger sizeLoads', () => {
+    const lo = lay({ sizeLoads: { ants: 4, pantry: [2], larvae: [1] } });
+    const hi = lay({ sizeLoads: { ants: 200, pantry: [25], larvae: [10] } });
+    for (let i = 0; i < lo.chambers.length; i++) {
+      expect(hi.chambers[i].rx).toBeGreaterThanOrEqual(lo.chambers[i].rx);
+      expect(hi.chambers[i].ry).toBeGreaterThanOrEqual(lo.chambers[i].ry);
+    }
+    expect(hi.chambers.some((c, i) => c.rx > lo.chambers[i].rx)).toBe(true);
+  });
+});

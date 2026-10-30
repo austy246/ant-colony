@@ -568,3 +568,17 @@ describe('nestHud', () => {
     expect(nestHud(colony(1, 10, 7)).nextQueen).toBe('Další královna za 100 jídla');
   });
 });
+
+describe('nestHud maxAnts', () => {
+  it('uses the mode ant limit, not the sandbox constant', () => {
+    const w = colony(3, 20);
+    w.hatchProgress = w.hatchInterval / 2;
+    w.mode = 'normal';
+    while (w.ants.length < 300) w.spawnAnt();
+    expect(nestHud(w).hatch).not.toBeNull(); // 300 is the sandbox cap only
+    while (w.ants.length < w.maxAnts) w.spawnAnt();
+    expect(nestHud(w).hatch).toBeNull();
+    w.mode = 'sandbox';
+    expect(nestHud(w).hatch).toBeNull();
+  });
+});

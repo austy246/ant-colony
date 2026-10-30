@@ -71,6 +71,8 @@ export interface NestInput {
   pantries: number;
   larvaeChambers: number;
   loads: NestLoads;
+  /** Loads that size the chambers (the peaks, so they never shrink); defaults to `loads`. `Chamber.load` always follows `loads`. */
+  sizeLoads?: NestLoads;
   width: number;
   height: number;
 }
@@ -572,7 +574,8 @@ export function nestLayout(inp: NestInput): NestLayout {
     subsetCache.set(key, sub);
   }
   const ants = num(inp.loads?.ants);
-  const antF = Math.min(1, Math.sqrt(ants) / 12);
+  const sz = inp.sizeLoads ?? inp.loads;
+  const antF = Math.min(1, Math.sqrt(num(sz?.ants)) / 12);
   const chambers: Chamber[] = sub.slots.map((s) => {
     let load: number;
     let f: number;
@@ -581,10 +584,10 @@ export function nestLayout(inp: NestInput): NestLayout {
       f = antF;
     } else if (s.kind === 'pantry') {
       load = Math.min(PANTRY_CAPACITY, num(inp.loads?.pantry?.[s.index]));
-      f = Math.sqrt(load / PANTRY_CAPACITY);
+      f = Math.sqrt(Math.min(PANTRY_CAPACITY, num(sz?.pantry?.[s.index])) / PANTRY_CAPACITY);
     } else {
       load = Math.min(LARVAE_PER_CHAMBER, num(inp.loads?.larvae?.[s.index]));
-      f = Math.sqrt(load / LARVAE_PER_CHAMBER);
+      f = Math.sqrt(Math.min(LARVAE_PER_CHAMBER, num(sz?.larvae?.[s.index])) / LARVAE_PER_CHAMBER);
     }
     return {
       id: s.id,

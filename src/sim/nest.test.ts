@@ -310,3 +310,16 @@ describe('save: nest ants', () => {
     expect(validateSave({ ...g, ants: [{ ...ant, state: 'nest', nestKind: 'nurse', role: 'nurse' }] })).not.toBeNull();
   });
 });
+
+describe('peakAnts', () => {
+  it('starts at 0 and never decreases when ants disappear', () => {
+    const w = flatWorld();
+    expect(w.peakAnts).toBe(0);
+    for (let i = 0; i < 5; i++) w.spawnAnt();
+    run(w, 0.5);
+    expect(w.peakAnts).toBe(5);
+    w.ants.length = 2;
+    run(w, 0.5);
+    expect(w.peakAnts).toBe(5);
+  });
+});

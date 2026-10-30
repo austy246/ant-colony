@@ -145,6 +145,8 @@ export class World {
   peakStock: number;
   /** Highest `larvae` count ever reached (never decreases; saved). Sizes the brood chambers. */
   peakLarvae: number;
+  /** Highest number of ants ever alive (never decreases; not saved, the view also takes the live count). Sizes the queen chambers. */
+  peakAnts = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
   /** Ants killed so far by a defending beetle (transient: not saved, 0 after a load). */
@@ -391,6 +393,7 @@ export class World {
     if (this.stock > this.peakStock) this.peakStock = this.stock;
     const l = this.larvae;
     if (l > this.peakLarvae) this.peakLarvae = l;
+    if (this.ants.length > this.peakAnts) this.peakAnts = this.ants.length;
   }
 
   /** Living creatures: cooldowns tick, hopping flies fly, beetles and caterpillars walk. */
