@@ -4,6 +4,7 @@ import {
   BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
+import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
@@ -161,6 +162,10 @@ export class World {
   seed: number;
   /** 'sandbox': MAX_ANTS, rescue on, never extinct. 'normal': MAX_ANTS_NORMAL, no rescue, the colony can die out. */
   mode: GameMode = 'sandbox';
+  /** Map growth step 0..MAX_MAP_STEP; grown by the colony in normal mode, see terrainSize. */
+  mapStep = 0;
+  /** Normal mode: seconds until the next spontaneous prey / food appearance (0 = draw a new wait now). */
+  spawnTimer = 0;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
   sugarReadyAt = 0;
   /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
@@ -375,6 +380,7 @@ export class World {
     this.resolveTouches();
     this.hatch();
     this.rescue();
+    if (this.mode === 'normal') updateEnvironment(this);
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();

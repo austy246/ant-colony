@@ -1,3 +1,5 @@
+import type { FoodKind } from './food';
+
 export const WORLD_W = 320;
 export const WORLD_H = 200;
 export const SCALE = 4;
@@ -31,6 +33,18 @@ export const SUGAR_COOLDOWN_S = 300;
 export const SUGAR_BOOST_S = 60;
 /** Movement speed multiplier of every ant while the sugar boost lasts. */
 export const SUGAR_BOOST_MUL = 1.5;
+/** Normal mode: seconds between two spontaneous prey / food appearances (uniform in MIN..MAX). */
+export const SPAWN_MIN_S = 20;
+export const SPAWN_MAX_S = 45;
+/** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar'>, number> = {
+  berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1,
+};
+/** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
+export const SPAWN_MAX_FOOD_BASE = 12;
+export const SPAWN_MAX_FOOD_PER_STEP = 2;
+/** Living beetles on the map at most BASE + mapStep. */
+export const SPAWN_MAX_BEETLES_BASE = 1;
 export const MAX_PHEROMONE = 5;
 export const STEP_S = 1 / 30;
 /** Seconds an ant gnaws at its food before it takes a piece (each ant: GNAW_S * (0.75 + 0.5 * random)). */
