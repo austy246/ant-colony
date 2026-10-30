@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EXPLORE_CELL, MAP_STEP_ANTS, MAX_MAP_STEP, STEP_S } from './constants';
+import { EXPLORE_CELL, MAP_STEP_ANTS, MAX_ANTS_NORMAL, MAX_MAP_STEP, STEP_S } from './constants';
 import { terrainSize } from './terrain';
 import { World } from './world';
 
@@ -26,6 +26,10 @@ describe('map growth', () => {
     }
     expect(Array.from(a.terrain.surface)).toEqual(Array.from(b.terrain.surface));
     expect(a.terrain.features).toEqual(b.terrain.features);
+  });
+
+  it('the map keeps growing with the colony all the way to the ant limit (2000 ants)', () => {
+    expect(MAX_MAP_STEP * MAP_STEP_ANTS).toBe(MAX_ANTS_NORMAL);
   });
 
   it('a lower or equal step is a no-op, and growth stops at MAX_MAP_STEP', () => {

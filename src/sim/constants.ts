@@ -5,8 +5,8 @@ export const WORLD_H = 200;
 /** Normal mode: each map growth step adds MAP_STEP_W x MAP_STEP_H px to the map (to the right and down), see terrainSize. */
 export const MAP_STEP_W = 40;
 export const MAP_STEP_H = 25;
-/** Upper bound of the map growth step. */
-export const MAX_MAP_STEP = 8;
+/** Upper bound of the map growth step: the map keeps growing with the colony up to MAX_ANTS_NORMAL / MAP_STEP_ANTS = 20 steps (2000 ants). */
+export const MAX_MAP_STEP = 20;
 /** The colony needs this many ants per map growth step (step = floor(ants / MAP_STEP_ANTS), never shrinks). */
 export const MAP_STEP_ANTS = 100;
 export const SCALE = 4;
