@@ -440,3 +440,104 @@ describe('prey avoids the web of a living spider', () => {
   });
 });
 
+
+describe('wanderers sense the silk of a living web (R4)', () => {
+  /** Old, neutral wanderers placed around the web (in the map), each heading straight at the spider. */
+  function ringOfWanderers(w: World, n: number, dist: number): Ant[] {
+    const base = inward(w);
+    const ants: Ant[] = [];
+    for (let k = 0; k < n; k++) {
+      const ang = base + (k / (n - 1) - 0.5) * 2.4;
+      const a = antAt(w, Math.cos(ang) * dist, Math.sin(ang) * dist);
+      a.heading = ang + Math.PI; // straight at the spider
+      a.age = 1000;
+      ants.push(a);
+    }
+    return ants;
+  }
+
+  it('wandering ants heading straight at a living web from a little way off turn away (almost all of them)', () => {
+    let caught = 0;
+    let total = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = spiderWorld(seed);
+      flatten(w);
+      parkAnts(w);
+      const ants = ringOfWanderers(w, 12, SPIDER_WEB_R + 20);
+      run(w, 20);
+      for (const a of ants) if (a.caughtT !== undefined || !w.ants.includes(a)) caught++;
+      total += ants.length;
+    }
+    expect(total).toBe(48);
+    expect(caught).toBeLessThanOrEqual(2);
+  });
+
+  it('wanderers following the map edge into the corner do not walk into the web', () => {
+    const w = spiderWorld(1);
+    flatten(w);
+    parkAnts(w);
+    const sp = w.spider!;
+    const ants: Ant[] = [];
+    for (let k = 0; k < 6; k++) {
+      // along the edge the web is closest to (top for the upper corner, bottom for the lower one), walking to the right
+      const a = antAt(w, -60 - k * 6, (sp.y < WORLD_H / 2 ? 1 : WORLD_H - 1) - sp.y);
+      a.heading = 0;
+      a.age = 1000;
+      ants.push(a);
+    }
+    for (let i = 0; i < Math.round(30 / STEP_S); i++) {
+      w.step(STEP_S);
+      for (const a of ants) expect(a.caughtT, `step ${i}`).toBeUndefined();
+    }
+  });
+
+  it('a dead spider no longer repels: wanderers walk over its spot', () => {
+    let entered = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = spiderWorld(seed);
+      flatten(w);
+      parkAnts(w);
+      w.spider!.alive = false;
+      w.spider!.respawnT = 1e9;
+      const sp = w.spider!;
+      const ants = ringOfWanderers(w, 12, SPIDER_WEB_R + 8);
+      const inside = new Set<Ant>();
+      for (let i = 0; i < Math.round(10 / STEP_S); i++) {
+        w.step(STEP_S);
+        for (const a of ants) if (Math.hypot(a.x - sp.x, a.y - sp.y) <= SPIDER_WEB_R) inside.add(a);
+      }
+      entered += inside.size;
+    }
+    expect(entered).toBeGreaterThan(10);
+  });
+
+  it('an ant going for food on the far side of the web is not protected and gets caught', () => {
+    let caught = 0;
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = spiderWorld(seed);
+      flatten(w);
+      parkAnts(w);
+      const sp = w.spider!;
+      const base = inward(w);
+      const food = w.placeFood('berry', sp.x + Math.cos(base + 0.8) * (SPIDER_WEB_R + 3), sp.y + Math.sin(base + 0.8) * (SPIDER_WEB_R + 3))!;
+      const a = antAt(w, Math.cos(base - 0.8) * (SPIDER_WEB_R + 3), Math.sin(base - 0.8) * (SPIDER_WEB_R + 3));
+      a.state = 'toFood';
+      a.targetFood = food.id;
+      a.heading = Math.atan2(food.y - a.y, food.x - a.x);
+      a.age = 1000;
+      run(w, 10);
+      if (a.caughtT !== undefined || !w.ants.includes(a)) caught++;
+    }
+    expect(caught).toBeGreaterThanOrEqual(3);
+  });
+
+  it('40 foraging ants with nothing to find lose (almost) none to the spider in 10 min', () => {
+    const w = spiderWorld(1);
+    parkAnts(w);
+    for (let i = 0; i < 40; i++) w.spawnAnt();
+    const n0 = w.ants.length;
+    run(w, 600);
+    expect(w.antsKilled).toBe(n0 - w.ants.length); // no prey: every loss is a spider meal
+    expect(w.antsKilled).toBeLessThanOrEqual(2);
+  });
+});

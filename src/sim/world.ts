@@ -84,6 +84,13 @@ const EXPLORE_RATE = 1;
  * (EXPLORE_CAP * 0.1 * 1.18 = 0.71 < the pull 0.15 * MAX_PHEROMONE of a fresh trail).
  */
 const EXPLORE_WEIGHT = 0.1;
+/**
+ * Score penalty of a wanderer's candidate heading whose EXPLORE_LOOKAHEAD point lies in the web of a living spider: larger
+ * than any trail pull (0.15 * MAX_PHEROMONE = 0.75) plus the explored-ground spread (<= 0.71), so the ant turns away when it
+ * can. It is a penalty, not a wall: a wanderer that already points into the web with every candidate (or is turned in by
+ * the map edge) can still blunder in, so the spider keeps catching a few ants (measured with the headless gameplay sim).
+ */
+const WEB_AVOID_PENALTY = 2;
 /** How far ahead (px) a wanderer reads the explored grid. */
 const EXPLORE_LOOKAHEAD = 16;
 const PICKUP_DIST = 1.5;
@@ -1006,6 +1013,8 @@ export class World {
     let best = desired;
     let bestScore = -Infinity;
     const wander = ant.state === 'wander';
+    // A wanderer (not one off on a distraction) senses the silk of a living web and steers clear of it.
+    const web = wander && ant.strayT === undefined && this.spider?.alive ? this.spider : null;
     for (const turn of FAN_TURNS) {
       const h = desired + turn;
       const c = Math.cos(h);
@@ -1017,6 +1026,7 @@ export class World {
         if (p > pull) pull = p;
       }
       if (wander) score -= EXPLORE_WEIGHT * (0.7 + 0.3 * ant.curiosity) * this.explored[this.exploreIndex(ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)];
+      if (web && inWeb(web, ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)) score -= WEB_AVOID_PENALTY;
       if (score > bestScore) {
         bestScore = score;
         best = h;
