@@ -15,6 +15,14 @@ export const STARTER_STOCK = 10;
 /** A started colony with no ants and too little food for one gets a free ant after this many seconds. */
 export const RESCUE_AFTER_S = 15;
 export const MAX_ANTS = 300;
+/** Majors (big soldier ants) can hatch only once the colony has at least this many ants. */
+export const MAJOR_MIN_ANTS = 50;
+/** Chance that a hatching ant (with at least MAJOR_MIN_ANTS ants) is a major. */
+export const MAJOR_CHANCE = 0.08;
+/** Majors never exceed this fraction of all ants. */
+export const MAJOR_MAX_FRACTION = 0.1;
+/** Pieces of food a major takes per bite (an ordinary ant takes 1). */
+export const MAJOR_CARRY_PIECES = 2;
 /** Ant limit in normal mode. */
 export const MAX_ANTS_NORMAL = 2000;
 export const MAX_PHEROMONE = 5;

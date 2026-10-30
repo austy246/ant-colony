@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_ANTS_NORMAL, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
@@ -30,6 +30,8 @@ export interface Ant {
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
   role: AntRole;
+  /** A major (big soldier ant): always kills living prey on touch and survives, ignores touch cooldowns, carries MAJOR_CARRY_PIECES pieces. Absent on ordinary ants and old saves. */
+  major?: true;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
   speedMul: number;
   /** Scales heading jitter, the chance to stray off a trail, the pull of unexplored ground and the weave of a carrier. */
@@ -237,6 +239,13 @@ export class World {
   }
 
   /** Ants on the surface (everything but state 'nest'). */
+  /** Ants that are majors. They count in `ants.length` (and so toward `maxAnts`) too. */
+  get majors(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.major) n++;
+    return n;
+  }
+
   get antsOnSurface(): number {
     let n = 0;
     for (const a of this.ants) if (a.state !== 'nest') n++;
@@ -466,21 +475,29 @@ export class World {
   private resolveTouches(): void {
     if (this.ants.length === 0) return;
     for (const f of this.food) {
-      if (!isAlive(f) || f.hop || (f.cooldown ?? 0) > 1e-9) continue;
+      if (!isAlive(f) || f.hop) continue;
+      const onCooldown = (f.cooldown ?? 0) > 1e-9;
+      let toucher: Ant | null = null;
       for (const ant of this.ants) {
         if (ant.state !== 'wander' && ant.state !== 'toFood') continue;
+        if (onCooldown && !ant.major) continue;
         if (Math.hypot(ant.x - f.x, ant.y - f.y) > TOUCH_DIST) continue;
-        this.touch(f, ant);
-        break;
+        // A major in reach wins over any ordinary ant (and ignores the cooldown); otherwise the first ant in array order.
+        if (ant.major) {
+          toucher = ant;
+          break;
+        }
+        if (!toucher) toucher = ant;
       }
+      if (toucher) this.touch(f, toucher);
     }
   }
 
   private touch(f: FoodItem, ant: Ant): void {
     f.touches = (f.touches ?? 0) + 1;
     f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
-    if (f.touches >= 2) {
-      // Second touch: the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
+    if (f.touches >= 2 || ant.major) {
+      // Second touch (or any touch of a major): the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
       const was = f.kind as PreyKind;
       f.alive = false;
       f.kind = 'carrion';
@@ -549,7 +566,12 @@ export class World {
     this.hatchProgress += STEP_S;
     if (this.hatchProgress >= this.hatchInterval * this.hatchMul - 1e-9) {
       this.stock = Math.max(0, Math.round((this.stock - FOOD_PER_ANT) * 1e6) / 1e6);
-      this.spawnAnt(true);
+      const hatched = this.spawnAnt(true);
+      // Drawn after every other draw of this hatch; below MAJOR_MIN_ANTS nothing is drawn (seeded sequences stay unchanged).
+      if (this.ants.length >= MAJOR_MIN_ANTS && this.rng.next() < MAJOR_CHANCE
+        && this.majors + 1 <= Math.floor(this.ants.length * MAJOR_MAX_FRACTION + 1e-9)) {
+        hatched.major = true;
+      }
       this.hatchProgress = 0;
     }
   }
@@ -763,8 +785,9 @@ export class World {
     }
     ant.timer -= STEP_S;
     if (ant.timer > 1e-9) return;
-    f.piecesLeft--;
-    ant.carry = FOOD_TABLE[f.kind].value;
+    const pieces = ant.major ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES) : 1;
+    f.piecesLeft -= pieces;
+    ant.carry = pieces * FOOD_TABLE[f.kind].value;
     ant.state = 'carry';
     ant.timer = 0;
     if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
