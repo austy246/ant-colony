@@ -166,7 +166,7 @@ describe('first touch: the caterpillar speeds up', () => {
     expect(w.antsKilled).toBe(0);
     expect(a.state).toBe('toFood');
     expect(a.targetFood).toBe(c.id);
-    expect(c.piecesLeft).toBe(12);
+    expect(c.piecesLeft).toBe(FOOD_TABLE.caterpillar.pieces);
   });
 
   it('the heading is turned away from the touching ant (dot product > 0.3, ants at 8 angles, caterpillar initially facing the ant)', () => {
@@ -281,7 +281,7 @@ describe('second touch: the caterpillar dies', () => {
     expect(c.alive).toBe(false);
     expect(c.kind).toBe('carrion');
     expect(c.corpseOf).toBe('caterpillar');
-    expect(c.piecesLeft).toBe(12);
+    expect(c.piecesLeft).toBe(FOOD_TABLE.caterpillar.pieces);
     expect(c.touches).toBe(2);
     expect(c.fleeT).toBeUndefined();
     expect(w.ants).toEqual([second]);

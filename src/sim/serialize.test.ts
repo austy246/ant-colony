@@ -171,8 +171,8 @@ describe('validateSave', () => {
   it('piecesLeft accepts 0 up to the largest piece count in FOOD_TABLE (old saves hold smaller values)', () => {
     const g = good();
     const food = (g.food as Record<string, unknown>[])[0];
-    expect(MAX_PIECES).toBe(24);
-    for (const piecesLeft of [0, 2, 6, 20, MAX_PIECES]) {
+    expect(MAX_PIECES).toBe(72);
+    for (const piecesLeft of [0, 2, 6, 20, 24, MAX_PIECES]) {
       expect(validateSave({ ...g, food: [{ ...food, piecesLeft }] }), String(piecesLeft)).not.toBeNull();
     }
   });
@@ -287,7 +287,7 @@ describe('validateSave', () => {
       expect(validateSave(s)).not.toBeNull();
       const sb = s.food.find((f) => f.id === beetle!.id)!;
       expect(sb).toEqual({
-        id: beetle!.id, kind: 'beetle', x: beetle!.x, y: beetle!.y, piecesLeft: 18, alive: true, touches: 1, heading: beetle!.heading,
+        id: beetle!.id, kind: 'beetle', x: beetle!.x, y: beetle!.y, piecesLeft: FOOD_TABLE.beetle.pieces, alive: true, touches: 1, heading: beetle!.heading,
         speedMul: beetle!.speedMul,
       });
       expect(beetle!.speedMul).toBeGreaterThan(0);

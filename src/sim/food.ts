@@ -3,15 +3,17 @@ import { Surface, type Terrain } from './terrain';
 
 export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar';
 
+/** Every source is FOOD_SIZE_MUL times larger than the base size, so it lasts longer and food does not keep popping up. */
+const FOOD_SIZE_MUL = 3;
 /** pieces = number of carryable pieces; value = food per piece (pieces x value is the total food of an item). */
 export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
-  beetle: { pieces: 18, value: 2 / 3 },
-  caterpillar: { pieces: 12, value: 2 / 3 },
-  fly: { pieces: 6, value: 2 / 3 },
-  carrion: { pieces: 24, value: 2 / 3 },
-  berry: { pieces: 3, value: 1 },
-  mushroom: { pieces: 3, value: 1 },
-  sugar: { pieces: 1, value: 1 },
+  beetle: { pieces: 18 * FOOD_SIZE_MUL, value: 2 / 3 },
+  caterpillar: { pieces: 12 * FOOD_SIZE_MUL, value: 2 / 3 },
+  fly: { pieces: 6 * FOOD_SIZE_MUL, value: 2 / 3 },
+  carrion: { pieces: 24 * FOOD_SIZE_MUL, value: 2 / 3 },
+  berry: { pieces: 3 * FOOD_SIZE_MUL, value: 1 },
+  mushroom: { pieces: 3 * FOOD_SIZE_MUL, value: 1 },
+  sugar: { pieces: 1 * FOOD_SIZE_MUL, value: 1 },
 };
 
 /** Kinds that exist as living creatures until they die. */

@@ -114,6 +114,7 @@ describe('World', () => {
   it('every carried piece is added to stock when the ant reaches the nest (berry: 3 pieces of value 1)', () => {
     const w = flatWorld(1);
     const f = w.placeFood('berry', NEST.x + 20, NEST.y)!;
+    f.piecesLeft = 3; // the trips below are timed for the original 3 pieces (a berry now has 9)
     const a = w.spawnAnt();
     a.state = 'toFood';
     a.targetFood = f.id;
@@ -126,6 +127,7 @@ describe('World', () => {
   it('piece count reaching 0 removes the food, and a multi-piece item is carried on repeated trips', () => {
     const w = flatWorld(2);
     const f = deadFood(w, 'fly', NEST.x + 20, NEST.y)!;
+    f.piecesLeft = 6; // the run below is timed for 6 trips (a fly now has 18 pieces)
     const a = w.spawnAnt();
     a.state = 'toFood';
     a.targetFood = f.id;
@@ -539,7 +541,7 @@ describe('World', () => {
   it('moveFood relocates a piece, removeFood deletes it', () => {
     const w = flatWorld(14);
     const f = deadFood(w, 'fly', 150, 100)!;
-    expect(f.piecesLeft).toBe(6);
+    expect(f.piecesLeft).toBe(FOOD_TABLE.fly.pieces);
     expect(w.moveFood(f.id, 200, 60)).toBe(true);
     expect(f.x).toBe(200);
     expect(f.y).toBe(60);

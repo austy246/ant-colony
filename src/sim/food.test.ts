@@ -75,21 +75,21 @@ describe('resolvePlacement', () => {
 describe('FOOD_TABLE', () => {
   it('has exactly the six forest kinds plus sugar', () => {
     expect(Object.keys(FOOD_TABLE).sort()).toEqual(['beetle', 'berry', 'carrion', 'caterpillar', 'fly', 'mushroom', 'sugar']);
-    expect(FOOD_TABLE.beetle).toEqual({ pieces: 18, value: 2 / 3 });
-    expect(FOOD_TABLE.caterpillar).toEqual({ pieces: 12, value: 2 / 3 });
-    expect(FOOD_TABLE.fly).toEqual({ pieces: 6, value: 2 / 3 });
-    expect(FOOD_TABLE.carrion).toEqual({ pieces: 24, value: 2 / 3 });
-    expect(FOOD_TABLE.berry).toEqual({ pieces: 3, value: 1 });
-    expect(FOOD_TABLE.mushroom).toEqual({ pieces: 3, value: 1 });
+    expect(FOOD_TABLE.beetle).toEqual({ pieces: 18 * 3, value: 2 / 3 });
+    expect(FOOD_TABLE.caterpillar).toEqual({ pieces: 12 * 3, value: 2 / 3 });
+    expect(FOOD_TABLE.fly).toEqual({ pieces: 6 * 3, value: 2 / 3 });
+    expect(FOOD_TABLE.carrion).toEqual({ pieces: 24 * 3, value: 2 / 3 });
+    expect(FOOD_TABLE.berry).toEqual({ pieces: 3 * 3, value: 1 });
+    expect(FOOD_TABLE.mushroom).toEqual({ pieces: 3 * 3, value: 1 });
   });
 
-  it('total food per item is unchanged by the smaller-pieces split (pieces x value)', () => {
+  it('total food per item is three times the base size (pieces x value)', () => {
     const total = (k: keyof typeof FOOD_TABLE) => FOOD_TABLE[k].pieces * FOOD_TABLE[k].value;
-    expect(total('beetle')).toBeCloseTo(12, 9);
-    expect(total('caterpillar')).toBeCloseTo(8, 9);
-    expect(total('fly')).toBeCloseTo(4, 9);
-    expect(total('carrion')).toBeCloseTo(16, 9);
-    expect(total('berry')).toBeCloseTo(3, 9);
-    expect(total('mushroom')).toBeCloseTo(3, 9);
+    expect(total('beetle')).toBeCloseTo(36, 9);
+    expect(total('caterpillar')).toBeCloseTo(24, 9);
+    expect(total('fly')).toBeCloseTo(12, 9);
+    expect(total('carrion')).toBeCloseTo(48, 9);
+    expect(total('berry')).toBeCloseTo(9, 9);
+    expect(total('mushroom')).toBeCloseTo(9, 9);
   });
 });

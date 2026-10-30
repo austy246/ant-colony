@@ -160,7 +160,7 @@ describe('touching a beetle', () => {
     expect(b.alive).toBe(true);
     expect(b.kind).toBe('beetle');
     expect(b.touches).toBe(1);
-    expect(b.piecesLeft).toBe(18);
+    expect(b.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
   });
 
   it('the second touch kills the beetle: carrion, corpseOf beetle, 18 pieces; the second ant survives and goes for the corpse', () => {
@@ -175,7 +175,7 @@ describe('touching a beetle', () => {
     expect(b.kind).toBe('carrion');
     expect(b.corpseOf).toBe('beetle');
     expect(b.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
-    expect(b.piecesLeft).toBe(18);
+    expect(b.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
     expect(b.touches).toBe(2);
     expect(w.ants).toEqual([second]);
     expect(w.antsKilled).toBe(1);
@@ -241,7 +241,7 @@ describe('touching a beetle', () => {
       expect(a.state).not.toBe('gnaw');
       expect(a.state).not.toBe('carry');
     }
-    expect(b.piecesLeft).toBe(18);
+    expect(b.piecesLeft).toBe(FOOD_TABLE.beetle.pieces);
     expect(a.carry).toBe(0);
     expect(b.touches).toBe(0);
     expect(b.alive).toBe(true);
@@ -325,7 +325,7 @@ describe('touching a fly', () => {
     expect(f.alive).toBe(false);
     expect(f.kind).toBe('carrion');
     expect(f.corpseOf).toBe('fly');
-    expect(f.piecesLeft).toBe(6);
+    expect(f.piecesLeft).toBe(FOOD_TABLE.fly.pieces);
     expect(w.antsKilled).toBe(0);
     expect(w.ants).toHaveLength(2);
   });
