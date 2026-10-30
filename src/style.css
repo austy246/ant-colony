@@ -89,15 +89,105 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
   background: #1a120b;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 #game {
   display: block;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   touch-action: none;
   image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Phones and tablets: notches / home indicator, bigger touch targets, toolbar as a scrollable strip. */
+@supports (padding: env(safe-area-inset-top)) {
+  .hud,
+  .nest-hud {
+    top: calc(8px + env(safe-area-inset-top));
+    left: calc(8px + env(safe-area-inset-left));
+  }
+  .panel,
+  .skip {
+    top: calc(8px + env(safe-area-inset-top));
+    right: calc(8px + env(safe-area-inset-right));
+  }
+  .toolbar {
+    bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (pointer: coarse) {
+  .toolbar button,
+  .panel button,
+  .skip {
+    min-height: 44px;
+    padding: 8px 14px;
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    left: 0;
+    right: 0;
+    transform: none;
+    max-width: none;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 8px;
+    padding: 6px;
+  }
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .toolbar button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .toolbar .sep {
+    flex: 0 0 1px;
+  }
+  .hud {
+    font-size: 12px;
+    padding: 4px 8px;
+    max-width: calc(100vw - 150px);
+  }
+  .hud-small {
+    font-size: 10px;
+  }
+  .nest-hud {
+    min-width: 0;
+    max-width: calc(100vw - 16px);
+    font-size: 12px;
+  }
+  .panel {
+    padding: 4px;
+  }
+  .panel button,
+  .skip {
+    font-size: 12px;
+  }
+}
+
+/* Landscape phones: very little height, keep the toolbar to a single compact row. */
+@media (max-height: 480px) {
+  .toolbar button {
+    min-height: 36px;
+    padding: 4px 10px;
+  }
 }
 
 .hud,
