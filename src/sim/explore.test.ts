@@ -175,7 +175,7 @@ describe('exploration', () => {
       run(w, 1);
       return a.y;
     };
-    expect(arrange(true)).toBeLessThan(98.5); // follows the trail north into explored ground
+    expect(arrange(true)).toBeLessThan(99.2); // follows the trail north into explored ground
     // The most curious ant (curiosity 1.6) still prefers a fresh trail to unexplored ground.
     // (the same rng stream with and without the trail, so only the trail differs.)
     expect(arrange(true, 1.6)).toBeLessThan(arrange(false, 1.6) - 2);

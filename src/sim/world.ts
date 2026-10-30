@@ -58,7 +58,13 @@ const MAX_TURN = 6 * STEP_S; // rad per substep
 const FAN = 0.6;
 const TURN_PENALTY = 0.05;
 const LOOKAHEAD = 3;
-const PHER_LOOKAHEAD = 4;
+/** How far ahead (px) and how wide (cells, each way) a pheromone-following ant senses a trail: a 1 px trail is easy to miss with less. */
+const PHER_LOOKAHEAD = 6;
+const PHER_R = 2;
+/** Nest-entrance trail scent: directions sampled, base chance to follow it, and the trail strength that makes it certain. */
+const SCENT_DIRS = 24;
+const SCENT_P = 0.7;
+const SCENT_FULL = 0.5;
 /** Radius within which a wandering ant notices food (pickup distance is separate and unchanged). Raised 16 -> 32 so bold, straight-heading scouts still find food. */
 const SENSE_FOOD = 32;
 /**
@@ -683,7 +689,37 @@ export class World {
     ant.state = state;
     ant.timer = 0;
     delete ant.nestKind;
-    if (state === 'wander') ant.targetFood = null;
+    if (state === 'wander') {
+      ant.targetFood = null;
+      this.scentTrail(ant);
+    }
+  }
+
+  /**
+   * A forager leaving the nest smells the trails that start at the entrance: with a chance that grows with the trail's
+   * strength (and the ant's stubbornness) it sets off along one of them (chosen in proportion to strength) instead of
+   * a random heading. Without trail, or for a free-spirited ant, the heading stays random.
+   */
+  private scentTrail(ant: Ant): void {
+    const vals: number[] = [];
+    let total = 0;
+    let max = 0;
+    for (let k = 0; k < SCENT_DIRS; k++) {
+      const a = (k / SCENT_DIRS) * TWO_PI;
+      const v = this.pher.sampleMax(NEST.x + Math.cos(a) * (NEST.r + 4), NEST.y + Math.sin(a) * (NEST.r + 4), 2);
+      vals.push(v);
+      total += v;
+      if (v > max) max = v;
+    }
+    if (total <= 0) return;
+    if (this.rng.next() >= Math.min(1, SCENT_P * ant.stubbornness) * Math.min(1, max / SCENT_FULL)) return;
+    let r = this.rng.next() * total;
+    let k = 0;
+    while (k < SCENT_DIRS - 1 && r > vals[k]) {
+      r -= vals[k];
+      k++;
+    }
+    ant.heading = wrapAngle((k / SCENT_DIRS) * TWO_PI + (this.rng.next() - 0.5) * 0.3);
   }
 
   /** An ant underground: only its clock runs. Hatchlings and unloaded foragers emerge when it reaches 0, nurses never do. */
@@ -893,7 +929,7 @@ export class World {
       const s = Math.sin(h);
       let score = speedAt(this.terrain, ant.x + c * LOOKAHEAD, ant.y + s * LOOKAHEAD) - TURN_PENALTY * Math.abs(turn);
       if (pherWeight > 0) {
-        const p = pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, 1);
+        const p = pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, PHER_R);
         score += p;
         if (p > pull) pull = p;
       }
