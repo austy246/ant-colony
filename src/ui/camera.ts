@@ -46,8 +46,9 @@ export class Camera {
     this.clamp();
   }
 
+  /** The most zoomed-out view: the whole map just fits (no floor, so a huge map can be seen whole). */
   get minZoom(): number {
-    return Math.max(1, Math.min(this.viewW / this.worldW, this.viewH / this.worldH));
+    return Math.min(this.viewW / this.worldW, this.viewH / this.worldH);
   }
 
   get maxZoom(): number {
@@ -78,8 +79,10 @@ export class Camera {
   }
 
   private clampAxis(c: number, viewPx: number, worldSize: number): number {
-    if (viewPx / this.zoom >= worldSize || !ok(c)) return worldSize / 2;
-    return Math.min(worldSize, Math.max(0, c));
+    const half = viewPx / this.zoom / 2;
+    if (half * 2 >= worldSize || !ok(c)) return worldSize / 2;
+    // the view never leaves the map: its edge stops at the map's edge
+    return Math.min(worldSize - half, Math.max(half, c));
   }
 
   panBy(dxScreen: number, dyScreen: number): void {

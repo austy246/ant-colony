@@ -51,19 +51,24 @@ describe('Camera', () => {
     expect(c.zoom).toBe(z);
   });
 
-  it('minZoom never drops below 1 on small views', () => {
+  it('minZoom has no floor: the whole map can always be seen, however big it is', () => {
     const c = new Camera(100, 80);
-    expect(c.minZoom).toBe(1);
+    expect(c.minZoom).toBeCloseTo(Math.min(100 / WORLD_W, 80 / WORLD_H), 9);
+    const huge = new Camera(1000, 600, 1520, 960);
+    huge.zoomAt(500, 300, 1e-6);
+    expect(huge.zoom).toBeCloseTo(Math.min(1000 / 1520, 600 / 960), 9);
+    expect(huge.x).toBe(760);
+    expect(huge.y).toBe(480);
   });
 
-  it('panBy cannot move view fully off the map', () => {
-    const c = new Camera(800, 600);
+  it('panBy cannot move the view off the map: its edge stops at the map edge', () => {
+    const c = new Camera(800, 600); // zoom 4: the view is 200 x 150 art px
     c.panBy(-1e6, -1e6);
-    expect(c.x).toBe(WORLD_W);
-    expect(c.y).toBe(WORLD_H);
+    expect(c.x).toBe(WORLD_W - 100);
+    expect(c.y).toBe(WORLD_H - 75);
     c.panBy(1e6, 1e6);
-    expect(c.x).toBe(0);
-    expect(c.y).toBe(0);
+    expect(c.x).toBe(100);
+    expect(c.y).toBe(75);
   });
 
   it('panBy moves content with the pointer', () => {
@@ -160,28 +165,28 @@ describe('Camera map growth', () => {
     c.x = 1000;
     c.y = 1000;
     c.clamp();
-    expect(c.x).toBe(360);
-    expect(c.y).toBe(225);
+    expect(c.x).toBe(360 - 50); // zoom 8: the view is 100 x 75 art px
+    expect(c.y).toBe(225 - 37.5);
     c.setWorldSize(400, 250);
     c.x = 1000;
     c.y = 1000;
     c.clamp();
-    expect(c.x).toBe(400);
-    expect(c.y).toBe(250);
+    expect(c.x).toBe(400 - 50);
+    expect(c.y).toBe(250 - 37.5);
   });
 
   it('setWorldSize keeps the view centre where it was and allows panning further', () => {
     const c = new Camera(800, 600);
     c.zoom = 8;
-    c.x = 300;
-    c.y = 190;
+    c.x = 250;
+    c.y = 150;
     c.clamp();
     c.setWorldSize(WORLD_W + 40, WORLD_H + 25);
-    expect(c.x).toBe(300);
-    expect(c.y).toBe(190);
+    expect(c.x).toBe(250);
+    expect(c.y).toBe(150);
     c.panBy(-100000, -100000);
-    expect(c.x).toBe(WORLD_W + 40);
-    expect(c.y).toBe(WORLD_H + 25);
+    expect(c.x).toBe(WORLD_W + 40 - 50);
+    expect(c.y).toBe(WORLD_H + 25 - 37.5);
   });
 
   it('keeps zoom within the new minZoom after setWorldSize', () => {
