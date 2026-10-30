@@ -111,3 +111,26 @@ describe('raids of red ants', () => {
     expect(w.reds).toHaveLength(0);
   });
 });
+
+describe('secret raid key', () => {
+  it('triggerRaid starts a raid at once (also with few ants) and not a second one while it goes on', () => {
+    const w = raidWorld(8);
+    w.addAnts(50);
+    expect(w.triggerRaid()).toBe(true);
+    expect(w.reds.length).toBeGreaterThanOrEqual(RAID_SIZE_MIN);
+    expect(w.triggerRaid()).toBe(false);
+    run(w, 5);
+    expect(w.reds.length).toBeGreaterThan(0);
+  });
+
+  it('works in sandbox too: the red ants walk to the nest', () => {
+    const w = World.create(9);
+    w.addAnts(30);
+    w.triggerRaid();
+    const before = w.reds[0] ? Math.hypot(w.reds[0].x - NEST.x, w.reds[0].y - NEST.y) : 0;
+    run(w, 5);
+    const r = w.reds[0];
+    expect(r).toBeDefined();
+    expect(Math.hypot(r.x - NEST.x, r.y - NEST.y)).toBeLessThan(before);
+  });
+});

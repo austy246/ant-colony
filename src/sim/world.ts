@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, HONEY_MAX_ITEMS, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, BUSH_DROP_DY, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -9,7 +9,7 @@ import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import type { RedAnt } from './raid';
-import { dropInterval, type Bush } from './aphids';
+import type { Bush } from './aphids';
 import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
@@ -481,8 +481,8 @@ export class World {
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
       updateEnvironment(this);
       this.updateBush();
-      this.updateRaid();
     }
+    this.updateRaid(); // also in sandbox, so the secret raid key works there (it never starts by itself below RAID_MIN_ANTS ants)
     this.updateSpider();
     this.pher.step(STEP_S);
     this.time += STEP_S;
@@ -927,7 +927,9 @@ export class World {
       if (f.piecesLeft <= 0 || f.stuck) continue;
       if (f.kind === 'leaf' && !this.bush) continue; // without aphids to feed, ants leave leaves to the caterpillars
       const d = Math.hypot(f.x - x, f.y - y);
-      if (d <= bestD) {
+      // the aphids' honeydew sits in the middle of the big bush: ants notice it from the edge of the canopy
+      const bushHoney = f.kind === 'honeydew' && this.bush !== null && f.x === this.bush.x && f.y === this.bush.y;
+      if (d <= (bushHoney ? SENSE_FOOD + BUSH_SENSE : SENSE_FOOD) && (!best || d <= bestD)) {
         bestD = d;
         best = f;
       }
@@ -1230,6 +1232,13 @@ export class World {
   /** Active duels (red id -> the black ant it fights); transient. */
   private duels = new Map<number, Ant>();
 
+  /** Secret cheat: a raid of red ants starts right now (false while one is going on). */
+  triggerRaid(): boolean {
+    if (this.reds.length > 0 || this.noRaid) return false;
+    this.startRaid();
+    return true;
+  }
+
   private startRaid(): void {
     const rng = this.rng;
     const cap = Math.max(RAID_SIZE_MIN, Math.floor(this.ants.length / 2));
@@ -1280,7 +1289,7 @@ export class World {
     }
   }
 
-  /** Normal mode: the bush appears with a big colony; its aphids now and then drop honeydew next to it (at most HONEY_MAX_ITEMS on the map). */
+  /** Normal mode: the bush appears with a big colony; its aphids make honeydew that the ants lick off. */
   private updateBush(): void {
     if (!this.bush) {
       if (this.ants.length < BUSH_MIN_ANTS) return;
@@ -1289,17 +1298,18 @@ export class World {
       const sy = BUSH_EDGE_GAP + this.rng.next() * Math.max(0, this.terrain.h - 2 * BUSH_EDGE_GAP);
       const found = resolvePlacement(this.terrain, sx, sy);
       const spot = found && !inWeb(this.spider, found.x, found.y) && Math.hypot(found.x - NEST.x, found.y - NEST.y) >= BUSH_NEST_GAP ? found : null;
-      if (spot) this.bush = { x: spot.x, y: spot.y, aphids: APHID_START, dropT: dropInterval(APHID_START) };
+      if (spot) this.bush = { x: spot.x, y: spot.y, aphids: APHID_START, dropT: 0 };
       return;
     }
     const b = this.bush;
-    b.dropT -= STEP_S;
-    if (b.dropT > 1e-9) return;
-    b.dropT = dropInterval(b.aphids);
-    let n = 0;
-    for (const f of this.food) if (f.kind === 'honeydew') n++;
-    if (n >= HONEY_MAX_ITEMS) return;
-    this.placeFood('honeydew', b.x + (this.rng.next() - 0.5) * 160, b.y + BUSH_DROP_DY + this.rng.next() * 10);
+    // Every aphid makes one drop of honeydew per APHID_HONEY_S and holds it until an ant licks it off (at most one per aphid).
+    // The drops are one food item at the bush's centre (its pieces = the drops waiting); ants walk in and lick them off.
+    b.dropT += b.aphids * STEP_S;
+    if (b.dropT < APHID_HONEY_S - 1e-9) return;
+    b.dropT -= APHID_HONEY_S;
+    const item = this.food.find((f) => f.kind === 'honeydew' && f.x === b.x && f.y === b.y);
+    if (item) item.piecesLeft = Math.min(b.aphids, item.piecesLeft + 1);
+    else this.food.push({ id: this.nextId++, kind: 'honeydew', x: b.x, y: b.y, piecesLeft: 1 });
   }
 
   /**

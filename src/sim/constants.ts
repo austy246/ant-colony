@@ -171,16 +171,14 @@ export const CATERPILLAR_MAX_PIECES = 144;
 export const BUSH_MIN_ANTS = 500;
 export const APHID_START = 3;
 export const APHID_MAX = 15;
-/** A drop of honeydew falls every max(APHID_DROP_MIN_S, APHID_DROP_BASE_S / aphids) seconds; at most HONEY_MAX_ITEMS lie on the map. */
-export const APHID_DROP_BASE_S = 270;
-export const APHID_DROP_MIN_S = 18;
-export const HONEY_MAX_ITEMS = 3;
+/** Every aphid holds one drop of honeydew per APHID_HONEY_S seconds, until an ant licks it off. */
+export const APHID_HONEY_S = 30;
 /** An ant carrying a leaf feeds the aphids once it is this close (px) to the bush. */
 export const BUSH_REACH = 60;
-/** The bush is big (about 300 x 270 art px): it appears at least this far (px) from the nest and from the map edges, and honeydew drops this far (px) below its centre. */
+/** The bush is big (about 300 x 270 art px): it appears at least this far (px) from the nest and from the map edges. Ants smell its honeydew BUSH_SENSE px farther than they notice other food. */
 export const BUSH_NEST_GAP = 220;
 export const BUSH_EDGE_GAP = 150;
-export const BUSH_DROP_DY = 125;
+export const BUSH_SENSE = 150;
 
 // ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
 export const RAID_MIN_ANTS = 1000;

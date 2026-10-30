@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dropInterval } from './aphids';
 import {
-  APHID_DROP_MIN_S, APHID_MAX, APHID_START, BUSH_MIN_ANTS, HONEY_MAX_ITEMS, NEST, STEP_S,
+  APHID_HONEY_S, APHID_MAX, APHID_START, BUSH_MIN_ANTS, BUSH_SENSE, STEP_S,
 } from './constants';
 import { FOOD_TABLE } from './food';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
@@ -31,11 +30,6 @@ describe('the aphids bush', () => {
     run(w, 1);
     expect(w.bush).not.toBeNull();
     expect(w.bush!.aphids).toBe(APHID_START);
-  });
-
-  it('the more aphids, the sooner the honeydew falls', () => {
-    expect(dropInterval(3)).toBeGreaterThan(dropInterval(10));
-    expect(dropInterval(1000)).toBe(APHID_DROP_MIN_S);
   });
 
   it('ants bring leaves to the bush and every leaf unit adds an aphid', () => {
@@ -77,24 +71,35 @@ describe('the aphids bush', () => {
     expect(w.bush!.aphids).toBe(APHID_MAX);
   });
 
-  it('every so often a drop of honeydew falls by the bush, at most HONEY_MAX_ITEMS at a time', () => {
+  it('every aphid makes one drop of honeydew per APHID_HONEY_S seconds and holds at most one', () => {
     const w = normalWorld(6);
-    w.bush = { x: 100, y: 40, aphids: APHID_MAX, dropT: 0.1 };
-    run(w, 1);
-    expect(w.food.filter((f) => f.kind === 'honeydew')).toHaveLength(1);
-    run(w, APHID_DROP_MIN_S * (HONEY_MAX_ITEMS + 3));
-    expect(w.food.filter((f) => f.kind === 'honeydew')).toHaveLength(HONEY_MAX_ITEMS);
+    w.bush = { x: 100, y: 40, aphids: APHID_START, dropT: 0 };
+    run(w, 5);
+    expect(w.food.filter((f) => f.kind === 'honeydew')).toHaveLength(0);
+    run(w, 10); // 3 aphids make a drop every 10 s in all
+    const honey = w.food.find((f) => f.kind === 'honeydew')!;
+    expect(honey.x).toBe(100);
+    expect(honey.piecesLeft).toBe(1);
+    run(w, APHID_HONEY_S - 14);
+    expect(honey.piecesLeft).toBe(APHID_START); // one drop per aphid after APHID_HONEY_S
+    run(w, 3 * APHID_HONEY_S);
+    expect(honey.piecesLeft).toBe(APHID_START); // no aphid holds a second drop
   });
 
-  it('honeydew is ordinary food: an ant carries it to the nest', () => {
+  it('ants lick the honeydew off the aphids from afar and carry it to the nest', () => {
     const w = normalWorld(7);
     w.stock = 0;
-    const d = w.placeFood('honeydew', NEST.x + 20, NEST.y)!;
+    w.bush = { x: 140, y: 120, aphids: APHID_START, dropT: 0 };
+    run(w, APHID_HONEY_S + 1);
+    const honey = w.food.find((f) => f.kind === 'honeydew')!;
+    expect(honey.piecesLeft).toBe(APHID_START);
     const a = w.spawnAnt();
-    a.x = d.x;
-    a.y = d.y + 2;
-    run(w, 40);
+    a.x = 140 - BUSH_SENSE;
+    a.y = 120;
+    a.heading = 0;
+    run(w, 90);
     expect(w.totalDelivered).toBeGreaterThan(0);
+    expect(honey.piecesLeft).toBeLessThan(APHID_START + 1);
   });
 
   it('the bush survives a save and a load', () => {
