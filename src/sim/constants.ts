@@ -15,6 +15,8 @@ export const STARTER_STOCK = 10;
 /** A started colony with no ants and too little food for one gets a free ant after this many seconds. */
 export const RESCUE_AFTER_S = 15;
 export const MAX_ANTS = 300;
+/** Ant limit in normal mode. */
+export const MAX_ANTS_NORMAL = 2000;
 export const MAX_PHEROMONE = 5;
 export const STEP_S = 1 / 30;
 /** Seconds an ant gnaws at its food before it takes a piece (each ant: GNAW_S * (0.75 + 0.5 * random)). */

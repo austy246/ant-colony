@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAX_ANTS_NORMAL, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
@@ -119,6 +119,8 @@ function wrapAngle(a: number): number {
   return a - Math.PI;
 }
 
+export type GameMode = 'sandbox' | 'normal';
+
 export class World {
   terrain: Terrain;
   pher: PheromoneField;
@@ -151,6 +153,8 @@ export class World {
   nextId = 1;
   rng: Rng;
   seed: number;
+  /** 'sandbox': MAX_ANTS, rescue on, never extinct. 'normal': MAX_ANTS_NORMAL, no rescue, the colony can die out. */
+  mode: GameMode = 'sandbox';
   /**
    * Coarse "where have ants been" map (EXPLORE_W x EXPLORE_H cells of EXPLORE_CELL px, row-major): wandering ants add
    * to their cell, values decay with half-life EXPLORE_HALF_LIFE_S and are capped at EXPLORE_CAP; wanderers prefer
@@ -173,9 +177,20 @@ export class World {
     this.peakLarvae = this.larvae;
   }
 
-  static create(seed: number): World {
+  static create(seed: number, mode: GameMode = 'sandbox'): World {
     const terrain = generateTerrain(seed);
-    return new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
+    const w = new World(seed, terrain, new PheromoneField(terrain.w, terrain.h), new Rng(seed ^ 0x9e3779b9));
+    w.mode = mode;
+    return w;
+  }
+
+  get maxAnts(): number {
+    return this.mode === 'normal' ? MAX_ANTS_NORMAL : MAX_ANTS;
+  }
+
+  /** Normal mode only: the colony started, has no ants and not enough food for another. Evaluated on every call. */
+  get extinct(): boolean {
+    return this.mode === 'normal' && this.started && this.ants.length === 0 && this.stock + STOCK_EPS < FOOD_PER_ANT;
   }
 
   /** Fed larvae waiting to hatch (stock is fractional, hence the epsilon). */
@@ -523,7 +538,7 @@ export class World {
 
   /** One hatching cycle per effective interval (HATCH_INTERVAL_S / queens) while there is food and room; at most one hatch per substep. */
   private hatch(): void {
-    if (!this.started || this.stock + STOCK_EPS < FOOD_PER_ANT || this.ants.length >= MAX_ANTS) {
+    if (!this.started || this.stock + STOCK_EPS < FOOD_PER_ANT || this.ants.length >= this.maxAnts) {
       this.hatchProgress = 0;
       return;
     }
@@ -541,7 +556,7 @@ export class World {
 
   /** Never soft-lock: an empty, foodless started colony gets one free ant after RESCUE_AFTER_S. */
   private rescue(): void {
-    if (!this.started || this.ants.length > 0 || this.stock + STOCK_EPS >= FOOD_PER_ANT) {
+    if (this.mode === 'normal' || !this.started || this.ants.length > 0 || this.stock + STOCK_EPS >= FOOD_PER_ANT) {
       this.rescueTimer = 0;
       return;
     }
