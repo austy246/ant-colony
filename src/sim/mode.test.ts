@@ -82,3 +82,14 @@ describe('world mode', () => {
     expect(s.ants.length).toBeGreaterThan(0);
   });
 });
+
+describe('secret cheat: addAnts', () => {
+  it('adds the requested ants and never goes beyond the ant limit of the mode', () => {
+    const w = World.create(5, 'sandbox');
+    expect(w.addAnts(100)).toBe(100);
+    expect(w.ants.length).toBe(100);
+    expect(w.addAnts(1000)).toBe(MAX_ANTS - 100);
+    expect(w.ants.length).toBe(MAX_ANTS);
+    expect(w.addAnts(100)).toBe(0);
+  });
+});

@@ -215,6 +215,13 @@ export async function startGame(): Promise<void> {
     if (views.isUnderground()) underground?.resize();
     else renderer.resize();
   });
+  // Secret: B gives 100 more ants (up to the ant limit).
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || !introDone || resetting) return;
+    const t = e.target;
+    if (t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.code === 'KeyB' || e.key.toLowerCase() === 'b') world.addAnts(100);
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') void autosave();
     else resetClock();

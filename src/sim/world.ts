@@ -355,6 +355,16 @@ export class World {
     return ant;
   }
 
+  /** Secret cheat: up to `n` more wandering ants at the entrance, never beyond maxAnts. Returns how many were added. */
+  addAnts(n: number): number {
+    let added = 0;
+    while (added < n && this.ants.length < this.maxAnts) {
+      this.spawnAnt();
+      added++;
+    }
+    return added;
+  }
+
   placeFood(kind: FoodKind, x: number, y: number): FoodItem | null {
     if (kind === 'leaf' && this.food.some((f) => f.kind === 'leaf')) return null; // one pile of leaves at a time
     const p = resolvePlacement(this.terrain, x, y);
