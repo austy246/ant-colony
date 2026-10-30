@@ -1,6 +1,8 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { World, type Ant } from '../sim/world';
+import { ANT_SIZE } from './antArt';
+import { MAJOR_SCALE } from './sprites';
 import { nestAntPose } from './nestChoreo';
 import { DIG_S, MAX_DRAWN_NEST_ANTS, MAX_STANDERS, nestHud, UndergroundView } from './underground';
 import type { CanvasLike } from './terrainRender';
@@ -258,6 +260,44 @@ describe('UndergroundView nest ants', () => {
       prev = d;
       expect(t.view.walkerCount()).toBe(n);
     }
+  });
+
+  it('underground draws a major larger than a normal ant', () => {
+    const widths = (major: boolean): number[] => {
+      const seen: number[] = [];
+      const spy = (w: number, h: number): CanvasLike => {
+        const cv = make(w, h);
+        const get = cv.getContext.bind(cv) as (k: string) => any;
+        (cv as any).getContext = (k: string) => {
+          const ctx = get(k);
+          if (w === ANT_SIZE && !ctx.__spied) {
+            ctx.__spied = true;
+          }
+          const orig = ctx.drawImage.bind(ctx);
+          if (!ctx.__wrapped) {
+            ctx.__wrapped = true;
+            ctx.drawImage = (img: { width: number }, ...a: number[]) => {
+              if (img.width === ANT_SIZE) seen.push(a.length >= 4 ? a[2] : img.width);
+              return orig(img, ...a);
+            };
+          }
+          return ctx;
+        };
+        return cv;
+      };
+      const w = nestWorld([{ kind: 'nurse', timer: 0 }]);
+      if (major) w.ants[0].major = true;
+      const canvas = createCanvas(1, 1);
+      Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
+      const view = new UndergroundView(canvas as unknown as HTMLCanvasElement, w, spy);
+      view.draw(0.05);
+      return seen;
+    };
+    const normal = widths(false);
+    const major = widths(true);
+    expect(normal.length).toBeGreaterThan(0);
+    expect(Math.max(...normal)).toBe(ANT_SIZE);
+    expect(Math.max(...major)).toBe(Math.round(ANT_SIZE * MAJOR_SCALE));
   });
 
   it('ants on the surface are not drawn underground', () => {

@@ -68,16 +68,16 @@ export class AntSprites {
   }
 }
 
-/** Draws one pre-rendered ant with a single drawImage at the (snapped) world position, smoothing off. */
-export function drawAnt(c: Ctx2D, sprites: AntSprites, x: number, y: number, dir: number, frame: number, carrying: boolean): void {
+/** A major (big-headed soldier) is drawn this many times larger than a worker, same sprite. */
+export const MAJOR_SCALE = 1.6;
+
+/** Draws one pre-rendered ant with a single drawImage at the (snapped) world position, smoothing off; `scale` enlarges it around its centre. */
+export function drawAnt(c: Ctx2D, sprites: AntSprites, x: number, y: number, dir: number, frame: number, carrying: boolean, scale = 1): void {
   if (c.imageSmoothingEnabled) c.imageSmoothingEnabled = false;
-  c.drawImage(
-    sprites.get(dir, frame, carrying) as unknown as CanvasImageSource,
-    snap(x) - ANT_CENTER / FINE,
-    snap(y) - ANT_CENTER / FINE,
-    ANT_SIZE / FINE,
-    ANT_SIZE / FINE,
-  );
+  const size = (ANT_SIZE / FINE) * scale;
+  // the centre pixel (ANT_CENTER) keeps its place whatever the scale
+  const off = ((ANT_CENTER + 0.5) * scale - 0.5) / FINE;
+  c.drawImage(sprites.get(dir, frame, carrying) as unknown as CanvasImageSource, snap(x) - off, snap(y) - off, size, size);
 }
 
 const clamp01 = (p: number): number => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0);

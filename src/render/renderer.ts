@@ -6,7 +6,7 @@ import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { advanceStride, frameFor, type StrideState } from './stride';
-import { AntSprites, drawAnt, drawQueen } from './sprites';
+import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
 import { renderTerrain, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
@@ -149,7 +149,7 @@ export class Renderer {
         const st = advanceStride(this.strides.get(a.id), a.x, a.y);
         st.gen = gen;
         this.strides.set(a.id, st);
-        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0);
+        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0, a.major ? MAJOR_SCALE : 1);
       }
       if (this.strides.size > ants.length) {
         const kills = this.lastKilled >= 0 ? this.world.antsKilled - this.lastKilled : 0;

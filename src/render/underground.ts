@@ -12,7 +12,7 @@
 import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
 import { chamberFills } from '../sim/nestNeeds';
 import type { World } from '../sim/world';
-import { CALLOW_RGBA } from './antArt';
+import { ANT_CENTER, ANT_SIZE, CALLOW_RGBA } from './antArt';
 import {
   colonyTint, drawText, floorY, larvaRaster, larvaSlots, LARVA_FRAMES, LARVA_GROW, LARVA_SIZE, LARVA_VARIANTS, MAX_CRUMBS,
   paintChamberInterior, paintChamberRim, paintCrumbs, paintEggPile, paintFlyRemains, paintTunnelInteriors, paintTunnelRims,
@@ -24,7 +24,7 @@ import {
   insideChamber, MAX_SHOWN_LARVAE, nestLayout, NEST_H, NEST_W, smoothToward, type Chamber, type NestLayout, type Pt, type Tunnel,
 } from './nestLayout';
 import { queenSprite } from './preyArt';
-import { AntSprites, type Ctx2D } from './sprites';
+import { AntSprites, MAJOR_SCALE, type Ctx2D } from './sprites';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
 
 const defaultMake: CanvasFactory = (w, h) => {
@@ -124,6 +124,8 @@ export class UndergroundView {
   private callowSprites: AntSprites;
   /** Reused per frame: the poses of the drawn nest ants (at most MAX_DRAWN_NEST_ANTS), their draw order and the egg bookkeeping. */
   private poses: NestPose[] = [];
+  /** Whether the ant behind poses[i] is a major (drawn larger). */
+  private majors: boolean[] = [];
   private order: number[] = [];
   private drawn = 0;
   private eggsTaken: number[] = [];
@@ -541,6 +543,7 @@ export class UndergroundView {
       if (n >= MAX_DRAWN_NEST_ANTS) break;
       const pose = (this.poses[n] ??= { x: 0, y: 0, dir16: 0, frame: 0, carrying: null, pose: 'stand', callow: false, queen: -1 });
       nestAntPose(a, sl, time, pose);
+      this.majors[n] = a.major === true;
       if (pose.carrying === 'egg' && pose.pose === 'walk' && pose.queen >= 0 && pose.queen < queens) this.eggsTaken[pose.queen]++;
       n++;
     }
@@ -577,7 +580,15 @@ export class UndergroundView {
       const sprites = p.callow ? this.callowSprites : this.antSprites;
       const x = Math.round(p.x);
       const y = Math.round(p.y);
-      c.drawImage(sprites.get(p.dir16, p.frame, p.carrying === 'crumb') as unknown as CanvasImageSource, x - 12, y - 12);
+      const img = sprites.get(p.dir16, p.frame, p.carrying === 'crumb') as unknown as CanvasImageSource;
+      if (this.majors[this.order[k]]) {
+        // a major: the same sprite MAJOR_SCALE times larger (whole fine pixels), centred on the same point
+        const size = Math.round(ANT_SIZE * MAJOR_SCALE);
+        const off = Math.round((ANT_CENTER + 0.5) * MAJOR_SCALE - 0.5);
+        c.drawImage(img, x - off, y - off, size, size);
+      } else {
+        c.drawImage(img, x - 12, y - 12);
+      }
       if (p.carrying === 'egg') this.drawCarriedEgg(c, p, x, y);
     }
   }
