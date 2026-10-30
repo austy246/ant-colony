@@ -160,9 +160,9 @@ export function worldFromSave(s: SaveV1): World {
     else delete ant.nestKind;
     w.ants.push(ant);
   }
-  // The spider only exists in normal mode; without a living one nobody can be stuck in a web.
+  // Without a living spider nobody can be stuck in a web.
   // Clamped to one full respawn from now, like the sugar clocks.
-  w.spider = w.mode === 'normal' && s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
+  w.spider = s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
   // Ants inside the nest are never in the web either.
   for (const a of w.ants) if (!w.spider?.alive || a.state === 'nest') delete a.caughtT;
   w.peakAnts = Math.max(s.peakAnts ?? 0, w.ants.length);

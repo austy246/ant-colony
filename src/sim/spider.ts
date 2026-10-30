@@ -36,8 +36,8 @@ export function spiderCornerIndex(seed: number, index: number): 0 | 1 {
 }
 
 /** Position of the `index`-th spider of a game: upper or lower right corner of the base map, MARGIN from the edges. */
-export function spiderCorner(seed: number, index: number): { x: number; y: number } {
-  return { x: WORLD_W - MARGIN, y: spiderCornerIndex(seed, index) === 0 ? MARGIN : WORLD_H - MARGIN };
+export function spiderCorner(seed: number, index: number, corner: 0 | 1 = spiderCornerIndex(seed, index)): { x: number; y: number } {
+  return { x: WORLD_W - MARGIN, y: corner === 0 ? MARGIN : WORLD_H - MARGIN };
 }
 
 /** Is (x, y) inside the web of a living spider? */

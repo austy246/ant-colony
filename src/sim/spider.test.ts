@@ -62,14 +62,19 @@ describe('spiderCorner', () => {
 });
 
 describe('spider in the world', () => {
-  it('sandbox world has no spider and catches nobody', () => {
-    const w = World.create(1);
-    w.spawnAnt();
-    w.ants[0].x = WORLD_W - 26;
-    w.ants[0].y = 26;
-    run(w, 2);
-    expect(w.spider).toBeNull();
-    expect(w.ants[0].caughtT).toBeUndefined();
+  it('sandbox world has a spider too, always in the lower right corner, and it catches ants', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const w = World.create(seed);
+      const a = w.spawnAnt();
+      w.step(STEP_S);
+      expect(w.spider).not.toBeNull();
+      expect(w.spider!.corner).toBe(1);
+      expect(w.spider!.y).toBe(WORLD_H - SPIDER_WEB_R - 4);
+      a.x = w.spider!.x + 5;
+      a.y = w.spider!.y;
+      w.step(STEP_S);
+      expect(a.caughtT).toBeDefined();
+    }
   });
 
   it('normal world creates a spider on first step, without drawing from the world rng', () => {

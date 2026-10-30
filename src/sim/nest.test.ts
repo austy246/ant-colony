@@ -11,6 +11,7 @@ const EXTRA = { introDone: true, camera: { x: 0, y: 0, zoom: 1 } };
 /** Flat ground, empty larder. */
 function flatWorld(seed = 1): World {
   const w = World.create(seed);
+  w.noSpider = true; // these tests place ants anywhere; the spider has its own tests
   w.stock = 0;
   w.terrain.surface.fill(Surface.Ground);
   w.terrain.speed.fill(1);

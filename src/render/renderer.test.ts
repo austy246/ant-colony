@@ -457,18 +457,18 @@ describe('Renderer spider and web', () => {
     expect(all(none.canvas)).toEqual(all(dead.canvas));
   });
 
-  it('a sandbox world has no spider and draws none', () => {
+  it('a sandbox world has a spider in the lower right corner and draws it', () => {
     const sb = setup();
     expect(sb.world.spider).toBeNull();
     sb.world.step(STEP_S);
-    expect(sb.world.spider).toBeNull();
+    expect(sb.world.spider?.corner).toBe(1);
     sb.r.draw();
-    // the render equals that of an identical world that has no `spider` property at all
+    // the render differs from that of an identical world without a spider
     const twin = setup();
+    twin.world.noSpider = true;
     twin.world.step(STEP_S);
-    delete (twin.world as { spider?: unknown }).spider;
     twin.r.draw();
-    expect(all(sb.canvas)).toEqual(all(twin.canvas));
+    expect(all(sb.canvas)).not.toEqual(all(twin.canvas));
   });
 
   it('draws nothing in the pheromone and terrain views', () => {

@@ -183,6 +183,8 @@ export class World {
   spawnTimer = 0;
   /** Normal mode: the spider (created on the first step; null in sandbox and before that). */
   spider: Spider | null = null;
+  /** Test hook: no spider is ever created (tests of unrelated mechanics that place ants anywhere on the map). */
+  noSpider = false;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
   sugarReadyAt = 0;
   /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
@@ -445,9 +447,9 @@ export class World {
       // The map follows the colony size, one step per substep at most, and never shrinks.
       const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
-      this.updateSpider();
       updateEnvironment(this);
     }
+    this.updateSpider();
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();
@@ -459,10 +461,17 @@ export class World {
    * ant every SPIDER_EAT_S: the longest-caught ordinary ant, or, when none is caught, a major that has hung in the web for
    * SPIDER_MAJOR_HOLD_S. A dead spider counts down to its replacement. Uses no randomness of the world's rng.
    */
+  /** The `index`-th spider of the game: sandbox always settles in the lower right corner, normal mode in a corner drawn from (seed, index). */
+  private newSpider(index: number): Spider {
+    const corner = this.mode === 'sandbox' ? 1 : spiderCornerIndex(this.seed, index);
+    const c = spiderCorner(this.seed, index, corner);
+    return { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner };
+  }
+
   private updateSpider(): void {
+    if (this.noSpider) return;
     if (!this.spider) {
-      const c = spiderCorner(this.seed, 0);
-      this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, 0) };
+      this.spider = this.newSpider(0);
     }
     const sp = this.spider;
     if (!sp.alive) {
@@ -470,8 +479,7 @@ export class World {
       if (sp.respawnT <= 1e-9) {
         // The replacement's corner depends on the seed and the (whole-second) time of the respawn, so it is reproducible.
         const index = 1 + Math.floor(this.time);
-        const c = spiderCorner(this.seed, index);
-        this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, index) };
+        this.spider = this.newSpider(index);
       }
       return;
     }
