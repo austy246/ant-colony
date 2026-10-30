@@ -143,6 +143,9 @@ export class Renderer {
     if (this.view === 'pheromone') this.drawPheromoneView(c);
     else if (this.view === 'terrain') this.drawTerrainView(c);
     else {
+      // the bush lies on the ground under the food (the aphids' drops of honeydew hang on it) and the ants
+      const bush = this.world.bush;
+      if (bush) drawBush(c, bush, this.world.time);
       this.drawFoodLayer(c);
       const q = this.queen;
       if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
@@ -154,9 +157,6 @@ export class Renderer {
         drawWeb(c, sp.x, sp.y, SPIDER_WEB_R, this.world.time);
         drawSpider(c, bodyPos(sp).x, bodyPos(sp).y);
       }
-
-      const bush = this.world.bush;
-      if (bush) drawBush(c, bush, this.world.time);
 
       const ants = this.sorted;
       ants.length = 0;

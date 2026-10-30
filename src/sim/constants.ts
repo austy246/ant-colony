@@ -201,6 +201,11 @@ export const RED_REACH = 2.5;
 export const DUEL_S = 2;
 export const BLACK_WIN_P = 0.55;
 export const MAJOR_WIN_P = 0.9;
+/** Red ants keep this far (px) apart (they push each other away, at RED_SEP_SPEED px/s at most). */
+export const RED_SEP = 3;
+export const RED_SEP_SPEED = 8;
+/** A wandering black ant notices a red one this far away (px) and goes to fight it. */
+export const ANT_SENSE_RED = 40;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

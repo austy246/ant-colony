@@ -167,3 +167,44 @@ describe('raid timing and visibility', () => {
     expect(hudText(w)).toContain(`NÁLET: ${w.reds.length} červených`);
   });
 });
+
+describe('red ants keep apart and black ants go to meet them', () => {
+  it('red ants do not walk on top of each other', () => {
+    const w = raidWorld(12);
+    // 60 raiders all starting within a 1 px blob, all heading for the nest
+    for (let i = 0; i < 60; i++) w.reds.push({ id: 9000 + i, x: 200 + (i % 8) * 0.12, y: 120 + Math.floor(i / 8) * 0.12, heading: Math.PI });
+    run(w, 6);
+    let crowded = 0;
+    for (const r of w.reds) if (w.reds.some((o) => o !== r && Math.hypot(o.x - r.x, o.y - r.y) < 1.5)) crowded++;
+    expect(crowded / w.reds.length).toBeLessThan(0.1);
+  });
+
+  it('a black ant that senses a red one nearby goes and fights it', () => {
+    let fought = 0;
+    const n = 30;
+    for (let seed = 1; seed <= n; seed++) {
+      const w = raidWorld(seed);
+      const a = w.spawnAnt();
+      // the red ant walks from (160, 90) toward the nest; the black one stands 25 px beside its path, facing away
+      a.x = 135;
+      a.y = 80;
+      a.heading = -Math.PI / 2;
+      w.reds.push({ id: 9000, x: 160, y: 90, heading: 0 });
+      run(w, 12);
+      if (w.redKilled + w.antsKilled === 1) fought++;
+    }
+    expect(fought / n).toBeGreaterThan(0.85);
+  });
+
+  it('black ants carrying food or in the nest ignore the red ones', () => {
+    const w = raidWorld(13);
+    const a = w.spawnAnt();
+    a.x = 160;
+    a.y = 60;
+    a.state = 'carry';
+    a.carry = 1;
+    w.reds.push({ id: 9000, x: 160, y: 70, heading: Math.PI });
+    run(w, 0.3);
+    expect(a.duelT).toBeUndefined();
+  });
+});

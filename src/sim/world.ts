@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RED_SEP, RED_SEP_SPEED, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -9,7 +9,7 @@ import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import type { RedAnt } from './raid';
-import type { Bush } from './aphids';
+import { dropSpot, type Bush } from './aphids';
 import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
@@ -63,6 +63,10 @@ export interface Ant {
 }
 
 const BASE_SPEED = 12;
+/** Honeydew within this distance (px) of the bush's centre is the aphids' (see nearestFood). */
+const BUSH_HONEY_R = 170;
+/** Cell size (px) of the grid of red ants that the black ants search. */
+const RED_CELL = 16;
 const MAX_TURN = 6 * STEP_S; // rad per substep
 const FAN = 0.6;
 /** How far ahead (px) and how wide (cells, each way) a pheromone-following ant senses a trail: a 1 px trail is easy to miss with less. */
@@ -474,6 +478,7 @@ export class World {
   }
 
   private substep(): void {
+    this.substepNo++;
     const ex = this.explored;
     for (let i = 0; i < ex.length; i++) ex[i] *= EXPLORE_DECAY;
     if (this.spider?.alive) this.saturateWeb(this.spider);
@@ -935,8 +940,8 @@ export class World {
       if (f.piecesLeft <= 0 || f.stuck) continue;
       if (f.kind === 'leaf' && !this.bush) continue; // without aphids to feed, ants leave leaves to the caterpillars
       const d = Math.hypot(f.x - x, f.y - y);
-      // the aphids' honeydew sits in the middle of the big bush: ants notice it from the edge of the canopy
-      const bushHoney = f.kind === 'honeydew' && this.bush !== null && f.x === this.bush.x && f.y === this.bush.y;
+      // the aphids' honeydew hangs inside the big bush: ants notice it from the edge of the canopy
+      const bushHoney = f.kind === 'honeydew' && this.bush !== null && Math.hypot(f.x - this.bush.x, f.y - this.bush.y) <= BUSH_HONEY_R;
       if (d <= (bushHoney ? SENSE_FOOD + BUSH_SENSE : SENSE_FOOD) && (!best || d <= bestD)) {
         bestD = d;
         best = f;
@@ -1087,6 +1092,14 @@ export class World {
       }
       pherWeight = ant.strayT !== undefined ? 0 : 0.22;
       this.markExplored(ant.x, ant.y);
+      const red = this.reds.length > 0 ? this.sensedRed(ant) : null;
+      if (red) {
+        // a red raider close by: go and fight it (the duel starts when they meet)
+        desired = Math.atan2(red.y - ant.y, red.x - ant.x);
+        pherWeight = 0;
+        delete ant.strayT;
+        delete ant.strayH;
+      }
     }
 
     const pull = this.move(ant, desired, pherWeight);
@@ -1192,6 +1205,14 @@ export class World {
     }
     const rng = this.rng;
     const fights = new Map<number, Ant>();
+    // grid of all red ants, so each one only looks at its close neighbours when keeping its distance
+    const sep = new Map<number, RedAnt[]>();
+    for (const r of this.reds) {
+      const key = Math.floor(r.y / RED_SEP) * 4096 + Math.floor(r.x / RED_SEP);
+      const list = sep.get(key);
+      if (list) list.push(r);
+      else sep.set(key, [r]);
+    }
     for (const r of [...this.reds]) {
       if (r.fightT !== undefined) {
         r.fightT -= STEP_S;
@@ -1231,11 +1252,86 @@ export class World {
         r.heading = Math.atan2(ty - r.y, tx - r.x) + (rng.next() - 0.5) * 0.5;
       }
       const v = RED_SPEED * STEP_S;
-      r.x = Math.max(0.5, Math.min(this.terrain.w - 0.5, r.x + Math.cos(r.heading) * v));
-      r.y = Math.max(0.5, Math.min(this.terrain.h - 0.5, r.y + Math.sin(r.heading) * v));
+      let px = 0;
+      let py = 0;
+      const gx = Math.floor(r.x / RED_SEP);
+      const gy = Math.floor(r.y / RED_SEP);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const list = sep.get((gy + dy) * 4096 + gx + dx);
+          if (!list) continue;
+          for (const o of list) {
+            if (o === r) continue;
+            const ddx = r.x - o.x;
+            const ddy = r.y - o.y;
+            const d = Math.hypot(ddx, ddy);
+            if (d >= RED_SEP) continue;
+            if (d < 1e-6) {
+              const a = rng.next() * TWO_PI; // exactly on top of each other: any way apart
+              px += Math.cos(a);
+              py += Math.sin(a);
+            } else {
+              px += (ddx / d) * ((RED_SEP - d) / RED_SEP);
+              py += (ddy / d) * ((RED_SEP - d) / RED_SEP);
+            }
+          }
+        }
+      }
+      const pl = Math.hypot(px, py);
+      const k = pl > 1 ? 1 / pl : 1; // push at most RED_SEP_SPEED
+      r.x = Math.max(0.5, Math.min(this.terrain.w - 0.5, r.x + Math.cos(r.heading) * v + px * k * RED_SEP_SPEED * STEP_S));
+      r.y = Math.max(0.5, Math.min(this.terrain.h - 0.5, r.y + Math.sin(r.heading) * v + py * k * RED_SEP_SPEED * STEP_S));
     }
     void fights;
+    // grid of the free red ants for the black ants' sense (next substep)
+    this.redGrid.clear();
+    for (const r of this.reds) {
+      if (r.fightT !== undefined) continue;
+      const key = Math.floor(r.y / RED_CELL) * 4096 + Math.floor(r.x / RED_CELL);
+      const list = this.redGrid.get(key);
+      if (list) list.push(r);
+      else this.redGrid.set(key, [r]);
+    }
   }
+
+  /** The red ant a wandering black ant is after: looked up every 4th substep (staggered by ant id) and remembered in between. */
+  private sensedRed(ant: Ant): RedAnt | null {
+    if ((this.substepNo + ant.id) % 4 === 0 || !this.redTargets.has(ant)) {
+      this.redTargets.set(ant, this.nearestRed(ant.x, ant.y));
+    }
+    const r = this.redTargets.get(ant) ?? null;
+    return r && this.reds.length > 0 ? r : null;
+  }
+
+  private redTargets = new WeakMap<Ant, RedAnt | null>();
+  private substepNo = 0;
+
+  /** The nearest free red ant within ANT_SENSE_RED of (x, y), or null. */
+  private nearestRed(x: number, y: number): RedAnt | null {
+    if (this.redGrid.size === 0) return null;
+    let best: RedAnt | null = null;
+    let bestD = ANT_SENSE_RED;
+    const cx = Math.floor(x / RED_CELL);
+    const cy = Math.floor(y / RED_CELL);
+    const n = Math.ceil(ANT_SENSE_RED / RED_CELL);
+    for (let dy = -n; dy <= n; dy++) {
+      for (let dx = -n; dx <= n; dx++) {
+        const list = this.redGrid.get((cy + dy) * 4096 + cx + dx);
+        if (!list) continue;
+        for (const r of list) {
+          const d = Math.hypot(r.x - x, r.y - y);
+          if (d < bestD) {
+            bestD = d;
+            best = r;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  /** Free red ants by 16 px cell, rebuilt every substep of a raid (what the black ants can sense). */
+  private redGrid = new Map<number, RedAnt[]>();
 
   /** Active duels (red id -> the black ant it fights); transient. */
   private duels = new Map<number, Ant>();
@@ -1273,6 +1369,7 @@ export class World {
   /** The raid is over: the surviving red ants leave, any duel in progress is called off. */
   private endRaid(): void {
     this.reds.length = 0;
+    this.redGrid.clear();
     for (const a of this.duels.values()) delete a.duelT;
     this.duels.clear();
     this.raidWait = -1;
@@ -1311,14 +1408,19 @@ export class World {
       return;
     }
     const b = this.bush;
-    // Every aphid makes one drop of honeydew per APHID_HONEY_S and holds it until an ant licks it off (at most one per aphid).
-    // The drops are one food item at the bush's centre (its pieces = the drops waiting); ants walk in and lick them off.
+    // Every aphid makes one drop of honeydew per APHID_HONEY_S and holds it, at the rear of its body, until an ant takes it
+    // (at most one per aphid). A drop is a food item at the aphid's rear; ants walk to the aphid and take it from there.
     b.dropT += b.aphids * STEP_S;
     if (b.dropT < APHID_HONEY_S - 1e-9) return;
     b.dropT -= APHID_HONEY_S;
-    const item = this.food.find((f) => f.kind === 'honeydew' && f.x === b.x && f.y === b.y);
-    if (item) item.piecesLeft = Math.min(b.aphids, item.piecesLeft + 1);
-    else this.food.push({ id: this.nextId++, kind: 'honeydew', x: b.x, y: b.y, piecesLeft: 1 });
+    const free: number[] = [];
+    for (let i = 0; i < b.aphids; i++) {
+      const s = dropSpot(b, i);
+      if (!this.food.some((f) => f.kind === 'honeydew' && f.x === s.x && f.y === s.y)) free.push(i);
+    }
+    if (free.length === 0) return;
+    const s = dropSpot(b, free[Math.floor(this.rng.next() * free.length)]);
+    this.food.push({ id: this.nextId++, kind: 'honeydew', x: s.x, y: s.y, piecesLeft: 1 });
   }
 
   /**
