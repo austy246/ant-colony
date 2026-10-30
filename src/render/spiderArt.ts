@@ -15,7 +15,7 @@ const SAG = 0.07;
 
 /**
  * Pixel-art web of radius `r` (art px) around (x, y): thin spokes and sagging concentric arcs, one fine pixel thick, every
- * fine pixel painted once (so crossings do not get more opaque). `time` makes the outer rings sway very slowly. Nothing is
+ * fine pixel painted once (so crossings do not get more opaque). `time` makes the inner rings sway very slowly (the rim is still). Nothing is
  * painted farther than r from the centre (to a fine pixel).
  */
 export function drawWeb(c: Ctx2D, x: number, y: number, r: number, time: number): void {
@@ -44,13 +44,14 @@ export function drawWeb(c: Ctx2D, x: number, y: number, r: number, time: number)
   }
   const seg = (Math.PI * 2) / SPOKES;
   for (let k = 0; k < RINGS.length; k++) {
-    const sway = k === RINGS.length - 1 ? Math.sin(time * 0.7 + k) * 0.2 : Math.sin(time * 0.5 + k) * 0.1;
+    // The inner rings sway slightly; the rim stays put so nothing is painted beyond r.
+    const sway = k === RINGS.length - 1 ? 0 : Math.sin(time * 0.5 + k) * 0.1;
     const base = r * RINGS[k];
     const steps = Math.ceil((Math.PI * 2 * base) / (PX / 2));
     for (let s = 0; s < steps; s++) {
       const a = (s / steps) * Math.PI * 2;
       const f = (((a - rot) / seg) % 1 + 1) % 1; // 0 at a spoke, 0.5 midway
-      const rad = base * (1 - SAG * Math.sin(Math.PI * f)) + (k === RINGS.length - 1 ? 0 : sway);
+      const rad = base * (1 - SAG * Math.sin(Math.PI * f)) + sway;
       plot(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
     }
   }
