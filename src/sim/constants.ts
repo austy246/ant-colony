@@ -110,10 +110,10 @@ export const STRAY_MAX_S = 6;
 export const STRAY_TURN_MIN = 0.6;
 export const STRAY_TURN_MAX = 1.6;
 /** Heading weave of returning carriers: std (rad) at curiosity 1, correlation time (s). */
-export const WEAVE_AMP = 0.35;
+export const WEAVE_AMP = 0.22;
 export const WEAVE_TAU_S = 1.5;
 /** Weave std of an ant walking to food (a slight curve instead of a straight line); fades out near the food. */
-export const APPROACH_WEAVE_AMP = 0.18;
+export const APPROACH_WEAVE_AMP = 0.12;
 /** Chance per second (times curiosity) that a carrier gets confused and heads off in a random direction. */
 export const LOST_P = 0.01;
 export const LOST_MIN_S = 1.5;

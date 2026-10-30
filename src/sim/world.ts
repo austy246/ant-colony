@@ -1047,7 +1047,7 @@ export class World {
         const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
       }
-      pherWeight = ant.strayT !== undefined ? 0 : 0.15;
+      pherWeight = ant.strayT !== undefined ? 0 : 0.22;
       this.markExplored(ant.x, ant.y);
     }
 
