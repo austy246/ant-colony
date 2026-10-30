@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   FOOD_PER_ANT, HATCH_INTERVAL_S, HATCH_STAY_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STEP_S, UNLOAD_S,
 } from './constants';
-import { FOOD_TABLE } from './food';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { Surface } from './terrain';
 import { World } from './world';
