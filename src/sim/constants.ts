@@ -44,7 +44,7 @@ export const SUGAR_BOOST_MUL = 1.5;
 export const SPAWN_MIN_S = 12;
 export const SPAWN_MAX_S = 30;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
-export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew'>, number> = {
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew' | 'redant'>, number> = {
   berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
@@ -177,6 +177,25 @@ export const APHID_DROP_MIN_S = 18;
 export const HONEY_MAX_ITEMS = 3;
 /** An ant carrying a leaf feeds the aphids once it is this close (px) to the bush. */
 export const BUSH_REACH = 5;
+
+// ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
+export const RAID_MIN_ANTS = 1000;
+/** Seconds between two raids (uniform in MIN..MAX, drawn when the colony reaches RAID_MIN_ANTS and after each raid). */
+export const RAID_MIN_S = 240;
+export const RAID_MAX_S = 600;
+/** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
+export const RAID_SIZE_MIN = 100;
+export const RAID_SIZE_MAX = 500;
+/** The surviving red ants give up and leave this many seconds after the raid began. */
+export const RAID_MAX_S_ALIVE = 240;
+/** Walking speed of a red ant (px/s), how far (px) it notices a black ant, and how close it must be to fight. */
+export const RED_SPEED = 11;
+export const RED_SENSE = 12;
+export const RED_REACH = 2.5;
+/** A duel lasts this many seconds; the black ant wins with BLACK_WIN_P (a major with MAJOR_WIN_P), otherwise the red one does. */
+export const DUEL_S = 2;
+export const BLACK_WIN_P = 0.55;
+export const MAJOR_WIN_P = 0.9;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

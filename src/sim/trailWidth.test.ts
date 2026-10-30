@@ -3,7 +3,7 @@ import { NEST, STEP_S } from './constants';
 import { Surface } from './terrain';
 import { World } from './world';
 // Measured over 6 seeds (20 foragers walking a 150 px route and back, 120 s): the lateral spread of walkers around the
-// nest-food line was 7.5 px rms before the weave was reduced, 5.4 px after. A bit narrower than before, but not a single file.
+// nest-food line was 7.5 px rms before the weave was reduced, 3.5 px after (returning carriers are also drawn to the trail). A bit narrower than before, but not a single file.
 it('foragers walk in a fairly tight file between nest and food (not a wide braid)', () => {
   const rs: number[] = [];
   for (let seed = 1; seed <= 6; seed++) {
@@ -21,6 +21,6 @@ it('foragers walk in a fairly tight file between nest and food (not a wide braid
     rs.push(Math.sqrt(s / Math.max(1, n)));
   }
   const mean = rs.reduce((a, b) => a + b) / rs.length;
-  expect(mean).toBeLessThan(6.5);
-  expect(mean).toBeGreaterThan(3); // still a living, wavy trail
+  expect(mean).toBeLessThan(5);
+  expect(mean).toBeGreaterThan(2); // still a living, wavy trail
 });

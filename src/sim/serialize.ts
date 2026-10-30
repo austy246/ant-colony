@@ -74,7 +74,7 @@ function foodToSave(f: FoodItem): FoodItem {
 
 /** Persistent fields of an ant only (the transient steering state is left out). */
 function antToSave(a: Ant): SaveV1['ants'][number] {
-  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, ...rest } = a;
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, ...rest } = a;
   return rest;
 }
 

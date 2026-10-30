@@ -405,6 +405,24 @@ function buildHoneydew(): Sprite {
   return toSprite(R);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Dead red ant: a small red-brown body lying on its side with curled legs.
+// ---------------------------------------------------------------------------------------------------------------------
+function buildRedAnt(): Sprite {
+  const R = newR();
+  R.ell(2, 3, 8, 3, SH);
+  for (const [x, k] of [[-3, -1], [0, 0], [3, 1]] as const) {
+    R.line(x, -2, x + k, -5, '#4a0c08');
+    R.line(x, 2, x - k, 5, '#4a0c08');
+  }
+  R.ell(-5, 0, 2.6, 2.2, '#8a1c10');
+  R.ell(0, 0, 3, 2.4, '#b8321c');
+  R.ell(6, 0, 3.6, 2.8, '#6e140c');
+  R.px(-1, -1, '#d8583a');
+  R.px(-6, -1, '#e8e0c8');
+  return toSprite(R);
+}
+
 const BUILDERS: Record<FoodKind, () => Sprite> = {
   beetle: buildBeetle,
   caterpillar: buildCaterpillar,
@@ -415,6 +433,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   sugar: buildSugar,
   leaf: buildLeaf,
   honeydew: buildHoneydew,
+  redant: buildRedAnt,
 };
 
 const cache = new Map<FoodKind, Sprite>();

@@ -1,13 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, BUSH_MIN_ANTS, APHID_START, APHID_MAX, HONEY_MAX_ITEMS, BUSH_REACH, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, HONEY_MAX_ITEMS, BUSH_REACH, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
+import type { RedAnt } from './raid';
 import { dropInterval, type Bush } from './aphids';
 import { pickSpawnSpot } from './environment';
 import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
@@ -40,6 +41,8 @@ export interface Ant {
   major?: true;
   /** TRANSIENT (not saved): leaf units this ant carries to the aphids bush (instead of food to the nest). */
   carryLeaf?: number;
+  /** TRANSIENT (not saved): seconds left of a duel with a red ant; the ant stands still meanwhile. */
+  duelT?: number;
   /** Normal mode: seconds this ant has been stuck in the spider's web (absent = free). A caught ant does not move or act. Saved. */
   caughtT?: number;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
@@ -68,6 +71,8 @@ const LOOKAHEAD = 3;
 /** How far ahead (px) and how wide (cells, each way) a pheromone-following ant senses a trail: a 1 px trail is easy to miss with less. */
 const PHER_LOOKAHEAD = 6;
 const PHER_R = 2;
+/** Pheromone pull of a returning carrier (a wanderer's is 0.22, a forager walking to food 0.3). */
+const CARRY_TRAIL_PULL = 0.12;
 /** Nest-entrance trail scent: directions sampled, base chance to follow it, and the trail strength that makes it certain. */
 const SCENT_DIRS = 24;
 const SCENT_P = 0.7;
@@ -189,6 +194,17 @@ export class World {
   spider: Spider | null = null;
   /** Normal mode: the bush with aphids (null until the colony has BUSH_MIN_ANTS ants). Saved. */
   bush: Bush | null = null;
+  /** Red raiders on the map (transient: not saved, a raid in progress ends with a reload). */
+  reds: RedAnt[] = [];
+  /** Seconds until the next raid; -1 = not drawn yet (the colony is below RAID_MIN_ANTS). Transient. */
+  raidWait = -1;
+  /** Seconds since the current raid began. */
+  private raidAge = 0;
+  /** Test hook: no raids (tests that count ants exactly with a colony of 1000 or more). */
+  noRaid = false;
+  /** Red ants killed in raids so far, and raids started (transient). */
+  redKilled = 0;
+  raidsStarted = 0;
   /** Test hook: no spider is ever created (tests of unrelated mechanics that place ants anywhere on the map). */
   noSpider = false;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
@@ -466,6 +482,7 @@ export class World {
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
       updateEnvironment(this);
       this.updateBush();
+      this.updateRaid();
     }
     this.updateSpider();
     this.pher.step(STEP_S);
@@ -980,6 +997,7 @@ export class World {
       ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
       return;
     }
+    if (ant.duelT !== undefined) return; // fighting a red ant: stands still until the duel is decided
     if (ant.state === 'nest') {
       this.updateNestAnt(ant);
       return;
@@ -1031,6 +1049,7 @@ export class World {
       desired = this.leafHeading(ant);
     } else if (ant.state === 'carry') {
       desired = this.carryHeading(ant);
+      pherWeight = CARRY_TRAIL_PULL; // returning carriers are drawn to the existing trail, so separate lines merge into one
       this.pher.deposit(ant.x, ant.y, DEPOSIT);
     } else if (ant.state === 'wander') {
       const jitter = (this.rng.next() - 0.5) * WANDER_JITTER * ant.curiosity;
@@ -1127,6 +1146,139 @@ export class World {
     ant.carry = 0;
     ant.state = 'wander';
     ant.targetFood = null;
+  }
+
+  /**
+   * Normal mode, from RAID_MIN_ANTS ants: now and then RAID_SIZE_MIN..RAID_SIZE_MAX red ants (at most half of the black ones) come in
+   * from the map edge, walk to the nest and fight every black ant they meet, one duel at a time. A killed red ant leaves its
+   * body (1 piece, carried by one black ant to the larder); the survivors leave RAID_MAX_S_ALIVE seconds after the start.
+   */
+  private updateRaid(): void {
+    if (this.noRaid) return;
+    if (this.reds.length === 0) {
+      if (this.ants.length < RAID_MIN_ANTS) {
+        this.raidWait = -1;
+        return;
+      }
+      if (this.raidWait < 0) this.raidWait = RAID_MIN_S + (RAID_MAX_S - RAID_MIN_S) * this.rng.next();
+      this.raidWait -= STEP_S;
+      if (this.raidWait > 0) return;
+      this.startRaid();
+      return;
+    }
+    this.raidAge += STEP_S;
+    if (this.raidAge >= RAID_MAX_S_ALIVE) {
+      this.endRaid();
+      return;
+    }
+    // Black ants on the surface, bucketed by explored-grid cell, so every red looks only at its neighbours.
+    const cell = EXPLORE_CELL;
+    const buckets = new Map<number, Ant[]>();
+    for (const a of this.ants) {
+      if (a.state === 'nest' || a.caughtT !== undefined || a.duelT !== undefined) continue;
+      const key = Math.floor(a.y / cell) * 4096 + Math.floor(a.x / cell);
+      const list = buckets.get(key);
+      if (list) list.push(a);
+      else buckets.set(key, [a]);
+    }
+    const rng = this.rng;
+    const fights = new Map<number, Ant>();
+    for (const r of [...this.reds]) {
+      if (r.fightT !== undefined) {
+        r.fightT -= STEP_S;
+        if (r.fightT <= 1e-9) this.resolveDuel(r, fights.get(r.id));
+        continue;
+      }
+      let foe: Ant | null = null;
+      let best = RED_SENSE;
+      const cx = Math.floor(r.x / cell);
+      const cy = Math.floor(r.y / cell);
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const list = buckets.get((cy + dy) * 4096 + cx + dx);
+          if (!list) continue;
+          for (const a of list) {
+            if (a.duelT !== undefined) continue;
+            const d = Math.hypot(a.x - r.x, a.y - r.y);
+            if (d < best) {
+              best = d;
+              foe = a;
+            }
+          }
+        }
+      }
+      if (foe && best <= RED_REACH) {
+        r.fightT = DUEL_S;
+        foe.duelT = DUEL_S;
+        this.duels.set(r.id, foe);
+        continue;
+      }
+      const tx = foe ? foe.x : NEST.x;
+      const ty = foe ? foe.y : NEST.y;
+      const away = Math.hypot(tx - r.x, ty - r.y);
+      if (!foe && away <= NEST.r + 4) {
+        r.heading += (rng.next() - 0.5) * 1.5; // at the nest: mill about and wait for ants to come out
+      } else {
+        r.heading = Math.atan2(ty - r.y, tx - r.x) + (rng.next() - 0.5) * 0.5;
+      }
+      const v = RED_SPEED * STEP_S;
+      r.x = Math.max(0.5, Math.min(this.terrain.w - 0.5, r.x + Math.cos(r.heading) * v));
+      r.y = Math.max(0.5, Math.min(this.terrain.h - 0.5, r.y + Math.sin(r.heading) * v));
+    }
+    void fights;
+  }
+
+  /** Active duels (red id -> the black ant it fights); transient. */
+  private duels = new Map<number, Ant>();
+
+  private startRaid(): void {
+    const rng = this.rng;
+    const cap = Math.max(RAID_SIZE_MIN, Math.floor(this.ants.length / 2));
+    const size = Math.min(cap, RAID_SIZE_MIN + Math.floor(rng.next() * (RAID_SIZE_MAX - RAID_SIZE_MIN + 1)));
+    const w = this.terrain.w;
+    const h = this.terrain.h;
+    const side = Math.floor(rng.next() * 3); // top, bottom or right edge: the nest lies at the left
+    const t = rng.next();
+    const ex = side === 2 ? w - 1 : 20 + t * (w - 40);
+    const ey = side === 0 ? 1 : side === 1 ? h - 1 : 20 + t * (h - 40);
+    for (let i = 0; i < size; i++) {
+      this.reds.push({
+        id: this.nextId++,
+        x: Math.max(0.5, Math.min(w - 0.5, ex + (rng.next() - 0.5) * 30)),
+        y: Math.max(0.5, Math.min(h - 0.5, ey + (rng.next() - 0.5) * 30)),
+        heading: Math.atan2(NEST.y - ey, NEST.x - ex),
+      });
+    }
+    this.raidAge = 0;
+    this.raidsStarted++;
+  }
+
+  /** The raid is over: the surviving red ants leave, any duel in progress is called off. */
+  private endRaid(): void {
+    this.reds.length = 0;
+    for (const a of this.duels.values()) delete a.duelT;
+    this.duels.clear();
+    this.raidWait = -1;
+  }
+
+  /** The duel of `r` ends: the black ant wins with BLACK_WIN_P (a major with MAJOR_WIN_P); the loser dies, a dead red ant leaves its body. */
+  private resolveDuel(r: RedAnt, _unused?: Ant): void {
+    const foe = this.duels.get(r.id);
+    this.duels.delete(r.id);
+    delete r.fightT;
+    if (!foe) return;
+    delete foe.duelT;
+    const i = this.ants.indexOf(foe);
+    if (i < 0) return; // the black ant is gone (spider, beetle): the red one fights on
+    if (this.rng.next() < (foe.major ? MAJOR_WIN_P : BLACK_WIN_P)) {
+      const k = this.reds.indexOf(r);
+      if (k >= 0) this.reds.splice(k, 1);
+      this.redKilled++;
+      this.food.push({ id: this.nextId++, kind: 'redant', x: r.x, y: r.y, piecesLeft: FOOD_TABLE.redant.pieces });
+    } else {
+      this.ants.splice(i, 1);
+      this.antsKilled++;
+    }
   }
 
   /** Normal mode: the bush appears with a big colony; its aphids now and then drop honeydew next to it (at most HONEY_MAX_ITEMS on the map). */

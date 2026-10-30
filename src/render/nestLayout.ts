@@ -817,8 +817,9 @@ function growSlot(seed: number, gr: Grid, e: Extension, kind: Grown): void {
   const rng = createRng(mix(seed, 100000 + n));
   const lobes = makeLobes(rng);
   // a little smaller than the planned chambers: the cell is the limit
-  const rxMax = kind === 'larvae' ? 21 : 15;
-  const [lo, hi] = kind === 'larvae' ? [0.58, 0.66] : [0.58, 0.7];
+  // every chamber has its own size (80..100 % of the cell's limit), so the new area is not a row of identical rooms
+  const rxMax = (kind === 'larvae' ? 21 : 15) * (0.8 + 0.2 * rng());
+  const [lo, hi] = kind === 'larvae' ? [0.58, 0.7] : [0.55, 0.75];
   const aspect = lo + (hi - lo) * rng();
   const ryMax = rxMax * aspect;
   const minF = kind === 'larvae' ? 0.68 : 0.6;
@@ -835,13 +836,15 @@ function growSlot(seed: number, gr: Grid, e: Extension, kind: Grown): void {
   const xR = gr.baseW + 5;
   // gentle waves (at most 2 units, within the edge bands of the cells) that are 0 at every junction, so the ways to
   // different chambers share their points exactly
+  // each row's gallery lies 0, 2 or 4 units lower than the plain grid line (a per-row hash), and its wave is wider
+  const rowDrop = (row: number): number => 2 * (mix(seed, 7000 + row) % 3); // even: the vertical gallery steps by 2
   const hy = (row: number, x: number): number => {
     const u = x - xE;
-    return gr.baseH + row * NEST_STEP_H + 6 + Math.round(2.2 * Math.sin((Math.PI * u) / 40) * (0.6 + 0.4 * Math.sin(u / 89 + row * 1.7 + seed)));
+    return gr.baseH + row * NEST_STEP_H + 6 + rowDrop(row) + Math.round(2.8 * Math.sin((Math.PI * u) / 40) * (0.6 + 0.4 * Math.sin(u / 89 + row * 1.7 + seed)));
   };
   const vx = (xc: number, y: number): number => {
     const v = y - yG;
-    return xc + Math.round(1.8 * Math.sin((Math.PI * v) / 25) * (0.6 + 0.4 * Math.sin(v / 37 + xc + seed)));
+    return xc + Math.round(3 * Math.sin((Math.PI * v) / 25) * (0.6 + 0.4 * Math.sin(v / 37 + xc + seed)));
   };
   const path: Pt[] = [...e.trunk];
   const add = (p: Pt): void => {
@@ -861,7 +864,7 @@ function growSlot(seed: number, gr: Grid, e: Extension, kind: Grown): void {
     }
   };
   const xd = xE + 2 * Math.round((cx - xE) / 2);
-  const yRow = gr.baseH + cell.r * NEST_STEP_H + 6;
+  const yRow = gr.baseH + cell.r * NEST_STEP_H + 6 + rowDrop(cell.r);
   if (cell.r === 0) along(0, xE, xd);
   else if (cell.r > 0) {
     vertical(xE, yG, yRow);

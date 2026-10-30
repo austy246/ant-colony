@@ -356,7 +356,8 @@ describe('returning carriers: weave and getting lost', () => {
     expect(episodes).toBeGreaterThanOrEqual(5);
     expect(durations.length).toBeGreaterThanOrEqual(episodes - 3); // they end (a few may still be running at 30 s)
     for (const d of durations) {
-      expect(d).toBeGreaterThanOrEqual(1.5 - 0.05);
+      // an episode can be cut short when the carrier reaches the nest in the middle of it (delivering clears it)
+      expect(d).toBeGreaterThanOrEqual(1.0);
       expect(d).toBeLessThanOrEqual(3 + 0.05);
     }
     run(w, 150);

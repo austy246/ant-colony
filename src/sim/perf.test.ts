@@ -21,6 +21,7 @@ describe('large colony', () => {
 
   it('normal hatch() passes 300 ants and stops at 2000', () => {
     const w = World.create(3, 'normal');
+    w.noRaid = true;
     w.noSpider = true; // a spider eating an ant would make the exact counts below flaky
     for (let i = 0; i < 299; i++) w.spawnAnt();
     w.stock = 1e6;

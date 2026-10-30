@@ -10,6 +10,7 @@ import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } f
 import { drawBush } from './bushArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
+import { RED_RGBA } from './antArt';
 import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
 import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
@@ -60,6 +61,7 @@ export class Renderer {
   private trailCanvas: CanvasLike | null = null;
   private trailImage: ImageData | null = null;
   private antSprites: AntSprites | null = null;
+  private redSprites: AntSprites | null = null;
   /** Walking-animation state per ant id; entries of ants that are gone are pruned by generation. */
   private strides = new Map<number, StrideState>();
   private strideGen = 0;
@@ -171,6 +173,12 @@ export class Renderer {
         st.gen = gen;
         this.strides.set(a.id, st);
         drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.major ? MAJOR_SCALE : 1);
+      }
+      const reds = this.world.reds;
+      if (reds.length > 0) {
+        // red raiders: the same ant art in red, a simple time-driven gait (they are not tracked by the stride state)
+        const rs = (this.redSprites ??= new AntSprites(this.make, RED_RGBA));
+        for (const r of reds) drawAnt(c, rs, r.x, r.y, antDirection(r.heading), r.fightT !== undefined ? 0 : Math.floor(this.world.time * 8 + r.id) % ANT_FRAMES, false);
       }
       if (this.strides.size > ants.length) {
         const kills = this.lastKilled >= 0 ? this.world.antsKilled - this.lastKilled : 0;
