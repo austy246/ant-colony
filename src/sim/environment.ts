@@ -3,6 +3,7 @@ import {
 } from './constants';
 import { isAlive, resolvePlacement, type FoodKind } from './food';
 import type { Rng } from './rng';
+import { inWeb } from './spider';
 import type { World } from './world';
 
 type SpawnKind = Exclude<FoodKind, 'sugar'>;
@@ -20,11 +21,12 @@ export function pickSpawnKind(rng: Rng, weights: Record<SpawnKind, number> = SPA
   return kinds[kinds.length - 1];
 }
 
-/** A random point of the whole current map, resolved to a free spot (null if none was found nearby). */
+/** A random point of the whole current map, resolved to a free spot (null if none was found nearby or it lies in the spider's web). */
 export function pickSpawnSpot(world: World): { x: number; y: number } | null {
   const x = world.rng.next() * world.terrain.w;
   const y = world.rng.next() * world.terrain.h;
-  return resolvePlacement(world.terrain, x, y);
+  const spot = resolvePlacement(world.terrain, x, y);
+  return spot && !inWeb(world.spider, spot.x, spot.y) ? spot : null;
 }
 
 /** Normal mode, once per substep: counts the wait down and, at zero, lets one prey / food item appear on its own. */

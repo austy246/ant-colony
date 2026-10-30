@@ -20,6 +20,8 @@ Na začátku nové hry si vybereš mód.
 - **Sandbox**: vše jako dosud. Kořist si pokládáš sám, počet mravenců je nejvýše 300 a kolonie nikdy nezahyne (prázdné hnízdo bez jídla dostane po 15 s jednoho zachránce).
 - **Normal**: jen sleduješ kolonii. Kořist se objevuje sama (brouci, housenky, mouchy, zdechliny, maliny i houby), mapa a podzemí rostou s kolonií, a ta může **zahynout**: když nezbude žádný mravenec ani jídlo na dalšího, zobrazí se obrazovka zániku a můžeš začít znovu. Limit je **2000 mravenců**. Jednou za **5 minut** můžeš položit **cukr**; mravenec ho donese do hnízda a celá kolonie se na **minutu zrychlí (×1,5 rychlost)**.
 
+**Pavouk** (jen v Normalu): sedí v rohu mapy (vpravo nahoře nebo dole) a kolem něj je **pavučina**. Mravenec, který do ní vstoupí, se **chytí** a stojí na místě; pavouk chycené mravence postupně **sní**, jednoho každých **15 sekund** (tráví), obyčejné mravence dřív (nejdéle chyceného jako prvního). Chyceného **majora** si nechá viset **minutu**, než ho sní, takže mu na pomoc může přijít druhý major: když se do pavučiny chytí **dva majoři** najednou, pavouka **přemůžou**, všichni chycení se osvobodí a pavouk zmizí. Toulaví mravenci vlákna cítí a pavučině se vyhýbají (ne vždy úspěšně); mravenci, kteří jdou za jídlem nebo ho nesou, na ni nedbají. Brouci, housenky a mouchy do pavučiny nelezou ani neskáčou. Po **10 minutách** se vrátí v některém z rohů.
+
 **Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie.
 
 Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane i při poklesu zásob nebo larev.

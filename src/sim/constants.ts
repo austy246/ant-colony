@@ -137,3 +137,19 @@ export const MAX_LARVAE_CHAMBERS = 4;
  */
 export const MAX_NORMAL_PANTRIES = 256;
 export const MAX_NORMAL_LARVAE_CHAMBERS = 128;
+
+// ---- Spider (normal mode): one immobile spider in a corner with a web ----
+/** Radius (art px) of the circular web around the spider. */
+export const SPIDER_WEB_R = 22;
+/**
+ * Seconds between two meals (digestion): the spider eats one caught ant this often while anyone is caught, ordinary ants
+ * first (longest caught first). Wandering ants sense a living web and steer clear of it (world.ts, WEB_AVOID_PENALTY).
+ */
+export const SPIDER_EAT_S = 15;
+/**
+ * A caught major is eaten only after it has hung in the web this long and no ordinary caught ant is waiting (time for a
+ * second major to come).
+ */
+export const SPIDER_MAJOR_HOLD_S = 60;
+/** Seconds after the spider's death until a new one settles in a corner. */
+export const SPIDER_RESPAWN_S = 600;

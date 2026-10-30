@@ -1,5 +1,6 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { STEP_S } from '../sim/constants';
 import { Surface } from '../sim/terrain';
 import { World } from '../sim/world';
 import { Camera } from '../ui/camera';
@@ -8,10 +9,10 @@ import { renderTerrain, type CanvasLike } from './terrainRender';
 
 const make = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
 
-function setup() {
+function setup(mode: 'sandbox' | 'normal' = 'sandbox') {
   const canvas = createCanvas(1, 1);
   Object.assign(canvas, { clientWidth: 640, clientHeight: 400 });
-  const world = World.create(7);
+  const world = World.create(7, mode);
   const camera = new Camera(640, 400);
   camera.fitWorld(); // zoom 2, world centred: screen = (world - (160,100)) * 2 + (320,200)
   const r = new Renderer(canvas as unknown as HTMLCanvasElement, world, camera, make);
@@ -388,5 +389,143 @@ describe('Renderer follows the map size', () => {
     const s = camera.worldToScreen(350.25, 210.25);
     const d = canvas.getContext('2d').getImageData(Math.floor(s.x), Math.floor(s.y), 1, 1).data;
     expect(d[2]).toBeGreaterThan(d[0] + 40);
+  });
+});
+
+describe('Renderer spider and web', () => {
+  const dark = (p: number[]) => Math.max(...p) < 40; // the spider body (#1a1410), darker than the vignetted ground (~47)
+
+  function spiderSetup() {
+    const s = setup('normal');
+    s.world.step(STEP_S); // creates the spider
+    return { ...s, sp: s.world.spider! };
+  }
+  const all = (canvas: { getContext(t: '2d'): any; width: number; height: number }) =>
+    Array.from(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data as Uint8ClampedArray);
+
+  const kill = (sp: { alive: boolean; respawnT: number }) => {
+    sp.alive = false;
+    sp.respawnT = 100;
+  };
+  const px4 = (canvas: { getContext(t: '2d'): any; width: number; height: number }) => {
+    const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data as Uint8ClampedArray;
+    return (sx: number, sy: number): number[] => Array.from(d.slice((sy * canvas.width + sx) * 4, (sy * canvas.width + sx) * 4 + 3));
+  };
+  /** Screen pixels (not part of the spider body) that a living spider's web changes, found by diffing against a dead-spider render. */
+  function webPixels() {
+    const live = spiderSetup();
+    live.r.draw();
+    const a = all(live.canvas);
+    const dead = spiderSetup();
+    kill(dead.sp);
+    dead.r.draw();
+    const b = all(dead.canvas);
+    const c = live.camera.worldToScreen(live.sp.x, live.sp.y);
+    const out: { sx: number; sy: number }[] = [];
+    const W = live.canvas.width;
+    for (let i = 0; i < a.length; i += 4) {
+      if (a[i] === b[i] && a[i + 1] === b[i + 1] && a[i + 2] === b[i + 2]) continue;
+      const sx = (i / 4) % W;
+      const sy = Math.floor(i / 4 / W);
+      if (Math.hypot(sx - c.x, sy - c.y) > 22) out.push({ sx, sy }); // beyond the spider's own body (~9 screen px)
+    }
+    return { out, a, b };
+  }
+
+  it('draws the spider body and the web around it while it lives', () => {
+    const { r, px, sp, world } = spiderSetup();
+    expect(sp.alive).toBe(true);
+    r.draw();
+    expect(dark(px(sp.x + 0.25, sp.y + 0.25))).toBe(true);
+    kill(sp);
+    r.draw();
+    expect(dark(px(sp.x + 0.25, sp.y + 0.25))).toBe(false);
+    expect(world.spider!.alive).toBe(false);
+    // the web: hundreds of screen pixels away from the body differ between the alive and the dead render
+    expect(webPixels().out.length).toBeGreaterThan(300);
+  });
+
+  it('renderer draws no spider when it is dead', () => {
+    const dead = spiderSetup();
+    kill(dead.sp);
+    dead.r.draw();
+    expect(dark(dead.px(dead.sp.x + 0.25, dead.sp.y + 0.25))).toBe(false);
+    // a dead spider leaves exactly the render of a world that never had one
+    const none = spiderSetup();
+    none.world.spider = null;
+    none.r.draw();
+    expect(all(none.canvas)).toEqual(all(dead.canvas));
+  });
+
+  it('a sandbox world has no spider and draws none', () => {
+    const sb = setup();
+    expect(sb.world.spider).toBeNull();
+    sb.world.step(STEP_S);
+    expect(sb.world.spider).toBeNull();
+    sb.r.draw();
+    // the render equals that of an identical world that has no `spider` property at all
+    const twin = setup();
+    twin.world.step(STEP_S);
+    delete (twin.world as { spider?: unknown }).spider;
+    twin.r.draw();
+    expect(all(sb.canvas)).toEqual(all(twin.canvas));
+  });
+
+  it('draws nothing in the pheromone and terrain views', () => {
+    for (const view of ['pheromone', 'terrain'] as const) {
+      const live = spiderSetup();
+      live.r.setView(view);
+      live.r.draw();
+      const a = all(live.canvas);
+      const dead = spiderSetup();
+      dead.sp.alive = false;
+      dead.sp.respawnT = 100;
+      dead.r.setView(view);
+      dead.r.draw();
+      expect(all(dead.canvas), view).toEqual(a);
+    }
+  });
+
+  it('renderer draws the web before the ants', () => {
+    // find a real thread pixel, then stand an ant on it: the ant's black pixels must stay black (web under the ant)
+    const { out } = webPixels();
+    const t = out.find((p) => p.sx > 330 && p.sx < 600) ?? out[0];
+    const place = (kill_: boolean) => {
+      const s = spiderSetup();
+      if (kill_) kill(s.sp);
+      const a = s.world.spawnAnt();
+      const w = { x: (t.sx - 320) / 2 + 160, y: (t.sy - 200) / 2 + 100 };
+      a.x = w.x;
+      a.y = w.y;
+      a.heading = 0;
+      a.state = 'wander';
+      s.r.draw();
+      return px4(s.canvas);
+    };
+    const withWeb = place(false);
+    const noWeb = place(true);
+    let overlap = 0;
+    const live = spiderSetup();
+    live.r.draw();
+    const webOnly = px4(live.canvas);
+    const deadOnly = (() => {
+      const d = spiderSetup();
+      kill(d.sp);
+      d.r.draw();
+      return px4(d.canvas);
+    })();
+    for (let dy = -14; dy <= 14; dy++) {
+      for (let dx = -16; dx <= 16; dx++) {
+        const x = t.sx + dx;
+        const y = t.sy + dy;
+        const ant = noWeb(x, y);
+        const isWeb = webOnly(x, y).join() !== deadOnly(x, y).join();
+        if (Math.max(...ant) <= 20 && isWeb) {
+          overlap++; // an ant-black pixel where a web thread lies
+          expect(withWeb(x, y), `${x},${y}`).toEqual(ant);
+        }
+      }
+    }
+    expect(overlap).toBeGreaterThan(0);
   });
 });

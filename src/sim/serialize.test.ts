@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HATCH_INTERVAL_S, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, WORLD_H, WORLD_W } from './constants';
+import { HATCH_INTERVAL_S, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, WORLD_H, WORLD_W } from './constants';
 import { terrainSize } from './terrain';
 import { validateSave, worldFromSave, worldToSave, type SaveV1 } from './serialize';
 import { FOOD_TABLE } from './food';
@@ -514,5 +514,92 @@ describe('normal mode fields', () => {
       { ants: [{ ...ant, major: false }] }, { ants: [{ ...ant, carrySugar: 1 }] },
     ];
     for (const patch of bad) expect(validateSave({ ...s, ...patch }), JSON.stringify(patch)).toBeNull();
+  });
+});
+
+describe('spider fields', () => {
+  const json = (s: SaveV1) => JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+  function spiderSave(): World {
+    const w = World.create(21, 'normal');
+    for (let i = 0; i < 4; i++) w.spawnAnt();
+    w.spawnTimer = 1e9;
+    w.step(STEP_S);
+    w.spider!.eatT = 2.5;
+    w.ants[1].x = w.spider!.x;
+    w.ants[1].y = w.spider!.y;
+    w.ants[1].caughtT = 3.25;
+    return w;
+  }
+
+  it('round trip keeps spider state and caughtT', () => {
+    const w = spiderSave();
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.spider).toEqual(w.spider);
+    expect(r.ants[1].caughtT).toBe(3.25);
+    expect(r.ants[0].caughtT).toBeUndefined();
+  });
+
+  it('round trip keeps a dead spider with its respawn clock', () => {
+    const w = spiderSave();
+    w.spider!.alive = false;
+    w.spider!.respawnT = 321;
+    for (const a of w.ants) delete a.caughtT;
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.spider).toEqual({ ...w.spider });
+    expect(r.spider!.alive).toBe(false);
+  });
+
+  it('old save without spider loads fine (no spider yet, nobody caught)', () => {
+    const w = spiderSave();
+    const s = json(worldToSave(w, EXTRA));
+    delete s.spider;
+    for (const a of s.ants as Record<string, unknown>[]) delete a.caughtT;
+    const r = worldFromSave(validateSave(s)!);
+    expect(r.spider).toBeNull();
+    expect(r.ants.every((a) => a.caughtT === undefined)).toBe(true);
+    r.step(STEP_S);
+    expect(r.spider).not.toBeNull();
+  });
+
+  it('a sandbox save has no spider; caughtT is dropped when there is no live spider', () => {
+    const sb = World.create(3);
+    sb.spawnAnt();
+    sb.ants[0].caughtT = 1;
+    const r = worldFromSave(validateSave(json(worldToSave(sb, EXTRA)))!);
+    expect(r.spider).toBeNull();
+    expect(r.ants[0].caughtT).toBeUndefined();
+  });
+
+  it('clamps a restored respawn clock to one full respawn', () => {
+    const w = spiderSave();
+    w.spider!.alive = false;
+    w.spider!.respawnT = 1e9;
+    for (const a of w.ants) delete a.caughtT;
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.spider!.respawnT).toBe(SPIDER_RESPAWN_S);
+  });
+
+  it('drops caughtT from ants that are inside the nest', () => {
+    const w = spiderSave();
+    w.ants[2].state = 'nest';
+    w.ants[2].caughtT = 1;
+    const r = worldFromSave(validateSave(json(worldToSave(w, EXTRA)))!);
+    expect(r.ants[2].caughtT).toBeUndefined();
+    expect(r.ants[1].caughtT).toBe(3.25);
+  });
+
+  it('invalid spider field is rejected', () => {
+    const s = json(worldToSave(spiderSave(), EXTRA));
+    const sp = s.spider as Record<string, unknown>;
+    const bad: Record<string, unknown>[] = [
+      { spider: null }, { spider: 5 }, { spider: { ...sp, x: NaN } }, { spider: { ...sp, y: -1 } }, { spider: { ...sp, x: WORLD_W + 1 } },
+      { spider: { ...sp, alive: 1 } }, { spider: { ...sp, eatT: -1 } }, { spider: { ...sp, eatT: Infinity } },
+      { spider: { ...sp, respawnT: '1' } }, { spider: { ...sp, corner: 2 } }, { spider: { ...sp, corner: 0.5 } },
+    ];
+    for (const patch of bad) expect(validateSave({ ...s, ...patch }), JSON.stringify(patch)).toBeNull();
+    const ant = (s.ants as Record<string, unknown>[])[1];
+    for (const caughtT of [-1, NaN, '1', null]) {
+      expect(validateSave({ ...s, ants: [{ ...ant, caughtT }] }), String(caughtT)).toBeNull();
+    }
   });
 });

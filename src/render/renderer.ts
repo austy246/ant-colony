@@ -2,9 +2,11 @@ import type { Terrain } from '../sim/terrain';
 import { isAlive } from '../sim/food';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
+import { SPIDER_WEB_R } from '../sim/constants';
 import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
+import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
 import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
@@ -140,6 +142,14 @@ export class Renderer {
       this.drawFoodLayer(c);
       const q = this.queen;
       if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
+      // The spider's web lies on the ground under the ants; the spider sits on it, also under the ants.
+      const sp = this.world.spider;
+      const halfW = this.cssW / 2 / zoom + SPIDER_WEB_R;
+      const halfH = this.cssH / 2 / zoom + SPIDER_WEB_R;
+      if (sp?.alive && Math.abs(sp.x - this.camera.x) <= halfW && Math.abs(sp.y - this.camera.y) <= halfH) {
+        drawWeb(c, sp.x, sp.y, SPIDER_WEB_R, this.world.time);
+        drawSpider(c, sp.x, sp.y);
+      }
 
       const ants = this.sorted;
       ants.length = 0;

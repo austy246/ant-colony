@@ -1,5 +1,6 @@
-import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
+import type { Spider } from './spider';
 import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
@@ -53,6 +54,8 @@ export interface SaveV1 {
   sugarReadyAt?: number;
   boostUntil?: number;
   spawnTimer?: number;
+  /** Optional (absent = none yet: created on the first normal-mode step): the spider. A caught ant carries `caughtT` (seconds stuck). */
+  spider?: Spider;
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -117,6 +120,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     sugarReadyAt: w.sugarReadyAt,
     boostUntil: w.boostUntil,
     spawnTimer: w.spawnTimer,
+    ...(w.spider ? { spider: { ...w.spider } } : {}),
   };
 }
 
@@ -156,6 +160,11 @@ export function worldFromSave(s: SaveV1): World {
     else delete ant.nestKind;
     w.ants.push(ant);
   }
+  // The spider only exists in normal mode; without a living one nobody can be stuck in a web.
+  // Clamped to one full respawn from now, like the sugar clocks.
+  w.spider = w.mode === 'normal' && s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
+  // Ants inside the nest are never in the web either.
+  for (const a of w.ants) if (!w.spider?.alive || a.state === 'nest') delete a.caughtT;
   w.peakAnts = Math.max(s.peakAnts ?? 0, w.ants.length);
   w.food.length = 0;
   for (const f of s.food) w.food.push(foodToSave(f));
@@ -193,7 +202,8 @@ function validAnt(a: unknown, size: { w: number; h: number }): boolean {
     (o.curiosity === undefined || inRange(o.curiosity, TRAIT_MIN, TRAIT_MAX)) &&
     (o.stubbornness === undefined || inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX)) &&
     (o.major === undefined || o.major === true) &&
-    (o.carrySugar === undefined || o.carrySugar === true)
+    (o.carrySugar === undefined || o.carrySugar === true) &&
+    (o.caughtT === undefined || (isNum(o.caughtT) && o.caughtT >= 0))
   );
 }
 
@@ -209,6 +219,15 @@ function validFood(f: unknown, size: { w: number; h: number }): boolean {
     (o.heading === undefined || isNum(o.heading)) &&
     (o.speedMul === undefined || inRange(o.speedMul, TRAIT_MIN, TRAIT_MAX)) &&
     (o.corpseOf === undefined || o.corpseOf === 'beetle' || o.corpseOf === 'fly' || o.corpseOf === 'caterpillar')
+  );
+}
+
+function validSpider(sp: unknown, size: { w: number; h: number }): boolean {
+  if (typeof sp !== 'object' || sp === null) return false;
+  const o = sp as Record<string, unknown>;
+  return (
+    inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && typeof o.alive === 'boolean' &&
+    isNum(o.eatT) && o.eatT >= 0 && isNum(o.respawnT) && o.respawnT >= 0 && (o.corner === 0 || o.corner === 1)
   );
 }
 
@@ -238,6 +257,7 @@ export function validateSave(x: unknown): SaveV1 | null {
     if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
   }
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
+  if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;

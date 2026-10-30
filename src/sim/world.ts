@@ -1,13 +1,14 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
 import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
+import { inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain';
 
 /** 'nest' = underground: the ant is not on the surface (see `Ant.nestKind` for why it is inside). */
@@ -35,6 +36,8 @@ export interface Ant {
   role: AntRole;
   /** A major (big soldier ant): always kills living prey on touch and survives, ignores touch cooldowns, carries MAJOR_CARRY_PIECES pieces. Absent on ordinary ants and old saves. */
   major?: true;
+  /** Normal mode: seconds this ant has been stuck in the spider's web (absent = free). A caught ant does not move or act. Saved. */
+  caughtT?: number;
   /** Personality (drawn at spawn, saved; 1.0 = neutral for ants loaded from old saves). Walking speed factor. */
   speedMul: number;
   /** Scales heading jitter, the chance to stray off a trail, the pull of unexplored ground and the weave of a carrier. */
@@ -87,6 +90,13 @@ const EXPLORE_RATE = 1;
  * (EXPLORE_CAP * 0.1 * 1.18 = 0.71 < the pull 0.15 * MAX_PHEROMONE of a fresh trail).
  */
 const EXPLORE_WEIGHT = 0.1;
+/**
+ * Score penalty of a wanderer's candidate heading whose EXPLORE_LOOKAHEAD point lies in the web of a living spider: larger
+ * than any trail pull (0.15 * MAX_PHEROMONE = 0.75) plus the explored-ground spread (<= 0.71), so the ant turns away when it
+ * can. It is a penalty, not a wall: a wanderer that already points into the web with every candidate (or is turned in by
+ * the map edge) can still blunder in, so the spider keeps catching a few ants (measured with the headless gameplay sim).
+ */
+const WEB_AVOID_PENALTY = 2;
 /** How far ahead (px) a wanderer reads the explored grid. */
 const EXPLORE_LOOKAHEAD = 16;
 const PICKUP_DIST = 1.5;
@@ -155,7 +165,7 @@ export class World {
   peakAnts = 0;
   /** True once the first ant has appeared (set by spawnAnt); hatching and rescue only run from then on. */
   started = false;
-  /** Ants killed so far by a defending beetle (transient: not saved, 0 after a load). */
+  /** Ants killed so far: by a defending beetle or eaten by the spider (transient: not saved, 0 after a load). */
   antsKilled = 0;
   /** Number of carried-food deliveries to the nest (transient: not saved, 0 after a load). */
   deliveryCount = 0;
@@ -171,6 +181,8 @@ export class World {
   mapVersion = 0;
   /** Normal mode: seconds until the next spontaneous prey / food appearance (0 = draw a new wait now). */
   spawnTimer = 0;
+  /** Normal mode: the spider (created on the first step; null in sandbox and before that). */
+  spider: Spider | null = null;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
   sugarReadyAt = 0;
   /** Sim time until which every ant moves SUGAR_BOOST_MUL times faster. */
@@ -277,6 +289,18 @@ export class World {
   get majors(): number {
     let n = 0;
     for (const a of this.ants) if (a.major) n++;
+    return n;
+  }
+
+  /** Radius of the spider's web (art px). */
+  get spiderWebR(): number {
+    return SPIDER_WEB_R;
+  }
+
+  /** Ants currently stuck in the web. */
+  get caughtAnts(): number {
+    let n = 0;
+    for (const a of this.ants) if (a.caughtT !== undefined) n++;
     return n;
   }
 
@@ -410,6 +434,7 @@ export class World {
   private substep(): void {
     const ex = this.explored;
     for (let i = 0; i < ex.length; i++) ex[i] *= EXPLORE_DECAY;
+    if (this.spider?.alive) this.saturateWeb(this.spider);
     for (const ant of this.ants) this.updateAnt(ant);
     this.trackPeaks();
     this.updateCreatures();
@@ -420,11 +445,101 @@ export class World {
       // The map follows the colony size, one step per substep at most, and never shrinks.
       const wanted = Math.min(MAX_MAP_STEP, Math.floor(this.ants.length / MAP_STEP_ANTS));
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
+      this.updateSpider();
       updateEnvironment(this);
     }
     this.pher.step(STEP_S);
     this.time += STEP_S;
     this.updateNurses();
+  }
+
+  /**
+   * Normal mode, once per substep, after the ants moved: creates the spider on the first step, catches surface ants that
+   * stand in the web, kills the spider when two majors are caught at once (everyone is freed), otherwise eats one caught
+   * ant every SPIDER_EAT_S: the longest-caught ordinary ant, or, when none is caught, a major that has hung in the web for
+   * SPIDER_MAJOR_HOLD_S. A dead spider counts down to its replacement. Uses no randomness of the world's rng.
+   */
+  private updateSpider(): void {
+    if (!this.spider) {
+      const c = spiderCorner(this.seed, 0);
+      this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, 0) };
+    }
+    const sp = this.spider;
+    if (!sp.alive) {
+      sp.respawnT -= STEP_S;
+      if (sp.respawnT <= 1e-9) {
+        // The replacement's corner depends on the seed and the (whole-second) time of the respawn, so it is reproducible.
+        const index = 1 + Math.floor(this.time);
+        const c = spiderCorner(this.seed, index);
+        this.spider = { x: c.x, y: c.y, alive: true, eatT: 0, respawnT: 0, corner: spiderCornerIndex(this.seed, index) };
+      }
+      return;
+    }
+    let majors = 0;
+    let longest: Ant | null = null; // longest-caught ordinary ant
+    let longestMajor: Ant | null = null;
+    for (const a of this.ants) {
+      if (a.caughtT === undefined) {
+        if (a.state === 'nest' || !inWeb(sp, a.x, a.y)) continue;
+        a.caughtT = 0;
+      }
+      if (a.major) {
+        majors++;
+        if (!longestMajor || a.caughtT > (longestMajor.caughtT as number)) longestMajor = a;
+      } else if (!longest || a.caughtT > (longest.caughtT as number)) {
+        longest = a;
+      }
+    }
+    if (majors >= 2) {
+      sp.alive = false;
+      sp.eatT = 0;
+      sp.respawnT = SPIDER_RESPAWN_S;
+      for (const a of this.ants) delete a.caughtT;
+      return;
+    }
+    if (!longest && !longestMajor) {
+      sp.eatT = 0;
+      return;
+    }
+    sp.eatT += STEP_S;
+    if (sp.eatT < SPIDER_EAT_S - 1e-9) return;
+    // Ordinary ants first; a lone major only after SPIDER_MAJOR_HOLD_S, so a second major has time to come and help.
+    const meal = longest ?? ((longestMajor!.caughtT as number) >= SPIDER_MAJOR_HOLD_S - 1e-9 ? longestMajor : null);
+    if (!meal) {
+      sp.eatT = SPIDER_EAT_S; // hungry: eats the held major the moment its hold is over
+      return;
+    }
+    sp.eatT = 0;
+    const i = this.ants.indexOf(meal);
+    if (i >= 0) this.ants.splice(i, 1); // whatever it carried is lost
+    this.antsKilled++;
+  }
+
+  /**
+   * While the spider lives, every explored-grid cell that overlaps its web is held at EXPLORE_CAP, so wanderers see the web
+   * as well-trodden ground and are not drawn into it by the pull of unexplored ground. Recomputed from the spider's
+   * position and the current grid every substep (respawn in another corner, map growth).
+   */
+  private saturateWeb(sp: Spider): void {
+    const r = SPIDER_WEB_R;
+    const x0 = Math.max(0, Math.floor((sp.x - r) / EXPLORE_CELL));
+    const x1 = Math.min(this.exploreW - 1, Math.floor((sp.x + r) / EXPLORE_CELL));
+    const y0 = Math.max(0, Math.floor((sp.y - r) / EXPLORE_CELL));
+    const y1 = Math.min(this.exploreH - 1, Math.floor((sp.y + r) / EXPLORE_CELL));
+    for (let cy = y0; cy <= y1; cy++) {
+      const ny = Math.max(cy * EXPLORE_CELL, Math.min((cy + 1) * EXPLORE_CELL, sp.y)) - sp.y;
+      for (let cx = x0; cx <= x1; cx++) {
+        const nx = Math.max(cx * EXPLORE_CELL, Math.min((cx + 1) * EXPLORE_CELL, sp.x)) - sp.x;
+        if (nx * nx + ny * ny <= r * r) this.explored[cy * this.exploreW + cx] = EXPLORE_CAP;
+      }
+    }
+  }
+
+  /** Would a creature stepping from (x0, y0) to (x1, y1) get (deeper) into the web of a living spider? Prey keeps out of it. */
+  private intoWeb(x0: number, y0: number, x1: number, y1: number): boolean {
+    const sp = this.spider;
+    if (!sp || !inWeb(sp, x1, y1)) return false;
+    return Math.hypot(x1 - sp.x, y1 - sp.y) < Math.hypot(x0 - sp.x, y0 - sp.y);
   }
 
   /**
@@ -495,7 +610,7 @@ export class World {
 
   /**
    * A beetle / caterpillar ambles with little heading noise, pauses now and then and turns away from obstacles; it never
-   * steps onto a blocked spot. A caterpillar is slower than a beetle, and while it flees (fleeT > 0) it neither pauses
+   * steps onto a blocked spot, nor (deeper) into the web of a living spider. A caterpillar is slower than a beetle, and while it flees (fleeT > 0) it neither pauses
    * nor crawls at the normal pace.
    */
   private walkCrawler(f: FoodItem): void {
@@ -514,8 +629,11 @@ export class World {
     }
     let h = (f.heading ?? 0) + (rng.next() - 0.5) * (cat ? CATERPILLAR_JITTER : BEETLE_JITTER);
     const t = this.terrain;
-    const freeAhead = (a: number): boolean =>
-      isFreeSpot(t, f.x + Math.cos(a) * BEETLE_LOOKAHEAD, f.y + Math.sin(a) * BEETLE_LOOKAHEAD);
+    const freeAhead = (a: number): boolean => {
+      const ax = f.x + Math.cos(a) * BEETLE_LOOKAHEAD;
+      const ay = f.y + Math.sin(a) * BEETLE_LOOKAHEAD;
+      return isFreeSpot(t, ax, ay) && !this.intoWeb(f.x, f.y, ax, ay);
+    };
     if (!freeAhead(h)) {
       const sign = rng.next() < 0.5 ? 1 : -1;
       let turned = false;
@@ -539,7 +657,7 @@ export class World {
     const v = base * (f.speedMul ?? 1) * speedAt(t, f.x, f.y) * STEP_S;
     const nx = f.x + Math.cos(f.heading) * v;
     const ny = f.y + Math.sin(f.heading) * v;
-    if (isFreeSpot(t, nx, ny)) {
+    if (isFreeSpot(t, nx, ny) && !this.intoWeb(f.x, f.y, nx, ny)) {
       f.x = nx;
       f.y = ny;
     }
@@ -554,6 +672,7 @@ export class World {
       let toucher: Ant | null = null;
       for (const ant of this.ants) {
         if (ant.state !== 'wander' && ant.state !== 'toFood') continue;
+        if (ant.caughtT !== undefined) continue;
         if (onCooldown && !ant.major) continue;
         if (Math.hypot(ant.x - f.x, ant.y - f.y) > TOUCH_DIST) continue;
         // A major in reach wins over any ordinary ant (and ignores the cooldown); otherwise the first ant in array order.
@@ -610,7 +729,10 @@ export class World {
     ant.timer = 0;
   }
 
-  /** Hop 20-35 px in a random direction to a free spot (8 headings, then shorter hops); stays put if nothing is free. */
+  /**
+   * Hop 20-35 px in a random direction to a free spot (8 headings, then shorter hops); stays put if nothing is free.
+   * A spot in the web of a living spider does not count as free.
+   */
   private startHop(f: FoodItem): void {
     const rng = this.rng;
     for (const scale of HOP_SCALES) {
@@ -619,7 +741,7 @@ export class World {
         const d = (HOP_MIN + (HOP_MAX - HOP_MIN) * rng.next()) * scale;
         const tx = f.x + Math.cos(h) * d;
         const ty = f.y + Math.sin(h) * d;
-        if (!isFreeSpot(this.terrain, tx, ty)) continue;
+        if (!isFreeSpot(this.terrain, tx, ty) || inWeb(this.spider, tx, ty)) continue;
         f.hop = { fromX: f.x, fromY: f.y, toX: tx, toY: ty, t: 0, dur: HOP_DUR };
         f.heading = h;
         return;
@@ -738,6 +860,10 @@ export class World {
 
   private updateAnt(ant: Ant): void {
     ant.age += STEP_S;
+    if (ant.caughtT !== undefined) {
+      ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
+      return;
+    }
     if (ant.state === 'nest') {
       this.updateNestAnt(ant);
       return;
@@ -923,6 +1049,8 @@ export class World {
     let best = desired;
     let bestScore = -Infinity;
     const wander = ant.state === 'wander';
+    // A wanderer (not one off on a distraction) senses the silk of a living web and steers clear of it.
+    const web = wander && ant.strayT === undefined && this.spider?.alive ? this.spider : null;
     for (const turn of FAN_TURNS) {
       const h = desired + turn;
       const c = Math.cos(h);
@@ -934,6 +1062,7 @@ export class World {
         if (p > pull) pull = p;
       }
       if (wander) score -= EXPLORE_WEIGHT * (0.7 + 0.3 * ant.curiosity) * this.explored[this.exploreIndex(ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)];
+      if (web && inWeb(web, ant.x + c * EXPLORE_LOOKAHEAD, ant.y + s * EXPLORE_LOOKAHEAD)) score -= WEB_AVOID_PENALTY;
       if (score > bestScore) {
         bestScore = score;
         best = h;
