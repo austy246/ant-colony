@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { NEST, RAID_MAX_S_ALIVE, RAID_MIN_ANTS, RAID_SIZE_MAX, RAID_SIZE_MIN, STEP_S } from './constants';
 import { FOOD_TABLE } from './food';
+import { hudText } from '../hud';
+import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { Surface } from './terrain';
 import { World } from './world';
 
@@ -132,5 +134,36 @@ describe('secret raid key', () => {
     const r = w.reds[0];
     expect(r).toBeDefined();
     expect(Math.hypot(r.x - NEST.x, r.y - NEST.y)).toBeLessThan(before);
+  });
+});
+
+describe('raid timing and visibility', () => {
+  it('the raiders appear a few hundred px from the nest, not across the whole map', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+      const w = raidWorld(seed);
+      w.addAnts(100);
+      w.triggerRaid();
+      for (const r of w.reds) expect(Math.hypot(r.x - NEST.x, r.y - NEST.y)).toBeLessThan(420);
+    }
+  });
+
+  it('the wait for the next raid survives a save and a load', () => {
+    const w = raidWorld(9);
+    w.addAnts(1000);
+    run(w, 1);
+    const left = w.raidWait;
+    expect(left).toBeGreaterThan(0);
+    const save = JSON.parse(JSON.stringify(worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 4 } })));
+    const v = validateSave(save);
+    expect(v).not.toBeNull();
+    expect(worldFromSave(v!).raidWait).toBeCloseTo(left, 6);
+  });
+
+  it('the HUD shows the raid while red ants are on the map', () => {
+    const w = raidWorld(10);
+    w.addAnts(10);
+    expect(hudText(w)).not.toContain('NÁLET');
+    w.triggerRaid();
+    expect(hudText(w)).toContain(`NÁLET: ${w.reds.length} červených`);
   });
 });

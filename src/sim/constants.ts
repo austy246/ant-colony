@@ -183,11 +183,14 @@ export const BUSH_SENSE = 150;
 // ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
 export const RAID_MIN_ANTS = 1000;
 /** Seconds between two raids (uniform in MIN..MAX, drawn when the colony reaches RAID_MIN_ANTS and after each raid). */
-export const RAID_MIN_S = 240;
-export const RAID_MAX_S = 600;
+export const RAID_MIN_S = 120;
+export const RAID_MAX_S = 360;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;
+/** The raiders appear this far (px) from the nest, toward the open side of the map, so they are soon seen. */
+export const RAID_DIST_MIN = 260;
+export const RAID_DIST_MAX = 360;
 /** The surviving red ants give up and leave this many seconds after the raid began. */
 export const RAID_MAX_S_ALIVE = 240;
 /** Walking speed of a red ant (px/s), how far (px) it notices a black ant, and how close it must be to fight. */

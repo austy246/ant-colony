@@ -55,6 +55,8 @@ export interface SaveV1 {
   sugarReadyAt?: number;
   boostUntil?: number;
   spawnTimer?: number;
+  /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
+  raidWait?: number;
   /** Optional (absent = none yet: created on the first normal-mode step): the spider. A caught ant carries `caughtT` (seconds stuck). */
   spider?: Spider;
   /** Optional (absent = no bush yet): the aphids bush (normal mode). */
@@ -123,6 +125,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     sugarReadyAt: w.sugarReadyAt,
     boostUntil: w.boostUntil,
     spawnTimer: w.spawnTimer,
+    raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
@@ -148,6 +151,7 @@ export function worldFromSave(s: SaveV1): World {
   w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
   w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
+  w.raidWait = s.raidWait ?? -1;
   w.ants.length = 0;
   for (const a of s.ants) {
     // `lifespan` was removed (ants no longer die of old age); old saves may still carry it: drop it.
@@ -260,6 +264,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   for (const k of ['peakStock', 'peakLarvae'] as const) {
     if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
   }
+  if (o.raidWait !== undefined && (!isNum(o.raidWait) || o.raidWait < -1)) return null;
   if (o.totalDelivered !== undefined && (!isNum(o.totalDelivered) || o.totalDelivered < 0)) return null;
   if (o.started !== undefined && typeof o.started !== 'boolean') return null;
   if (o.mode !== undefined && o.mode !== 'sandbox' && o.mode !== 'normal') return null;
