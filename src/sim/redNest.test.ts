@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CAPTURE_ANTS, CAPTURE_R, CAPTURED_HATCH_MUL, CAPTURED_QUEENS, HATCH_INTERVAL_S, NEST, RAID_MIN_ANTS, RED_NEST_GAP, RED_PATROL_MAX,
-  RED_PATROL_R, RED_TRICKLE_S, STEP_S,
+  RED_PATROL_R, RED_PATROL_START, RED_TRICKLE_S, STEP_S,
 } from './constants';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { Surface } from './terrain';
@@ -35,25 +35,28 @@ describe('the red nest', () => {
     }
   });
 
-  it('it appears with RED_PATROL_MAX (10) red ants that walk around it and defend it', () => {
+  it('it appears with 100 red ants that walk around it, and a new one comes every 5 s', () => {
     const w = bigWorld(2);
     run(w, 1);
-    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX);
-    expect(RED_PATROL_MAX).toBe(10);
-    run(w, 60);
+    expect(RED_PATROL_START).toBe(100);
+    expect(RED_TRICKLE_S).toBe(5);
+    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_START);
+    run(w, 60); // 12 more
     const patrols = w.reds.filter((r) => r.patrol);
-    expect(patrols).toHaveLength(RED_PATROL_MAX);
-    for (const r of patrols) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(RED_PATROL_R + 40);
+    expect(patrols.length).toBeGreaterThanOrEqual(RED_PATROL_START + 10);
+    expect(patrols.length).toBeLessThanOrEqual(RED_PATROL_START + 13);
+    let far = 0;
+    for (const r of patrols) if (Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y) > RED_PATROL_R + 60) far++;
+    expect(far / patrols.length).toBeLessThan(0.1);
     expect(w.raiders).toBe(0); // patrols are not a raid
   });
 
-  it('a defender that falls in a duel is replaced, one every RED_TRICKLE_S seconds', () => {
+  it('the red ants stop growing in number at RED_PATROL_MAX', () => {
     const w = bigWorld(8);
     run(w, 1);
-    w.reds.splice(0, 4); // four defenders lost
-    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX - 4);
-    run(w, RED_TRICKLE_S * 5);
-    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX);
+    for (let i = 0; i < RED_PATROL_MAX; i++) w.reds.push({ id: 90000 + i, x: w.redNest!.x, y: w.redNest!.y, heading: 0, patrol: true });
+    run(w, RED_TRICKLE_S * 3);
+    expect(w.reds.filter((r) => r.patrol).length).toBeLessThanOrEqual(RED_PATROL_START + RED_PATROL_MAX);
   });
 
   it('the raids set off from the red nest', () => {

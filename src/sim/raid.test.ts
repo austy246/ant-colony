@@ -40,9 +40,9 @@ describe('raids of red ants', () => {
       w.raidWait = 0.01;
       run(w, 0.5);
       expect(w.raidsStarted).toBe(1);
-      expect(w.reds.length).toBeGreaterThanOrEqual(RAID_SIZE_MIN);
-      expect(w.reds.length).toBeLessThanOrEqual(RAID_SIZE_MAX);
-      sizes.add(w.reds.length);
+      expect(w.raiders).toBeGreaterThanOrEqual(RAID_SIZE_MIN);
+      expect(w.raiders).toBeLessThanOrEqual(RAID_SIZE_MAX);
+      sizes.add(w.raiders);
     }
     expect(sizes.size).toBeGreaterThan(1); // the size is random
   });

@@ -217,10 +217,11 @@ export const ANT_SENSE_RED = 40;
 /** The red nest lies at least this far (px) from the black nest and the bush, and RED_NEST_EDGE from the map edge. */
 export const RED_NEST_GAP = 380;
 export const RED_NEST_EDGE = 70;
-/** RED_PATROL_MAX red ants appear with the nest and walk around it (within RED_PATROL_R px) to defend it; a new one comes out every RED_TRICKLE_S seconds while fewer are left. */
-export const RED_TRICKLE_S = 8;
-export const RED_PATROL_MAX = 10;
-export const RED_PATROL_R = 80;
+/** RED_PATROL_START red ants appear with the nest and walk around it (within RED_PATROL_R px) to defend it; a new one comes out every RED_TRICKLE_S seconds, up to RED_PATROL_MAX: the red ants are real rivals. */
+export const RED_TRICKLE_S = 5;
+export const RED_PATROL_START = 100;
+export const RED_PATROL_MAX = 300;
+export const RED_PATROL_R = 120;
 /** Black wanderers within RED_NEST_SENSE px smell the red nest and go there. */
 export const RED_NEST_SENSE = 90;
 /** The red nest is taken when CAPTURE_ANTS black ants (on the surface) are within CAPTURE_R px of it at once. */
