@@ -80,7 +80,7 @@ export function bushPixels(): Uint8ClampedArray {
       if (d < 0) continue;
       // light: from above and a little from the left; the lower the darker
       const h = Math.min(1, Math.max(0, (py - top) / (bottom - top)));
-      let light = 1.05 - 0.8 * h - 0.18 * ((px / (9.5 * SCALE * FINE)) * 0.5 + 0.5);
+      let light = 0.82 - 0.7 * h - 0.18 * ((px / (9.5 * SCALE * FINE)) * 0.5 + 0.5);
       // leaf texture: slanted leaf-sized cells (about 6 x 4 fine px), each its own shade, lighter at its top edge and darker at its
       // bottom edge, so the foliage reads as overlapping leaves; plus a coarser clumping of lighter and darker twigs
       const u = x * 0.92 + y * 0.4;
