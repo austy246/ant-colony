@@ -1431,6 +1431,7 @@ export class World {
       if (Math.hypot(p.x - NEST.x, p.y - NEST.y) < RED_NEST_GAP) return;
       if (this.bush && Math.hypot(p.x - this.bush.x, p.y - this.bush.y) < BUSH_NEST_GAP) return;
       this.redNest = { x: p.x, y: p.y, owner: 'red', trickleT: RED_TRICKLE_S };
+      for (let i = 0; i < RED_PATROL_MAX; i++) this.spawnPatrol(this.redNest); // the nest comes with its defenders
       return;
     }
     const n = this.redNest;
@@ -1450,6 +1451,11 @@ export class World {
     let patrols = 0;
     for (const r of this.reds) if (r.patrol) patrols++;
     if (patrols >= RED_PATROL_MAX) return;
+    this.spawnPatrol(n);
+  }
+
+  /** A patrol red ant at the red nest, with its own point to walk to around it. */
+  private spawnPatrol(n: RedNest): void {
     const pa = this.rng.next() * TWO_PI;
     const pd = RED_PATROL_R * Math.sqrt(this.rng.next());
     this.reds.push({

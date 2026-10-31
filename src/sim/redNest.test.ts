@@ -35,16 +35,25 @@ describe('the red nest', () => {
     }
   });
 
-  it('red ants keep coming out of it (up to RED_PATROL_MAX) and stay near it', () => {
+  it('it appears with RED_PATROL_MAX (10) red ants that walk around it and defend it', () => {
     const w = bigWorld(2);
-    run(w, 3);
-    expect(w.reds.filter((r) => r.patrol)).toHaveLength(0);
-    run(w, RED_TRICKLE_S * (RED_PATROL_MAX + 4));
+    run(w, 1);
+    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX);
+    expect(RED_PATROL_MAX).toBe(10);
+    run(w, 60);
     const patrols = w.reds.filter((r) => r.patrol);
-    expect(patrols.length).toBeGreaterThan(5);
-    expect(patrols.length).toBeLessThanOrEqual(RED_PATROL_MAX);
-    for (const r of patrols) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(RED_PATROL_R + 60);
+    expect(patrols).toHaveLength(RED_PATROL_MAX);
+    for (const r of patrols) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(RED_PATROL_R + 40);
     expect(w.raiders).toBe(0); // patrols are not a raid
+  });
+
+  it('a defender that falls in a duel is replaced, one every RED_TRICKLE_S seconds', () => {
+    const w = bigWorld(8);
+    run(w, 1);
+    w.reds.splice(0, 4); // four defenders lost
+    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX - 4);
+    run(w, RED_TRICKLE_S * 5);
+    expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_MAX);
   });
 
   it('the raids set off from the red nest', () => {
