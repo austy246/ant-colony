@@ -24,8 +24,8 @@ import {
   TRAIL_RGB,
 } from './views';
 
-/** An ultra major is drawn about as big as the whole nest crater (an ant sprite is ~7 art px long, the crater ~32 wide). */
-const ULTRA_SCALE = 5;
+/** An ultra major is drawn about as big as the whole nest crater (an ant body is ~9 art px long, the crater ~28 wide; this is a giant, ~90 px). */
+const ULTRA_SCALE = 10;
 
 const defaultMake: CanvasFactory = (w, h) => {
   const c = document.createElement('canvas');
