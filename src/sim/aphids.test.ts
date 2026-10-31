@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  APHID_HONEY_S, APHID_MAX, APHID_START, BUSH_MIN_ANTS, BUSH_SENSE, STEP_S,
+  APHID_HONEY_S, APHID_MAX, APHID_START, BUSH_MAX_ANTS, BUSH_MIN_ANTS, BUSH_SENSE, STEP_S,
 } from './constants';
 import { FOOD_TABLE } from './food';
 import { dropSpot } from './aphids';
@@ -105,6 +105,38 @@ describe('the aphids bush', () => {
     run(w, 120);
     expect(w.totalDelivered).toBeGreaterThan(0);
     expect(w.food.filter((f) => f.kind === 'honeydew').length).toBeLessThan(before + 1);
+  });
+
+  it('one ant per drop and at most BUSH_MAX_ANTS ants in the bush: no crowd around a single drop', () => {
+    const w = normalWorld(8);
+    w.growMapTo(10);
+    const bx = 500;
+    const by = 300;
+    w.bush = { x: bx, y: by, aphids: APHID_MAX, dropT: 0 };
+    run(w, APHID_HONEY_S * 2); // 15 aphids hold a drop each after 30 s
+    expect(w.food.filter((f) => f.kind === 'honeydew').length).toBeGreaterThan(8);
+    for (let i = 0; i < 80; i++) {
+      const a = w.spawnAnt();
+      const ang = (i / 80) * Math.PI * 2;
+      a.x = bx + Math.cos(ang) * 225;
+      a.y = by + Math.sin(ang) * 225;
+      a.heading = ang + Math.PI;
+    }
+    let maxInBush = 0;
+    let maxPerDrop = 0;
+    for (let t = 0; t < 40 / STEP_S; t++) {
+      w.step(STEP_S);
+      let inBush = 0;
+      const per = new Map<number, number>();
+      for (const a of w.ants) {
+        if (Math.hypot(a.x - bx, a.y - by) <= 170) inBush++;
+        if ((a.state === 'toFood' || a.state === 'gnaw') && a.targetFood !== null) per.set(a.targetFood, (per.get(a.targetFood) ?? 0) + 1);
+      }
+      maxInBush = Math.max(maxInBush, inBush);
+      for (const [id, n] of per) if (w.food.some((f) => f.id === id && f.kind === 'honeydew')) maxPerDrop = Math.max(maxPerDrop, n);
+    }
+    expect(maxPerDrop).toBe(1);
+    expect(maxInBush).toBeLessThanOrEqual(BUSH_MAX_ANTS + 6);
   });
 
   it('the bush survives a save and a load', () => {

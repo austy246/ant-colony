@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -481,6 +481,11 @@ export class World {
 
   private substep(): void {
     this.substepNo++;
+    if (this.bush) {
+      let n = 0;
+      for (const a of this.ants) if (a.state !== 'nest' && Math.hypot(a.x - this.bush.x, a.y - this.bush.y) <= BUSH_HONEY_R) n++;
+      this.bushAnts = n;
+    } else this.bushAnts = 0;
     const ex = this.explored;
     for (let i = 0; i < ex.length; i++) ex[i] *= EXPLORE_DECAY;
     if (this.spider?.alive) this.saturateWeb(this.spider);
@@ -936,7 +941,7 @@ export class World {
     return id === null ? undefined : this.food.find((f) => f.id === id);
   }
 
-  private nearestFood(x: number, y: number): FoodItem | undefined {
+  private nearestFood(x: number, y: number, asker?: Ant): FoodItem | undefined {
     let best: FoodItem | undefined;
     let bestD = SENSE_FOOD;
     for (const f of this.food) {
@@ -945,6 +950,12 @@ export class World {
       const d = Math.hypot(f.x - x, f.y - y);
       // the aphids' honeydew hangs inside the big bush: ants notice it from the edge of the canopy
       const bushHoney = f.kind === 'honeydew' && this.bush !== null && Math.hypot(f.x - this.bush.x, f.y - this.bush.y) <= BUSH_HONEY_R;
+      if (bushHoney) {
+        // one ant per drop, and at most BUSH_MAX_ANTS ants in the bush at once (those already in it may go on)
+        const claim = this.honeyClaims.get(f.id);
+        if (claim && claim.ant !== asker && this.time - claim.t < HONEY_CLAIM_S && claim.ant.targetFood === f.id) continue;
+        if (this.bushAnts >= BUSH_MAX_ANTS && this.bush && Math.hypot(x - this.bush.x, y - this.bush.y) > BUSH_HONEY_R) continue;
+      }
       if (d <= (bushHoney ? SENSE_FOOD + BUSH_SENSE : SENSE_FOOD) && (!best || d <= bestD)) {
         bestD = d;
         best = f;
@@ -1021,10 +1032,11 @@ export class World {
     }
 
     if (ant.state === 'wander') {
-      const f = this.nearestFood(ant.x, ant.y);
+      const f = this.nearestFood(ant.x, ant.y, ant);
       if (f) {
         ant.state = 'toFood';
         ant.targetFood = f.id;
+        if (f.kind === 'honeydew' && this.bush) this.honeyClaims.set(f.id, { ant, t: this.time });
       }
     }
 
@@ -1103,6 +1115,10 @@ export class World {
         pherWeight = 0;
         delete ant.strayT;
         delete ant.strayH;
+      } else if (this.bushAnts >= BUSH_MAX_ANTS && this.bush && this.bushFull(ant)) {
+        // the bush is full (BUSH_MAX_ANTS ants in it): a wanderer at its edge turns away
+        desired = Math.atan2(ant.y - this.bush.y, ant.x - this.bush.x);
+        pherWeight = 0;
       } else if (rn && Math.hypot(rn.x - ant.x, rn.y - ant.y) <= RED_NEST_SENSE) {
         // the red nest is near: smell it and go there (four of them at once take it)
         desired = Math.atan2(rn.y - ant.y, rn.x - ant.x);
@@ -1310,6 +1326,12 @@ export class World {
     }
   }
 
+  /** Is this ant just outside the edge of the bush (within 25 px of it)? Only asked while the bush is full. */
+  private bushFull(ant: Ant): boolean {
+    const d = Math.hypot(ant.x - (this.bush as Bush).x, ant.y - (this.bush as Bush).y);
+    return d > BUSH_HONEY_R && d <= BUSH_HONEY_R + 25;
+  }
+
   /** The red ant a wandering black ant is after: looked up every 4th substep (staggered by ant id) and remembered in between. */
   private sensedRed(ant: Ant): RedAnt | null {
     if ((this.substepNo + ant.id) % 4 === 0 || !this.redTargets.has(ant)) {
@@ -1320,6 +1342,9 @@ export class World {
   }
 
   private redTargets = new WeakMap<Ant, RedAnt | null>();
+  /** Which ant is on its way to which drop of honeydew (id -> claim), and how many ants are in the bush now. Transient. */
+  private honeyClaims = new Map<number, { ant: Ant; t: number }>();
+  private bushAnts = 0;
   private substepNo = 0;
 
   /** The nearest free red ant within ANT_SENSE_RED of (x, y), or null. */

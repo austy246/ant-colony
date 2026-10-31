@@ -179,6 +179,10 @@ export const BUSH_REACH = 60;
 export const BUSH_NEST_GAP = 220;
 export const BUSH_EDGE_GAP = 150;
 export const BUSH_SENSE = 150;
+/** At most this many ants are drawn to the bush at once (its honeydew), and a drop is taken by one ant at a time. */
+export const BUSH_MAX_ANTS = 20;
+/** A claim on a drop of honeydew lapses after this many seconds (an ant that was eaten or lost interest). */
+export const HONEY_CLAIM_S = 60;
 
 // ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
 export const RAID_MIN_ANTS = 1000;
