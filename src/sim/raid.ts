@@ -11,6 +11,11 @@ export interface RedAnt {
   oy?: number;
   /** A patrol red ant (walks about near the red nest, for good) instead of a raider (absent / false). */
   patrol?: boolean;
+  /** Job of a patrol red ant: a guard circles the red nest, a forager looks for food and brings it to the nest (absent = walks about near it). */
+  job?: 'guard' | 'forager';
+  /** Food a forager carries (its value) and the id of the food item it is walking to. */
+  carry?: number;
+  tf?: number;
   /** Seconds left of the duel it is in (absent = not fighting). */
   fightT?: number;
 }
@@ -21,6 +26,8 @@ export interface RedNest {
   y: number;
   /** 'red' while the red ants hold it; 'black' once black ants have taken it (it is then another nest of the colony: more queens, faster hatching). */
   owner: 'red' | 'black';
+  /** Food the red foragers have brought home; every RED_STOCK_PER_ANT of it makes one more red ant. */
+  stock?: number;
   /** Seconds until the next patrol red ant comes out. Transient. */
   trickleT: number;
 }

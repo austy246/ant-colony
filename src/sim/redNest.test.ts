@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CAPTURE_ANTS, CAPTURE_R, CAPTURED_HATCH_MUL, CAPTURED_QUEENS, HATCH_INTERVAL_S, NEST, RAID_MIN_ANTS, RED_NEST_GAP, RED_PATROL_MAX,
-  RED_PATROL_R, RED_PATROL_START, RED_TRICKLE_S, STEP_S,
+  RED_FORAGE_R, RED_PATROL_START, RED_TRICKLE_S, STEP_S,
 } from './constants';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { Surface } from './terrain';
 import { World } from './world';
+
+vi.setConfig({ testTimeout: 120_000 }); // big colonies with hundreds of red ants: slow when the whole suite runs at once
 
 function bigWorld(seed: number, ants = RAID_MIN_ANTS): World {
   const w = World.create(seed, 'normal');
@@ -45,9 +47,10 @@ describe('the red nest', () => {
     const patrols = w.reds.filter((r) => r.patrol);
     expect(patrols.length).toBeGreaterThanOrEqual(RED_PATROL_START + 10);
     expect(patrols.length).toBeLessThanOrEqual(RED_PATROL_START + 13);
-    let far = 0;
-    for (const r of patrols) if (Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y) > RED_PATROL_R + 60) far++;
-    expect(far / patrols.length).toBeLessThan(0.1);
+    const guards = patrols.filter((r) => r.job === 'guard');
+    expect(guards.length / patrols.length).toBeGreaterThanOrEqual(0.1);
+    for (const r of guards) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(70); // they circle it
+    for (const r of patrols) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(RED_FORAGE_R + 80);
     expect(w.raiders).toBe(0); // patrols are not a raid
   });
 

@@ -49,7 +49,7 @@ export type NestPoseKind = 'walk' | 'stand' | 'feed' | 'tend';
 export interface NestAntLike {
   id: number;
   nestKind?: 'hatch' | 'unload' | 'nurse';
-  role?: 'forager' | 'nurse';
+  role?: 'forager' | 'nurse' | 'guard';
   timer: number;
 }
 

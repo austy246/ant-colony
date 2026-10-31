@@ -9,6 +9,7 @@ import { World } from './world';
 /** World with an obstacle-free ground (speed 1 everywhere) and an empty larder (no starter stock, so nothing hatches by itself). */
 function flatWorld(seed = 1): World {
   const w = World.create(seed);
+  w.noGuards = true; // these tests count on every ant foraging; guards have their own tests
   w.stock = 0;
   w.hatchJitter = 0; // these tests check exact hatch timing; the jitter has its own tests in personality.test.ts
   w.terrain.surface.fill(Surface.Ground);

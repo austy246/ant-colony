@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { NEST, RAID_MAX_S_ALIVE, RAID_MIN_ANTS, RAID_SIZE_MAX, RAID_SIZE_MIN, STEP_S } from './constants';
 import { FOOD_TABLE } from './food';
 import { hudText } from '../hud';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { Surface } from './terrain';
 import { World } from './world';
+
+vi.setConfig({ testTimeout: 120_000 }); // big colonies with hundreds of red ants: slow when the whole suite runs at once
 
 function raidWorld(seed: number): World {
   const w = World.create(seed, 'normal');
@@ -151,7 +153,7 @@ describe('raid timing and visibility', () => {
 
   it('the wait for the next raid survives a save and a load', () => {
     const w = raidWorld(9);
-    w.addAnts(1000);
+    w.addAnts(RAID_MIN_ANTS);
     run(w, 1);
     const left = w.raidWait;
     expect(left).toBeGreaterThan(0);

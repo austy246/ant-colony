@@ -185,7 +185,7 @@ export const BUSH_MAX_ANTS = 20;
 export const HONEY_CLAIM_S = 60;
 
 // ---- Raids: from RAID_MIN_ANTS ants, red ants now and then attack the colony ----
-export const RAID_MIN_ANTS = 1000;
+export const RAID_MIN_ANTS = 1500;
 /** Seconds between two raids (uniform in MIN..MAX, drawn when the colony reaches RAID_MIN_ANTS and after each raid). */
 export const RAID_MIN_S = 120;
 export const RAID_MAX_S = 360;
@@ -215,7 +215,9 @@ export const ANT_SENSE_RED = 40;
 
 // ---- The red nest: appears with RAID_MIN_ANTS black ants; red ants keep coming out; black ants can take it ----
 /** The red nest lies at least this far (px) from the black nest and the bush, and RED_NEST_EDGE from the map edge. */
-export const RED_NEST_GAP = 380;
+export const RED_NEST_GAP = 600;
+/** The red nest appears with this many black ants. */
+export const RED_NEST_MIN_ANTS = 1500;
 export const RED_NEST_EDGE = 70;
 /** RED_PATROL_START red ants appear with the nest and walk around it (within RED_PATROL_R px) to defend it; a new one comes out every RED_TRICKLE_S seconds, up to RED_PATROL_MAX: the red ants are real rivals. */
 export const RED_TRICKLE_S = 5;
@@ -232,6 +234,17 @@ export const CAPTURED_QUEENS = 4;
 export const CAPTURED_HATCH_MUL = 0.75;
 /** Raiders leave the red nest spread over a disc of this radius (px). */
 export const RAID_SPREAD_NEST = 60;
+/** Red ants: this share (at least one in ten) of the patrols are guards that circle the red nest; the rest forage up to RED_FORAGE_R px away. */
+export const RED_GUARD_FRACTION = 0.15;
+export const RED_FORAGE_R = 350;
+/** A red forager notices food this far away (px); food it brings home counts toward more red ants. */
+export const RED_FOOD_SENSE = 60;
+export const RED_STOCK_PER_ANT = 6;
+/** Guards: this share of the black colony (majors first) circles the nest in rings GUARD_R_MIN + k * GUARD_R_STEP px away, and fights the red ants. */
+export const GUARD_FRACTION = 0.1;
+export const GUARD_MIN_COLONY = 20;
+export const GUARD_R_MIN = 22;
+export const GUARD_R_STEP = 7;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

@@ -19,6 +19,7 @@ import { World, type Ant } from './world';
 /** A normal world whose spider exists (created by the first step), with prey spawning switched off. */
 function spiderWorld(seed = 1): World {
   const w = World.create(seed, 'normal');
+  w.noGuards = true; // the guards circle the nest, away from the web
   w.spawnAnt();
   w.stock = 0;
   w.spawnTimer = 1e9;

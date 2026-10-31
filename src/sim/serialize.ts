@@ -62,7 +62,7 @@ export interface SaveV1 {
   /** Optional (absent = no bush yet): the aphids bush (normal mode). */
   bush?: Bush;
   /** Optional (absent = none yet): the red ants' nest (normal mode) and who holds it. */
-  redNest?: { x: number; y: number; owner: 'red' | 'black' };
+  redNest?: { x: number; y: number; owner: 'red' | 'black'; stock?: number };
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -129,7 +129,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     spawnTimer: w.spawnTimer,
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
-    ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner } } : {}),
+    ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0 } } : {}),
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
 }
@@ -172,7 +172,7 @@ export function worldFromSave(s: SaveV1): World {
     w.ants.push(ant);
   }
   w.bush = s.bush ? { ...s.bush } : null;
-  w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, trickleT: RED_TRICKLE_S } : null;
+  w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, stock: s.redNest.stock ?? 0, trickleT: RED_TRICKLE_S } : null;
   // Without a living spider nobody can be stuck in a web.
   // Clamped to one full respawn from now, like the sugar clocks.
   w.spider = s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
@@ -190,7 +190,7 @@ const isInt = (v: unknown): v is number => isNum(v) && Number.isInteger(v);
 const inRange = (v: unknown, lo: number, hi: number): v is number => isNum(v) && v >= lo && v <= hi;
 const ANT_STATES = ['wander', 'toFood', 'gnaw', 'carry', 'nest'];
 const NEST_KINDS = ['hatch', 'unload', 'nurse'];
-const ANT_ROLES = ['forager', 'nurse'];
+const ANT_ROLES = ['forager', 'nurse', 'guard'];
 /** Saves from the old colony-floor rules stored up to 15 s here; they still load (clamped on restore). */
 const LEGACY_MAX_HATCH_PROGRESS = 15;
 const MAX_ENTRIES = 2000;
@@ -253,7 +253,7 @@ function validBush(b: unknown, size: { w: number; h: number }): boolean {
 function validRedNest(n: unknown, size: { w: number; h: number }): boolean {
   if (typeof n !== 'object' || n === null) return false;
   const o = n as Record<string, unknown>;
-  return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && (o.owner === 'red' || o.owner === 'black');
+  return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && (o.owner === 'red' || o.owner === 'black') && (o.stock === undefined || (isNum(o.stock) && o.stock >= 0));
 }
 
 function validPheromone(b64: string, size: { w: number; h: number }): boolean {

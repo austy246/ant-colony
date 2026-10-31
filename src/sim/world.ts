@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_STOCK_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -17,7 +17,7 @@ import { extendTerrain, generateTerrain, speedAt, type Terrain } from './terrain
 export type AntState = 'wander' | 'toFood' | 'gnaw' | 'carry' | 'nest';
 /** Why an ant in state 'nest' is inside: freshly hatched, resting after a delivery, or a permanent nest worker. */
 export type NestKind = 'hatch' | 'unload' | 'nurse';
-export type AntRole = 'forager' | 'nurse';
+export type AntRole = 'forager' | 'nurse' | 'guard';
 
 export interface Ant {
   id: number;
@@ -213,6 +213,8 @@ export class World {
   raidWait = -1;
   /** Seconds since the current raid began. */
   private raidAge = 0;
+  /** Test hook: no guards (tests that count on every ant of a colony foraging). */
+  noGuards = false;
   /** Test hook: no raids (tests that count ants exactly with a colony of 1000 or more). */
   noRaid = false;
   /** Red ants killed in raids so far, and raids started (transient). */
@@ -647,6 +649,7 @@ export class World {
     if (this.nurseSlot < 0) this.nurseSlot = slot; // fresh world or a load: wait for the next boundary
     if (slot <= this.nurseSlot) return;
     this.nurseSlot = slot;
+    this.updateGuards();
     // Majors (big soldiers) are not nest workers: any that were nurses go out to the surface.
     for (const a of this.ants) {
       if (a.role === 'nurse' && a.major) {
@@ -672,6 +675,41 @@ export class World {
       if (oldest) {
         oldest.role = 'forager';
         this.emerge(oldest, 'wander');
+      }
+    }
+  }
+
+  /**
+   * About GUARD_FRACTION of the colony (once it has GUARD_MIN_COLONY ants) are guards: they circle the nest and fight the red
+   * ants instead of foraging. Majors are chosen first, then ordinary ants on the surface that carry nothing.
+   */
+  private updateGuards(): void {
+    const want = !this.noGuards && this.ants.length >= GUARD_MIN_COLONY ? Math.floor(this.ants.length * GUARD_FRACTION) : 0;
+    let have = 0;
+    for (const a of this.ants) if (a.role === 'guard') have++;
+    if (have < want) {
+      const free = (a: Ant): boolean => a.state !== 'nest' && a.role === 'forager' && a.carry === 0 && a.carryLeaf === undefined && a.caughtT === undefined && a.duelT === undefined;
+      const picks = this.ants.filter((a) => free(a) && a.major === true).concat(this.ants.filter((a) => free(a) && a.major !== true));
+      for (const a of picks.slice(0, want - have)) {
+        a.role = 'guard';
+        a.state = 'wander';
+        a.targetFood = null;
+      }
+    } else if (have > want) {
+      let extra = have - want;
+      for (const a of this.ants) {
+        if (extra <= 0) break;
+        if (a.role === 'guard' && a.major !== true) {
+          a.role = 'forager';
+          extra--;
+        }
+      }
+      for (const a of this.ants) {
+        if (extra <= 0) break;
+        if (a.role === 'guard') {
+          a.role = 'forager';
+          extra--;
+        }
       }
     }
   }
@@ -1031,7 +1069,7 @@ export class World {
       return;
     }
 
-    if (ant.state === 'wander') {
+    if (ant.state === 'wander' && ant.role !== 'guard') {
       const f = this.nearestFood(ant.x, ant.y, ant);
       if (f) {
         ant.state = 'toFood';
@@ -1109,7 +1147,13 @@ export class World {
       this.markExplored(ant.x, ant.y);
       const red = this.reds.length > 0 ? this.sensedRed(ant) : null;
       const rn = this.redNest?.owner === 'red' ? this.redNest : null;
-      if (red) {
+      if (ant.role === 'guard' && !red) {
+        // a guard circles the nest on its own ring
+        desired = this.orbitHeading(ant.x, ant.y, NEST.x, NEST.y, ant.id);
+        pherWeight = 0;
+        delete ant.strayT;
+        delete ant.strayH;
+      } else if (red) {
         // a red ant close by: go and fight it (the duel starts when they meet)
         desired = Math.atan2(red.y - ant.y, red.x - ant.x);
         pherWeight = 0;
@@ -1267,12 +1311,20 @@ export class World {
         this.duels.set(r.id, foe);
         continue;
       }
-      // raiders make for their own rally point near the black nest, patrols for a point near the red nest
+      // guards circle the red nest, foragers look for food; raiders make for their own rally point near the black nest
       const base = r.patrol && this.redNest ? this.redNest : NEST;
+      const job = !foe && r.patrol && this.redNest ? r.job : undefined;
+      if (job === 'guard') {
+        r.heading = this.orbitHeading(r.x, r.y, this.redNest!.x, this.redNest!.y, r.id) + (rng.next() - 0.5) * 0.3;
+      } else if (job === 'forager') {
+        r.heading = this.forageHeading(r, this.redNest!);
+      }
       const tx = foe ? foe.x : Math.max(5, Math.min(this.terrain.w - 5, base.x + (r.ox ?? 0)));
       const ty = foe ? foe.y : Math.max(5, Math.min(this.terrain.h - 5, base.y + (r.oy ?? 0)));
       const away = Math.hypot(tx - r.x, ty - r.y);
-      if (!foe && away <= 6) {
+      if (job) {
+        // its heading was set above
+      } else if (!foe && away <= 6) {
         r.heading += (rng.next() - 0.5) * 1.5; // at its rally point: mill about and wait for ants to come
         if (r.patrol) {
           const pa = rng.next() * TWO_PI;
@@ -1448,7 +1500,7 @@ export class World {
   private updateRedNest(): void {
     if (this.noRaid) return;
     if (!this.redNest) {
-      if (this.ants.length < RAID_MIN_ANTS) return;
+      if (this.ants.length < RED_NEST_MIN_ANTS) return;
       const sx = RED_NEST_EDGE + this.rng.next() * Math.max(0, this.terrain.w - 2 * RED_NEST_EDGE);
       const sy = RED_NEST_EDGE + this.rng.next() * Math.max(0, this.terrain.h - 2 * RED_NEST_EDGE);
       const p = resolvePlacement(this.terrain, sx, sy);
@@ -1483,10 +1535,80 @@ export class World {
   private spawnPatrol(n: RedNest): void {
     const pa = this.rng.next() * TWO_PI;
     const pd = RED_PATROL_R * Math.sqrt(this.rng.next());
+    let patrols = 0;
+    let guards = 0;
+    for (const r of this.reds) {
+      if (!r.patrol) continue;
+      patrols++;
+      if (r.job === 'guard') guards++;
+    }
+    // at least RED_GUARD_FRACTION of the patrols circle the nest as guards, the rest look for food
+    const job = guards < Math.ceil((patrols + 1) * RED_GUARD_FRACTION) ? 'guard' : 'forager';
     this.reds.push({
-      id: this.nextId++, x: n.x, y: n.y, heading: pa, patrol: true, spd: 0.75 + 0.5 * this.rng.next(),
+      id: this.nextId++, x: n.x, y: n.y, heading: pa, patrol: true, job, spd: 0.75 + 0.5 * this.rng.next(),
       ox: Math.cos(pa) * pd, oy: Math.sin(pa) * pd,
     });
+  }
+
+  /** Heading of a ring walker: round the centre (cx, cy) on its own ring (ring k = id % 5), clockwise or not by id. */
+  private orbitHeading(x: number, y: number, cx: number, cy: number, id: number): number {
+    const r = Math.hypot(x - cx, y - cy) || 1;
+    const th = Math.atan2(y - cy, x - cx);
+    const dir = id % 2 === 0 ? 1 : -1;
+    const want = GUARD_R_MIN + (id % 5) * GUARD_R_STEP;
+    const k = (want - r) / 10;
+    return Math.atan2(Math.cos(th) * dir + Math.sin(th) * k, -Math.sin(th) * dir + Math.cos(th) * k);
+  }
+
+  /**
+   * Heading of a red forager: a carrier goes home to the red nest and hands its food over (the nest's stock; every
+   * RED_STOCK_PER_ANT of it makes one more red ant); a seeker walks to the nearest piece of food it notices (not a living
+   * creature, not leaves), takes one piece and turns home, else wanders up to RED_FORAGE_R px from the nest.
+   */
+  private forageHeading(r: RedAnt, n: RedNest): number {
+    const rng = this.rng;
+    if (r.carry) {
+      if (Math.hypot(n.x - r.x, n.y - r.y) <= 8) {
+        n.stock = (n.stock ?? 0) + r.carry;
+        r.carry = 0;
+        if (n.stock >= RED_STOCK_PER_ANT) {
+          n.stock -= RED_STOCK_PER_ANT;
+          this.spawnPatrol(n);
+        }
+        return r.heading + Math.PI * (0.5 + rng.next());
+      }
+      return Math.atan2(n.y - r.y, n.x - r.x) + (rng.next() - 0.5) * 0.4;
+    }
+    if (r.tf === undefined && (this.substepNo + r.id) % 4 === 0) {
+      let best: FoodItem | null = null;
+      let bestD = RED_FOOD_SENSE;
+      for (const f of this.food) {
+        if (f.piecesLeft <= 0 || f.kind === 'leaf' || f.stuck || isAlive(f)) continue;
+        const d = Math.hypot(f.x - r.x, f.y - r.y);
+        if (d < bestD) {
+          bestD = d;
+          best = f;
+        }
+      }
+      if (best) r.tf = best.id;
+    }
+    if (r.tf !== undefined) {
+      const f = this.findFood(r.tf);
+      if (!f || f.piecesLeft <= 0 || isAlive(f)) {
+        delete r.tf;
+      } else if (Math.hypot(f.x - r.x, f.y - r.y) <= 2) {
+        f.piecesLeft -= 1;
+        r.carry = FOOD_TABLE[f.kind].value;
+        if (f.piecesLeft <= 0) this.food.splice(this.food.indexOf(f), 1);
+        delete r.tf;
+        return Math.atan2(n.y - r.y, n.x - r.x);
+      } else {
+        return Math.atan2(f.y - r.y, f.x - r.x) + (rng.next() - 0.5) * 0.3;
+      }
+    }
+    const away = Math.hypot(r.x - n.x, r.y - n.y);
+    if (away > RED_FORAGE_R) return Math.atan2(n.y - r.y, n.x - r.x) + (rng.next() - 0.5) * 0.6;
+    return r.heading + (rng.next() - 0.5) * 0.6; // wander
   }
 
   /** The duel of `r` ends: the black ant wins with BLACK_WIN_P (a major with MAJOR_WIN_P); the loser dies, a dead red ant leaves its body. */
