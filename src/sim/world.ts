@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RED_SEP, RED_SEP_SPEED, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -1243,15 +1243,15 @@ export class World {
         this.duels.set(r.id, foe);
         continue;
       }
-      const tx = foe ? foe.x : NEST.x;
-      const ty = foe ? foe.y : NEST.y;
+      const tx = foe ? foe.x : Math.max(5, Math.min(this.terrain.w - 5, NEST.x + (r.ox ?? 0)));
+      const ty = foe ? foe.y : Math.max(5, Math.min(this.terrain.h - 5, NEST.y + (r.oy ?? 0)));
       const away = Math.hypot(tx - r.x, ty - r.y);
-      if (!foe && away <= NEST.r + 4) {
-        r.heading += (rng.next() - 0.5) * 1.5; // at the nest: mill about and wait for ants to come out
+      if (!foe && away <= 6) {
+        r.heading += (rng.next() - 0.5) * 1.5; // at its rally point near the nest: mill about and wait for ants to come
       } else {
-        r.heading = Math.atan2(ty - r.y, tx - r.x) + (rng.next() - 0.5) * 0.5;
+        r.heading = Math.atan2(ty - r.y, tx - r.x) + (rng.next() - 0.5) * 0.9; // wanders a little on the way
       }
-      const v = RED_SPEED * STEP_S;
+      const v = RED_SPEED * (r.spd ?? 1) * STEP_S;
       let px = 0;
       let py = 0;
       const gx = Math.floor(r.x / RED_SEP);
@@ -1355,11 +1355,16 @@ export class World {
     const ex = Math.max(5, Math.min(w - 5, NEST.x + Math.cos(ang) * dist));
     const ey = Math.max(5, Math.min(h - 5, NEST.y + Math.sin(ang) * dist));
     for (let i = 0; i < size; i++) {
+      const a = rng.next() * TWO_PI;
+      const d = RAID_SPREAD * Math.sqrt(rng.next()); // uniform over the disc
       this.reds.push({
         id: this.nextId++,
-        x: Math.max(0.5, Math.min(w - 0.5, ex + (rng.next() - 0.5) * 30)),
-        y: Math.max(0.5, Math.min(h - 0.5, ey + (rng.next() - 0.5) * 30)),
+        x: Math.max(0.5, Math.min(w - 0.5, ex + Math.cos(a) * d)),
+        y: Math.max(0.5, Math.min(h - 0.5, ey + Math.sin(a) * d)),
         heading: Math.atan2(NEST.y - ey, NEST.x - ex),
+        spd: 0.75 + 0.5 * rng.next(),
+        ox: Math.cos(a + 2) * RAID_SPREAD * Math.sqrt(rng.next()),
+        oy: Math.sin(a + 2) * RAID_SPREAD * Math.sqrt(rng.next()),
       });
     }
     this.raidAge = 0;

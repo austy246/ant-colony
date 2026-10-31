@@ -191,6 +191,8 @@ export const RAID_SIZE_MAX = 500;
 /** The raiders appear this far (px) from the nest, toward the open side of the map, so they are soon seen. */
 export const RAID_DIST_MIN = 260;
 export const RAID_DIST_MAX = 360;
+/** The raiders start spread over a disc of this radius (px) around that point, each with its own speed, so the raid is a wide, loose crowd. */
+export const RAID_SPREAD = 110;
 /** The surviving red ants give up and leave this many seconds after the raid began. */
 export const RAID_MAX_S_ALIVE = 240;
 /** Walking speed of a red ant (px/s), how far (px) it notices a black ant, and how close it must be to fight. */
@@ -202,8 +204,8 @@ export const DUEL_S = 2;
 export const BLACK_WIN_P = 0.55;
 export const MAJOR_WIN_P = 0.9;
 /** Red ants keep this far (px) apart (they push each other away, at RED_SEP_SPEED px/s at most). */
-export const RED_SEP = 3;
-export const RED_SEP_SPEED = 8;
+export const RED_SEP = 8;
+export const RED_SEP_SPEED = 10;
 /** A wandering black ant notices a red one this far away (px) and goes to fight it. */
 export const ANT_SENSE_RED = 40;
 /** The spider walks along its web to a caught creature at this speed (px/s). */

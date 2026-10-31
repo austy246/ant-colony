@@ -143,7 +143,7 @@ describe('raid timing and visibility', () => {
       const w = raidWorld(seed);
       w.addAnts(100);
       w.triggerRaid();
-      for (const r of w.reds) expect(Math.hypot(r.x - NEST.x, r.y - NEST.y)).toBeLessThan(420);
+      for (const r of w.reds) expect(Math.hypot(r.x - NEST.x, r.y - NEST.y)).toBeLessThan(480);
     }
   });
 
@@ -206,5 +206,28 @@ describe('red ants keep apart and black ants go to meet them', () => {
     w.reds.push({ id: 9000, x: 160, y: 70, heading: Math.PI });
     run(w, 0.3);
     expect(a.duelT).toBeUndefined();
+  });
+});
+
+describe('a raid is a wide, loose crowd', () => {
+  it('the raiders are spread over a wide area and keep their distance on the way', () => {
+    for (let seed = 1; seed <= 4; seed++) {
+      const w = raidWorld(seed);
+      w.addAnts(1000);
+      w.growMapTo(10); // a colony of 1000 ants has this big a map
+      w.triggerRaid();
+      const spread = (): number => {
+        const mx = w.reds.reduce((s, r) => s + r.x, 0) / w.reds.length;
+        const my = w.reds.reduce((s, r) => s + r.y, 0) / w.reds.length;
+        return Math.sqrt(w.reds.reduce((s, r) => s + (r.x - mx) ** 2 + (r.y - my) ** 2, 0) / w.reds.length);
+      };
+      expect(spread(), `seed ${seed} at the start`).toBeGreaterThan(50);
+      run(w, 8); // still on the way (later the duels thin them out)
+      expect(spread(), `seed ${seed} after 8 s`).toBeGreaterThan(50);
+      // nobody has a neighbour closer than half the keep-apart distance (RED_SEP = 8 px) for long
+      let close = 0;
+      for (const r of w.reds) if (w.reds.some((o) => o !== r && Math.hypot(o.x - r.x, o.y - r.y) < 3)) close++;
+      expect(close / w.reds.length, `seed ${seed}`).toBeLessThan(0.08);
+    }
   });
 });
