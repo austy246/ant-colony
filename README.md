@@ -24,6 +24,8 @@ Na začátku nové hry si vybereš mód.
 
 **Majoři** (v obou módech, od **50 mravenců**): větší mravenec, který kořist (brouka, housenku, mouchu) zabije **jedním dotykem** a unese **dvojnásobek** (2 dílky). Majorem se vylíhne nejvýše asi desetina kolonie. Majoři se **nestarají o hnízdo**: nikdy z nich nejsou ošetřovatelé a stále chodí po povrchu.
 
+**Super major** a **ultra major:** na každých **100 mravenců** kolonie se vylíhne jeden **super major** (2× větší než major, nese 4 kousky jídla, v souboji vyhraje v 99 %); na každých **1000 mravenců** jeden **ultra major**, obrovský (kreslí se jako celé hnízdo a víc), nese 8 kousků, v souboji prakticky nemůže prohrát a sám přemůže pavouka.
+
 Komůrky v podzemí se už **nezmenšují**: jednou vyhrabaná komůrka zůstane i při poklesu zásob nebo larev.
 
 ## Ovládání

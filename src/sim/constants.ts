@@ -36,6 +36,10 @@ export const MAJOR_CARRY_PIECES = 2;
 export const SUPER_MAJOR_EVERY = 100;
 export const SUPER_CARRY_PIECES = 4;
 export const SUPER_WIN_P = 0.99;
+/** Ultra majors: one hatches for every ULTRA_MAJOR_EVERY ants; as big as the whole nest (see ULTRA_SCALE in the renderer), carry ULTRA_CARRY_PIECES pieces, win a duel with ULTRA_WIN_P and alone overpower the spider. */
+export const ULTRA_MAJOR_EVERY = 1000;
+export const ULTRA_CARRY_PIECES = 8;
+export const ULTRA_WIN_P = 0.999;
 /** Ant limit in normal mode. */
 export const MAX_ANTS_NORMAL = 2000;
 /** Normal mode: seconds of sim time before another sugar piece can be placed. */

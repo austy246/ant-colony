@@ -216,6 +216,7 @@ function validAnt(a: unknown, size: { w: number; h: number }): boolean {
     (o.stubbornness === undefined || inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX)) &&
     (o.major === undefined || o.major === true) &&
     (o.superMajor === undefined || (o.superMajor === true && o.major === true)) &&
+    (o.ultraMajor === undefined || (o.ultraMajor === true && o.major === true && o.superMajor === undefined)) &&
     (o.carrySugar === undefined || o.carrySugar === true) &&
     (o.caughtT === undefined || (isNum(o.caughtT) && o.caughtT >= 0))
   );
