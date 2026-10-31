@@ -32,14 +32,10 @@ export const MAJOR_CHANCE = 0.08;
 export const MAJOR_MAX_FRACTION = 0.1;
 /** Pieces of food a major takes per bite (an ordinary ant takes 1). */
 export const MAJOR_CARRY_PIECES = 2;
-/** Super majors: one hatches for every SUPER_MAJOR_EVERY ants of the colony; twice the size of a major, they carry SUPER_CARRY_PIECES pieces and win a duel with SUPER_WIN_P. */
-export const SUPER_MAJOR_EVERY = 100;
+/** Super majors: one hatches for every SUPER_MAJOR_EVERY ants of the colony (1:1000); twice the size of a major, they carry SUPER_CARRY_PIECES pieces and win a duel with SUPER_WIN_P. */
+export const SUPER_MAJOR_EVERY = 1000;
 export const SUPER_CARRY_PIECES = 4;
 export const SUPER_WIN_P = 0.99;
-/** Ultra majors: one hatches for every ULTRA_MAJOR_EVERY ants; as big as the whole nest (see ULTRA_SCALE in the renderer), carry ULTRA_CARRY_PIECES pieces, win a duel with ULTRA_WIN_P and alone overpower the spider. */
-export const ULTRA_MAJOR_EVERY = 1000;
-export const ULTRA_CARRY_PIECES = 8;
-export const ULTRA_WIN_P = 0.999;
 /** Ant limit in normal mode. */
 export const MAX_ANTS_NORMAL = 2000;
 /** Normal mode: seconds of sim time before another sugar piece can be placed. */

@@ -1,7 +1,7 @@
 import {
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, ULTRA_MAJOR_EVERY, ULTRA_CARRY_PIECES, ULTRA_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -40,8 +40,6 @@ export interface Ant {
   major?: true;
   /** A super major (also `major`): twice the size of a major. One hatches per SUPER_MAJOR_EVERY ants of the colony. */
   superMajor?: true;
-  /** An ultra major (also `major`, never `superMajor`): as big as the whole nest. One hatches per ULTRA_MAJOR_EVERY ants. */
-  ultraMajor?: true;
   /** TRANSIENT (not saved): leaf units this ant carries to the aphids bush (instead of food to the nest). */
   carryLeaf?: number;
   /** TRANSIENT (not saved): seconds left of a duel with a red ant; the ant stands still meanwhile. */
@@ -332,13 +330,6 @@ export class World {
   }
 
   /** Ants that are majors. They count in `ants.length` (and so toward `maxAnts`) too. */
-  /** Ultra majors in the colony. */
-  get ultras(): number {
-    let n = 0;
-    for (const a of this.ants) if (a.ultraMajor) n++;
-    return n;
-  }
-
   /** Super majors in the colony. */
   get supers(): number {
     let n = 0;
@@ -582,7 +573,7 @@ export class World {
         a.caughtT = 0;
       }
       if (a.major) {
-        majors += a.ultraMajor ? 4 : a.superMajor ? 2 : 1; // a super major counts for two, an ultra major for four, when the spider is overpowered
+        majors += a.superMajor ? 2 : 1; // a super major counts for two when the spider is overpowered
         if (!longestMajor || a.caughtT > (longestMajor.caughtT as number)) longestMajor = a;
       } else if (!longest || a.caughtT > (longest.caughtT as number)) {
         longest = a;
@@ -992,10 +983,7 @@ export class World {
         hatched.major = true;
       }
       // one super major for every SUPER_MAJOR_EVERY ants of the colony (no random draw: it does not disturb the seeded sequences)
-      if (this.ultras + 1 <= Math.floor(this.ants.length / ULTRA_MAJOR_EVERY)) {
-        hatched.major = true;
-        hatched.ultraMajor = true;
-      } else if (this.supers + 1 <= Math.floor(this.ants.length / SUPER_MAJOR_EVERY)) {
+      if (this.supers + 1 <= Math.floor(this.ants.length / SUPER_MAJOR_EVERY)) {
         hatched.major = true;
         hatched.superMajor = true;
       }
@@ -1686,7 +1674,7 @@ export class World {
     delete foe.duelT;
     const i = this.ants.indexOf(foe);
     if (i < 0) return; // the black ant is gone (spider, beetle): the red one fights on
-    if (this.rng.next() < (foe.ultraMajor ? ULTRA_WIN_P : foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P)) {
+    if (this.rng.next() < (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P)) {
       const k = this.reds.indexOf(r);
       if (k >= 0) this.reds.splice(k, 1);
       this.redKilled++;
@@ -1757,7 +1745,7 @@ export class World {
     }
     ant.timer -= STEP_S;
     if (ant.timer > 1e-9) return;
-    const pieces = ant.ultraMajor ? Math.min(f.piecesLeft, ULTRA_CARRY_PIECES) : ant.superMajor ? Math.min(f.piecesLeft, SUPER_CARRY_PIECES) : ant.major ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES) : 1;
+    const pieces = ant.superMajor ? Math.min(f.piecesLeft, SUPER_CARRY_PIECES) : ant.major ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES) : 1;
     f.piecesLeft -= pieces;
     ant.carry = pieces * FOOD_TABLE[f.kind].value;
     if (f.kind === 'sugar') ant.carrySugar = true;

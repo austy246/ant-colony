@@ -24,9 +24,6 @@ import {
   TRAIL_RGB,
 } from './views';
 
-/** An ultra major is drawn about as big as the whole nest crater (an ant body is ~9 art px long, the crater ~28 wide; this is a giant, ~90 px). */
-const ULTRA_SCALE = 10;
-
 const defaultMake: CanvasFactory = (w, h) => {
   const c = document.createElement('canvas');
   c.width = w;
@@ -180,7 +177,7 @@ export class Renderer {
         const st = advanceStride(this.strides.get(a.id), a.x, a.y);
         st.gen = gen;
         this.strides.set(a.id, st);
-        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.ultraMajor ? ULTRA_SCALE : a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
+        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
       }
       const reds = this.world.reds;
       if (reds.length > 0) {
