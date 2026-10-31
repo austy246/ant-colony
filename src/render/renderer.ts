@@ -7,7 +7,7 @@ import { bodyPos } from '../sim/spider';
 import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
-import { drawBush } from './bushArt';
+import { BushSprite, drawBush } from './bushArt';
 import { drawRedNest } from './redNestArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
@@ -63,6 +63,7 @@ export class Renderer {
   private trailImage: ImageData | null = null;
   private antSprites: AntSprites | null = null;
   private redSprites: AntSprites | null = null;
+  private bushSprite: BushSprite | null = null;
   /** Walking-animation state per ant id; entries of ants that are gone are pruned by generation. */
   private strides = new Map<number, StrideState>();
   private strideGen = 0;
@@ -148,7 +149,7 @@ export class Renderer {
       const redNest = this.world.redNest;
       if (redNest) drawRedNest(c, redNest, this.world.time);
       const bush = this.world.bush;
-      if (bush) drawBush(c, bush, this.world.time);
+      if (bush) drawBush(c, bush, this.world.time, (this.bushSprite ??= new BushSprite(this.make)));
       this.drawFoodLayer(c);
       const q = this.queen;
       if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
