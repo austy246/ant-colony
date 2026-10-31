@@ -107,7 +107,7 @@ describe('the aphids bush', () => {
     expect(w.food.filter((f) => f.kind === 'honeydew').length).toBeLessThan(before + 1);
   });
 
-  it('one ant per drop and at most BUSH_MAX_ANTS ants in the bush: no crowd around a single drop', () => {
+  it('one ant per drop and at most BUSH_MAX_ANTS ants collecting honeydew: no crowd around a single drop', () => {
     const w = normalWorld(8);
     w.growMapTo(10);
     const bx = 500;
@@ -122,21 +122,47 @@ describe('the aphids bush', () => {
       a.y = by + Math.sin(ang) * 225;
       a.heading = ang + Math.PI;
     }
-    let maxInBush = 0;
+    let maxCollectors = 0;
     let maxPerDrop = 0;
     for (let t = 0; t < 40 / STEP_S; t++) {
       w.step(STEP_S);
-      let inBush = 0;
+      let collectors = 0;
       const per = new Map<number, number>();
       for (const a of w.ants) {
-        if (Math.hypot(a.x - bx, a.y - by) <= 170) inBush++;
         if ((a.state === 'toFood' || a.state === 'gnaw') && a.targetFood !== null) per.set(a.targetFood, (per.get(a.targetFood) ?? 0) + 1);
       }
-      maxInBush = Math.max(maxInBush, inBush);
-      for (const [id, n] of per) if (w.food.some((f) => f.id === id && f.kind === 'honeydew')) maxPerDrop = Math.max(maxPerDrop, n);
+      for (const [id, n] of per) {
+        if (!w.food.some((f) => f.id === id && f.kind === 'honeydew')) continue;
+        collectors += n;
+        maxPerDrop = Math.max(maxPerDrop, n);
+      }
+      maxCollectors = Math.max(maxCollectors, collectors);
     }
     expect(maxPerDrop).toBe(1);
-    expect(maxInBush).toBeLessThanOrEqual(BUSH_MAX_ANTS + 10); // a soft rule: ants that were already in, or arrive together, may exceed it a little
+    expect(maxCollectors).toBeGreaterThan(5); // plenty do collect
+    expect(maxCollectors).toBeLessThanOrEqual(BUSH_MAX_ANTS);
+  });
+
+  it('other ants are not kept out of the bush: with all 20 collectors busy, an ant walks on across it (past the middle) toward food on the far side', () => {
+    const w = normalWorld(9);
+    w.growMapTo(10);
+    const bx = 500;
+    const by = 300;
+    w.bush = { x: bx, y: by, aphids: APHID_MAX, dropT: 0 };
+    run(w, APHID_HONEY_S * 2);
+    const beetle = w.placeFood('carrion', bx + 260, by)!;
+    beetle.piecesLeft = 20;
+    for (let i = 0; i < 40; i++) {
+      const a = w.spawnAnt();
+      a.x = bx - 240;
+      a.y = by - 80 + i * 4;
+      a.heading = 0; // all of them walk toward the bush and past it
+      a.age = 500; // old ants roam freely (young ones are called back toward the nest)
+    }
+    let crossed = 0;
+    run(w, 50);
+    for (const a of w.ants) if (a.x > bx + 80) crossed++; // past the middle of the bush, on its far half
+    expect(crossed).toBeGreaterThanOrEqual(1);
   });
 
   it('the bush survives a save and a load', () => {

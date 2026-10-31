@@ -177,7 +177,7 @@ export class Renderer {
         const st = advanceStride(this.strides.get(a.id), a.x, a.y);
         st.gen = gen;
         this.strides.set(a.id, st);
-        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.major ? MAJOR_SCALE : 1);
+        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
       }
       const reds = this.world.reds;
       if (reds.length > 0) {

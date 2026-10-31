@@ -32,6 +32,10 @@ export const MAJOR_CHANCE = 0.08;
 export const MAJOR_MAX_FRACTION = 0.1;
 /** Pieces of food a major takes per bite (an ordinary ant takes 1). */
 export const MAJOR_CARRY_PIECES = 2;
+/** Super majors: one hatches for every SUPER_MAJOR_EVERY ants of the colony; twice the size of a major, they carry SUPER_CARRY_PIECES pieces and win a duel with SUPER_WIN_P. */
+export const SUPER_MAJOR_EVERY = 100;
+export const SUPER_CARRY_PIECES = 4;
+export const SUPER_WIN_P = 0.99;
 /** Ant limit in normal mode. */
 export const MAX_ANTS_NORMAL = 2000;
 /** Normal mode: seconds of sim time before another sugar piece can be placed. */
@@ -179,7 +183,7 @@ export const BUSH_REACH = 60;
 export const BUSH_NEST_GAP = 220;
 export const BUSH_EDGE_GAP = 150;
 export const BUSH_SENSE = 150;
-/** At most this many ants are drawn to the bush at once (its honeydew), and a drop is taken by one ant at a time. */
+/** At most this many ants collect the bush's honeydew at once (others may still walk across the bush), and a drop is taken by one ant at a time. */
 export const BUSH_MAX_ANTS = 20;
 /** A claim on a drop of honeydew lapses after this many seconds (an ant that was eaten or lost interest). */
 export const HONEY_CLAIM_S = 60;
