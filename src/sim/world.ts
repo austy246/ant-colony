@@ -899,21 +899,55 @@ export class World {
     }
   }
 
+  /** A living creature dies and becomes carrion with its own meat (a fattened caterpillar is worth more). */
+  private killCreature(f: FoodItem): void {
+    const was = f.kind as PreyKind;
+    f.alive = false;
+    f.kind = 'carrion';
+    f.corpseOf = was;
+    f.piecesLeft = was === 'caterpillar' ? Math.max(f.piecesLeft, FOOD_TABLE[was].pieces) : FOOD_TABLE[was].pieces;
+    delete f.cooldown;
+    delete f.biteT;
+    delete f.hop;
+    delete f.wanderT;
+    delete f.fleeT;
+  }
+
+  /**
+   * A red forager touches a living creature (the same rules as for a black ant): the second touch kills it (it becomes carrion
+   * the red ants take home too); the first makes a fly hop away and a caterpillar flee, and a beetle kills the red ant that
+   * touched it. Returns false when the red ant died.
+   */
+  private redTouch(r: RedAnt, f: FoodItem): boolean {
+    if (!isAlive(f) || f.hop || f.stuck || (f.cooldown ?? 0) > 1e-9) return true;
+    f.touches = (f.touches ?? 0) + 1;
+    f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
+    if (f.touches >= 2) {
+      this.killCreature(f);
+      return true;
+    }
+    if (f.kind === 'beetle') {
+      const i = this.reds.indexOf(r);
+      if (i >= 0) this.reds.splice(i, 1);
+      this.redKilled++;
+      return false;
+    }
+    if (f.kind === 'caterpillar') {
+      f.fleeT = CATERPILLAR_FLEE_S;
+      f.heading = Math.atan2(f.y - r.y, f.x - r.x);
+      f.wanderT = 0;
+    } else {
+      this.startHop(f);
+    }
+    return true;
+  }
+
   private touch(f: FoodItem, ant: Ant): void {
     f.touches = (f.touches ?? 0) + 1;
     f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
     if (f.touches >= 2 || ant.major) {
       // Second touch (or any touch of a major): the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
-      const was = f.kind as PreyKind;
-      f.alive = false;
-      f.kind = 'carrion';
-      f.corpseOf = was;
-      f.piecesLeft = was === 'caterpillar' ? Math.max(f.piecesLeft, FOOD_TABLE[was].pieces) : FOOD_TABLE[was].pieces; // a fattened caterpillar is worth more
-      delete f.cooldown;
-      delete f.biteT;
-      delete f.hop;
-      delete f.wanderT;
-      delete f.fleeT;
+      this.killCreature(f);
       ant.state = 'toFood';
       ant.targetFood = f.id;
       ant.timer = 0;
@@ -1618,7 +1652,7 @@ export class World {
       let best: FoodItem | null = null;
       let bestD = RED_FOOD_SENSE;
       for (const f of this.food) {
-        if (f.piecesLeft <= 0 || f.kind === 'leaf' || f.kind === 'honeydew' || f.kind === 'redant' || f.stuck || isAlive(f)) continue;
+        if (f.piecesLeft <= 0 || f.kind === 'leaf' || f.kind === 'honeydew' || f.kind === 'redant' || f.stuck) continue;
         const d = Math.hypot(f.x - r.x, f.y - r.y);
         if (d < bestD) {
           bestD = d;
@@ -1629,8 +1663,12 @@ export class World {
     }
     if (r.tf !== undefined) {
       const f = this.findFood(r.tf);
-      if (!f || f.piecesLeft <= 0 || isAlive(f)) {
+      if (!f || f.piecesLeft <= 0 || f.stuck) {
         delete r.tf;
+      } else if (isAlive(f)) {
+        // a living creature: go for it and touch it (a second touch kills it; then it is food like any other)
+        if (Math.hypot(f.x - r.x, f.y - r.y) <= TOUCH_DIST && !this.redTouch(r, f)) return r.heading;
+        return Math.atan2(f.y - r.y, f.x - r.x) + (rng.next() - 0.5) * 0.3;
       } else if (Math.hypot(f.x - r.x, f.y - r.y) <= 2) {
         r.gnawT = GNAW_S * (0.75 + 0.5 * rng.next()); // arrived: gnaw before taking a piece
         return r.heading;

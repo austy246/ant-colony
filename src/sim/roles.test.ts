@@ -134,4 +134,54 @@ describe('the red ants forage', () => {
     run(w, 2);
     expect(Math.abs(seeker.y - n.y)).toBeLessThan(d0 + 1);
   });
+
+  function huntWorld(seed: number): World {
+    const w = World.create(seed, 'normal');
+    w.noSpider = true;
+    w.spawnTimer = 1e9;
+    w.stock = 300;
+    w.terrain.surface.fill(Surface.Ground);
+    w.terrain.speed.fill(1);
+    w.addAnts(RED_NEST_MIN_ANTS);
+    run(w, 2);
+    for (const a of w.ants) { a.role = 'nurse'; a.state = 'nest'; a.nestKind = 'nurse'; }
+    w.reds.splice(0, w.reds.length);
+    w.redNest!.stock = 0;
+    return w;
+  }
+
+  it('red foragers hunt a fly: the second touch kills it and it becomes carrion', () => {
+    const w = huntWorld(9);
+    const n = w.redNest!;
+    const fly = w.placeFood('fly', n.x + 60, n.y)!;
+    const f: RedAnt = { id: 92000, x: fly.x - 1, y: fly.y, heading: 0, patrol: true, job: 'forager', spd: 1, tf: fly.id };
+    w.reds.push(f);
+    run(w, 25);
+    expect(fly.alive).toBeFalsy();
+    expect(fly.corpseOf).toBe('fly');
+  });
+
+  it('a beetle kills the first red ant that touches it, and a group of them bring it down', () => {
+    const w = huntWorld(10);
+    const n = w.redNest!;
+    const beetle = w.placeFood('beetle', n.x + 60, n.y)!;
+    beetle.speedMul = 0.01; // (it hardly moves while the reds close in)
+    for (let i = 0; i < 6; i++) {
+      w.reds.push({ id: 92100 + i, x: beetle.x + (i - 2.5) * 0.4, y: beetle.y - 1.5 + i * 0.1, heading: 0, patrol: true, job: 'forager', spd: 1, tf: beetle.id });
+    }
+    run(w, 15);
+    expect(w.redKilled).toBeGreaterThanOrEqual(1); // the beetle killed the first one that touched it
+    expect(beetle.alive).toBeFalsy(); // the next touch (after the cooldown) killed the beetle
+    expect(beetle.corpseOf).toBe('beetle');
+  });
+
+  it('red foragers chase a caterpillar too', () => {
+    const w = huntWorld(11);
+    const n = w.redNest!;
+    const cat = w.placeFood('caterpillar', n.x + 60, n.y)!;
+    w.reds.push({ id: 92200, x: cat.x - 1, y: cat.y, heading: 0, patrol: true, job: 'forager', spd: 1, tf: cat.id });
+    run(w, 40);
+    expect(cat.alive).toBeFalsy();
+    expect(cat.corpseOf).toBe('caterpillar');
+  });
 });
