@@ -208,6 +208,25 @@ export const RED_SEP = 8;
 export const RED_SEP_SPEED = 10;
 /** A wandering black ant notices a red one this far away (px) and goes to fight it. */
 export const ANT_SENSE_RED = 40;
+
+// ---- The red nest: appears with RAID_MIN_ANTS black ants; red ants keep coming out; black ants can take it ----
+/** The red nest lies at least this far (px) from the black nest and the bush, and RED_NEST_EDGE from the map edge. */
+export const RED_NEST_GAP = 380;
+export const RED_NEST_EDGE = 70;
+/** A patrol red ant comes out every RED_TRICKLE_S seconds (at most RED_PATROL_MAX at a time) and walks within RED_PATROL_R px of the nest. */
+export const RED_TRICKLE_S = 8;
+export const RED_PATROL_MAX = 14;
+export const RED_PATROL_R = 130;
+/** Black wanderers within RED_NEST_SENSE px smell the red nest and go there. */
+export const RED_NEST_SENSE = 90;
+/** The red nest is taken when CAPTURE_ANTS black ants (on the surface) are within CAPTURE_R px of it at once. */
+export const CAPTURE_ANTS = 4;
+export const CAPTURE_R = 18;
+/** A taken nest adds CAPTURED_QUEENS queens, and the queens hatch ants CAPTURED_HATCH_MUL times as long per cycle (< 1: faster). */
+export const CAPTURED_QUEENS = 4;
+export const CAPTURED_HATCH_MUL = 0.75;
+/** Raiders leave the red nest spread over a disc of this radius (px). */
+export const RAID_SPREAD_NEST = 60;
 /** The spider walks along its web to a caught creature at this speed (px/s). */
 export const SPIDER_SPEED = 14;
 /** Seconds the spider needs to eat a fly caught in its web, once it has reached it. Flies are served before ants. */

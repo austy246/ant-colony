@@ -35,6 +35,8 @@ describe('raids of red ants', () => {
     for (let seed = 1; seed <= 6; seed++) {
       const w = raidWorld(seed);
       w.addAnts(RAID_MIN_ANTS);
+      run(w, 2); // the red nest appears (the raids set off from it)
+      expect(w.redNest?.owner).toBe('red');
       w.raidWait = 0.01;
       run(w, 0.5);
       expect(w.raidsStarted).toBe(1);

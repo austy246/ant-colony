@@ -1,4 +1,4 @@
-import { APHID_MAX, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -61,6 +61,8 @@ export interface SaveV1 {
   spider?: Spider;
   /** Optional (absent = no bush yet): the aphids bush (normal mode). */
   bush?: Bush;
+  /** Optional (absent = none yet): the red ants' nest (normal mode) and who holds it. */
+  redNest?: { x: number; y: number; owner: 'red' | 'black' };
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -127,6 +129,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     spawnTimer: w.spawnTimer,
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
+    ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner } } : {}),
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
 }
@@ -169,6 +172,7 @@ export function worldFromSave(s: SaveV1): World {
     w.ants.push(ant);
   }
   w.bush = s.bush ? { ...s.bush } : null;
+  w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, trickleT: RED_TRICKLE_S } : null;
   // Without a living spider nobody can be stuck in a web.
   // Clamped to one full respawn from now, like the sugar clocks.
   w.spider = s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
@@ -246,6 +250,12 @@ function validBush(b: unknown, size: { w: number; h: number }): boolean {
   return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isInt(o.aphids) && o.aphids >= 1 && o.aphids <= APHID_MAX && isNum(o.dropT) && o.dropT >= 0;
 }
 
+function validRedNest(n: unknown, size: { w: number; h: number }): boolean {
+  if (typeof n !== 'object' || n === null) return false;
+  const o = n as Record<string, unknown>;
+  return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && (o.owner === 'red' || o.owner === 'black');
+}
+
 function validPheromone(b64: string, size: { w: number; h: number }): boolean {
   try {
     return base64ToBytes(b64).length === size.w * size.h;
@@ -275,6 +285,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (o.bush !== undefined && !validBush(o.bush, size)) return null;
+  if (o.redNest !== undefined && !validRedNest(o.redNest, size)) return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;

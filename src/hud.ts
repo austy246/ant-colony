@@ -18,7 +18,7 @@ export function hudParts(world: World): HudParts {
   return {
     before: `Mravenci: ${total}`,
     small: inNest > 0 ? ` (na povrchu ${surface})` : '',
-    after: ` · Zásoba: ${stock.toFixed(1)}${(world.reds?.length ?? 0) > 0 ? ` · NÁLET: ${world.reds.length} červených` : ''}`,
+    after: ` · Zásoba: ${stock.toFixed(1)}${(world.raiders ?? 0) > 0 ? ` · NÁLET: ${world.raiders} červených` : ''}`,
   };
 }
 

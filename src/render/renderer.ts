@@ -8,6 +8,7 @@ import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { drawBush } from './bushArt';
+import { drawRedNest } from './redNestArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { RED_RGBA } from './antArt';
@@ -144,6 +145,8 @@ export class Renderer {
     else if (this.view === 'terrain') this.drawTerrainView(c);
     else {
       // the bush lies on the ground under the food (the aphids' drops of honeydew hang on it) and the ants
+      const redNest = this.world.redNest;
+      if (redNest) drawRedNest(c, redNest, this.world.time);
       const bush = this.world.bush;
       if (bush) drawBush(c, bush, this.world.time);
       this.drawFoodLayer(c);
