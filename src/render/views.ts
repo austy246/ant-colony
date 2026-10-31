@@ -30,6 +30,9 @@ export function surfaceOverlayColor(s: number): string | null {
 /** Straight (non-premultiplied) RGB of a trail cell; alpha comes from pheromoneAlpha. */
 export const TRAIL_RGB = [127, 209, 255] as const;
 
+/** The red ants' trail in the pheromone view. */
+export const RED_TRAIL_RGB = [255, 106, 80] as const;
+
 /** Soft orange radial glow around the nest, w x h (the map size), built from homeGlow. */
 export function buildHomeGlowCanvas(make: CanvasFactory, w: number, h: number): CanvasLike {
   const canvas = make(w, h);

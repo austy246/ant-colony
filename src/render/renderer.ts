@@ -20,6 +20,7 @@ import {
   pheromoneAlpha,
   PHEROMONE_DARK,
   TERRAIN_DARK,
+  RED_TRAIL_RGB,
   TRAIL_RGB,
 } from './views';
 
@@ -182,7 +183,7 @@ export class Renderer {
       if (reds.length > 0) {
         // red raiders: the same ant art in red, a simple time-driven gait (they are not tracked by the stride state)
         const rs = (this.redSprites ??= new AntSprites(this.make, RED_RGBA));
-        for (const r of reds) drawAnt(c, rs, r.x, r.y, antDirection(r.heading), r.fightT !== undefined ? 0 : Math.floor(this.world.time * 8 + r.id) % ANT_FRAMES, false);
+        for (const r of reds) drawAnt(c, rs, r.x, r.y, antDirection(r.heading), r.fightT !== undefined || r.gnawT !== undefined ? 0 : Math.floor(this.world.time * 8 + r.id) % ANT_FRAMES, (r.carry ?? 0) > 0);
       }
       if (this.strides.size > ants.length) {
         const kills = this.lastKilled >= 0 ? this.world.antsKilled - this.lastKilled : 0;
@@ -290,17 +291,20 @@ export class Renderer {
     if (tc) {
       this.trailImage ??= tc.createImageData(w, h);
       const buf = this.trailImage.data;
+      const redData = this.world.redPher.w === w && this.world.redPher.h === h && this.world.reds.length > 0 ? this.world.redPher.data : null;
       buf.fill(0);
       for (let y = y0; y <= y1; y++) {
         const row = y * w;
         for (let x = x0; x <= x1; x++) {
           const a = pheromoneAlpha(data[row + x]);
-          if (a === 0) continue;
+          const ra = redData ? pheromoneAlpha(redData[row + x]) : 0;
+          if (a === 0 && ra === 0) continue;
           const o = (row + x) * 4;
-          buf[o] = TRAIL_RGB[0];
-          buf[o + 1] = TRAIL_RGB[1];
-          buf[o + 2] = TRAIL_RGB[2];
-          buf[o + 3] = Math.round(a * 255);
+          const red = ra > a; // the red ants' trail is drawn in red where it is the stronger one
+          buf[o] = red ? RED_TRAIL_RGB[0] : TRAIL_RGB[0];
+          buf[o + 1] = red ? RED_TRAIL_RGB[1] : TRAIL_RGB[1];
+          buf[o + 2] = red ? RED_TRAIL_RGB[2] : TRAIL_RGB[2];
+          buf[o + 3] = Math.round((red ? ra : a) * 255);
         }
       }
       tc.putImageData(this.trailImage, 0, 0);
@@ -319,6 +323,13 @@ export class Renderer {
       c.fillRect(fx - 1, fy - 1, 3, 3);
     }
 
+    c.fillStyle = '#ff6a50';
+    for (const r of this.world.reds) {
+      const rx = Math.round(r.x);
+      const ry = Math.round(r.y);
+      c.fillRect(rx - 1, ry, 3, 1);
+      c.fillRect(rx, ry - 1, 1, 3);
+    }
     c.fillStyle = '#ffffff';
     for (const a of this.world.ants) {
       if (a.state === 'nest') continue;

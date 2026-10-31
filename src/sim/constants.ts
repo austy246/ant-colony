@@ -237,9 +237,11 @@ export const RAID_SPREAD_NEST = 60;
 /** Red ants: this share (at least one in ten) of the patrols are guards that circle the red nest; the rest forage up to RED_FORAGE_R px away. */
 export const RED_GUARD_FRACTION = 0.15;
 export const RED_FORAGE_R = 350;
-/** A red forager notices food this far away (px); food it brings home counts toward more red ants. */
+/** A red forager notices food this far away (px); the food it brings home feeds the nest (new red ants cost RED_FOOD_PER_ANT each). */
 export const RED_FOOD_SENSE = 60;
-export const RED_STOCK_PER_ANT = 6;
+export const RED_START_STOCK = 100;
+/** Every new red ant costs this much food from the red nest's stock (while it has none, no new red ants come out). */
+export const RED_FOOD_PER_ANT = 1;
 /** Guards: this share of the black colony (majors first) circles the nest in rings GUARD_R_MIN + k * GUARD_R_STEP px away, and fights the red ants. */
 export const GUARD_FRACTION = 0.1;
 export const GUARD_MIN_COLONY = 20;

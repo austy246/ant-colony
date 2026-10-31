@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_NEST_MIN_ANTS, RED_STOCK_PER_ANT, STEP_S } from './constants';
+import { GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import type { RedAnt } from './raid';
 import { Surface } from './terrain';
 import { World } from './world';
 
@@ -61,8 +62,8 @@ describe('the red ants forage', () => {
     expect(RAID_MIN_ANTS).toBe(1500);
   });
 
-  it('red foragers take food home, and every RED_STOCK_PER_ANT of it makes one more red ant', () => {
-    const w = World.create(5, 'normal');
+  function redWorld(seed: number): World {
+    const w = World.create(seed, 'normal');
     w.noSpider = true;
     w.spawnTimer = 1e9;
     w.stock = 300;
@@ -70,18 +71,67 @@ describe('the red ants forage', () => {
     w.terrain.speed.fill(1);
     w.addAnts(RED_NEST_MIN_ANTS);
     run(w, 2);
+    for (const a of w.ants) { a.role = 'nurse'; a.state = 'nest'; a.nestKind = 'nurse'; } // keep the black ants out of it
+    return w;
+  }
+
+  it('the red nest starts with a stock of food; every new red ant costs RED_FOOD_PER_ANT of it', () => {
+    const w = redWorld(5);
     const n = w.redNest!;
-    for (const a of w.ants) a.role = 'nurse'; // keep the black ants out of it
-    for (const a of w.ants) { a.state = 'nest'; a.nestKind = 'nurse'; }
+    expect(RED_START_STOCK).toBe(100);
+    const before = (n.stock ?? 0) + 0;
+    const reds0 = w.reds.length;
+    run(w, RED_TRICKLE_S * 4 + 1);
+    expect(w.reds.length - reds0).toBe(4);
+    expect(before - (n.stock ?? 0)).toBeCloseTo(4 * RED_FOOD_PER_ANT, 6);
+  });
+
+  it('with no food in the stock no new red ant comes out', () => {
+    const w = redWorld(6);
+    const n = w.redNest!;
+    n.stock = 0;
+    const reds0 = w.reds.length;
+    run(w, RED_TRICKLE_S * 3);
+    expect(w.reds.length).toBe(reds0);
+  });
+
+  it('red foragers gnaw at the food, carry a piece home slowly, hand it over and the stock grows', () => {
+    const w = redWorld(7);
+    const n = w.redNest!;
+    n.stock = 0; // nothing is spent while we watch
     const food = w.placeFood('berry', n.x + 30, n.y)!;
     food.piecesLeft = 30;
-    const reds0 = w.reds.length;
-    run(w, 120);
+    // a single forager next to the food: it must stand and gnaw for a while before it takes a piece
+    w.reds.splice(0, w.reds.length);
+    const f: RedAnt = { id: 91000, x: food.x - 1, y: food.y, heading: 0, patrol: true, job: 'forager', spd: 1, tf: food.id };
+    w.reds.push(f);
+    let gnawed = 0;
+    let carryAt = -1;
+    for (let t = 0; t < 40 / STEP_S; t++) {
+      w.step(STEP_S);
+      if (f.gnawT !== undefined) gnawed++;
+      if (carryAt < 0 && (f.carry ?? 0) > 0) carryAt = t * STEP_S;
+    }
+    expect(gnawed * STEP_S).toBeGreaterThan(2.5); // it gnawed for about GNAW_S seconds
+    expect(carryAt).toBeGreaterThan(2.5);
     expect(food.piecesLeft).toBeLessThan(30);
-    const brought = 30 - food.piecesLeft;
-    expect(brought).toBeGreaterThanOrEqual(RED_STOCK_PER_ANT);
-    expect((n.stock ?? 0) + 0).toBeGreaterThanOrEqual(0);
-    // more reds than the 5 s trickle alone would give (120 s / 5 s = 24)
-    expect(w.reds.length - reds0).toBeGreaterThan(24);
+    expect(n.delivered ?? 0).toBeGreaterThan(0);
+    expect(n.stock ?? 0).toBeGreaterThan(0);
+  });
+
+  it('a red forager carrying food lays red pheromone on the way home, which other red foragers follow', () => {
+    const w = redWorld(8);
+    const n = w.redNest!;
+    w.reds.splice(0, w.reds.length);
+    expect(w.redPher.sampleMax(n.x + 40, n.y, 3)).toBe(0);
+    w.reds.push({ id: 91001, x: n.x + 80, y: n.y, heading: Math.PI, patrol: true, job: 'forager', spd: 1, carry: 1 });
+    run(w, 6);
+    expect(w.redPher.sampleMax(n.x + 60, n.y, 30)).toBeGreaterThan(0.3);
+    // a seeker that starts beside the trail turns onto it
+    w.reds.push({ id: 91002, x: n.x + 90, y: n.y + 14, heading: -Math.PI / 2, patrol: true, job: 'forager', spd: 1 });
+    const seeker = w.reds[w.reds.length - 1];
+    const d0 = Math.abs(seeker.y - n.y);
+    run(w, 2);
+    expect(Math.abs(seeker.y - n.y)).toBeLessThan(d0 + 1);
   });
 });

@@ -16,6 +16,8 @@ export interface RedAnt {
   /** Food a forager carries (its value) and the id of the food item it is walking to. */
   carry?: number;
   tf?: number;
+  /** Seconds a forager still gnaws at its food before it takes a piece (it stands still meanwhile, like a black ant). */
+  gnawT?: number;
   /** Seconds left of the duel it is in (absent = not fighting). */
   fightT?: number;
 }
@@ -28,6 +30,8 @@ export interface RedNest {
   owner: 'red' | 'black';
   /** Food the red foragers have brought home; every RED_STOCK_PER_ANT of it makes one more red ant. */
   stock?: number;
+  /** Food brought home in all (for the statistics and tests). */
+  delivered?: number;
   /** Seconds until the next patrol red ant comes out. Transient. */
   trickleT: number;
 }
