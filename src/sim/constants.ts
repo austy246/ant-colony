@@ -168,7 +168,7 @@ export const CATERPILLAR_MAX_PIECES = 144;
 
 // ---- Aphids: a bush with a few aphids appears with a big colony; ants feed them leaves and collect their honeydew ----
 /** The bush appears once the colony has this many ants (normal mode). */
-export const BUSH_MIN_ANTS = 500;
+export const BUSH_MIN_ANTS = 1000;
 export const APHID_START = 3;
 export const APHID_MAX = 15;
 /** Every aphid holds one drop of honeydew per APHID_HONEY_S seconds, until an ant licks it off. */
