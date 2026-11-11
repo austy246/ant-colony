@@ -1,3 +1,103 @@
+@import '@fontsource/pixelify-sans/latin-400.css';
+@import '@fontsource/pixelify-sans/latin-ext-400.css';
+@import '@fontsource/pixelify-sans/latin-600.css';
+@import '@fontsource/pixelify-sans/latin-ext-600.css';
+
+/* Pixel-art UI: stepped (notched) corners, hard bevels, no blur, earth + moss palette taken from the map and sprites. */
+:root {
+  --px-font: 'Pixelify Sans', ui-monospace, 'Courier New', monospace;
+  --px-ink: #efe3c8;
+  --px-ink-dim: #b9a47e;
+  --px-bg: #1e150d;
+  --px-panel: #2a1d12;
+  --px-edge: #0f0a06;
+  --px-btn: #4a3524;
+  --px-btn-hi: #6b5238;
+  --px-btn-lo: #2e2015;
+  --px-btn-hover: #5a4430;
+  --px-moss: #4f7a2e;
+  --px-moss-hi: #86b35f;
+  --px-moss-lo: #2f4c1b;
+}
+
+/* a notched pixel frame: 2px dark outline whose corners are cut, plus a lit top-left and shaded bottom-right bevel */
+.toolbar,
+.nest-hud,
+.hud,
+.panel,
+.mode-box {
+  background: var(--px-panel);
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 #44311f,
+    inset -2px -2px 0 0 #1a120b;
+}
+
+.toolbar button,
+.panel button,
+.skip,
+.mode-item button {
+  font-family: var(--px-font);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--px-ink);
+  background: var(--px-btn);
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-hi),
+    inset -2px -2px 0 0 var(--px-btn-lo);
+  text-shadow: 1px 1px 0 var(--px-edge);
+  cursor: pointer;
+}
+
+.toolbar button:hover,
+.panel button:hover,
+.skip:hover {
+  background: var(--px-btn-hover);
+}
+
+.toolbar button:active,
+.panel button:active,
+.skip:active,
+.mode-item button:active {
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-lo),
+    inset -2px -2px 0 0 var(--px-btn-hi);
+  padding-top: 8px;
+  padding-bottom: 4px;
+}
+
+.toolbar button.active {
+  background: var(--px-moss);
+  color: #f3fbe6;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-moss-hi),
+    inset -2px -2px 0 0 var(--px-moss-lo);
+}
+
+.toolbar button.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .toolbar {
   position: fixed;
   bottom: 8px;
@@ -7,38 +107,18 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 4px;
-  max-width: calc(100vw - 16px);
-  padding: 6px;
-  background: rgba(20, 14, 8, 0.8);
-  border-radius: 8px;
-  font-family: system-ui, sans-serif;
+  gap: 8px;
+  max-width: calc(100vw - 28px);
+  padding: 10px;
+  background: var(--px-panel);
+  border-radius: 0;
+  font-family: var(--px-font);
   user-select: none;
 }
 
 .toolbar button {
   padding: 6px 10px;
-  font-size: 14px;
-  color: #f2e6d0;
-  background: #3a2a1a;
-  border: 1px solid #6b4f33;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.toolbar button:hover {
-  background: #4d3924;
-}
-
-.toolbar button.active {
-  background: #c98a2b;
-  border-color: #f0b85a;
-  color: #1a120b;
-}
-
-.toolbar button.disabled {
-  opacity: 0.35;
-  pointer-events: none;
+  font-size: 16px;
 }
 
 .nest-hud {
@@ -48,40 +128,40 @@
   min-width: 260px;
   max-width: calc(100vw - 16px);
   padding: 6px 10px;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  color: #f2e6d0;
-  background: rgba(20, 14, 8, 0.8);
-  border-radius: 8px;
+  font-family: var(--px-font);
+  font-size: 16px;
+  color: var(--px-ink);
+  background: var(--px-panel);
+  border-radius: 0;
   user-select: none;
   pointer-events: none;
 }
 
 .nest-bar {
-  height: 4px;
+  height: 6px;
   margin: 6px 0 2px;
-  background: #3a2a1a;
-  border-radius: 2px;
+  background: var(--px-edge);
+  border-radius: 0;
   overflow: hidden;
 }
 
 .nest-fill {
   width: 0;
   height: 100%;
-  background: #f0b85a;
+  background: var(--px-moss-hi);
 }
 
 .nest-note {
   margin-top: 4px;
   font-size: 12px;
-  color: #cdbb98;
+  color: var(--px-ink-dim);
 }
 
 .toolbar .sep {
-  width: 1px;
+  width: 2px;
   align-self: stretch;
-  background: #6b4f33;
-  margin: 0 4px;
+  background: var(--px-edge);
+  margin: 0 6px;
 }
 
 html,
@@ -158,7 +238,7 @@ body {
     white-space: nowrap;
   }
   .toolbar .sep {
-    flex: 0 0 1px;
+    flex: 0 0 2px;
   }
   .hud {
     font-size: 12px;
@@ -194,11 +274,11 @@ body {
 .panel,
 .skip {
   position: fixed;
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  color: #f2e6d0;
-  background: rgba(20, 14, 8, 0.8);
-  border-radius: 8px;
+  font-family: var(--px-font);
+  font-size: 16px;
+  color: var(--px-ink);
+  background: var(--px-panel);
+  border-radius: 0;
   user-select: none;
 }
 
@@ -219,20 +299,9 @@ body {
   padding: 6px;
 }
 
-.panel button,
 .skip {
   padding: 6px 10px;
-  font-size: 14px;
-  color: #f2e6d0;
-  background: #3a2a1a;
-  border: 1px solid #6b4f33;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.panel button:hover,
-.skip:hover {
-  background: #4d3924;
+  font-size: 16px;
 }
 
 .skip {
@@ -248,9 +317,9 @@ body {
   margin-left: 8px;
   padding: 1px 6px;
   font-size: 11px;
-  color: #1a120b;
-  background: #c98a2b;
-  border-radius: 8px;
+  color: #f3fbe6;
+  background: var(--px-moss);
+  border-radius: 0;
 }
 
 .mode-select {
@@ -262,8 +331,8 @@ body {
   justify-content: center;
   padding: 16px;
   background: rgba(10, 7, 4, 0.7);
-  font-family: system-ui, sans-serif;
-  color: #f2e6d0;
+  font-family: var(--px-font);
+  color: var(--px-ink);
 }
 
 .mode-box {
@@ -273,9 +342,8 @@ body {
   width: 100%;
   max-width: 360px;
   padding: 16px;
-  background: rgba(20, 14, 8, 0.8);
-  border: 1px solid #6b4f33;
-  border-radius: 8px;
+  background: var(--px-panel);
+  border-radius: 0;
   text-align: center;
 }
 
@@ -293,16 +361,11 @@ body {
   min-height: 44px;
   padding: 8px 16px;
   font-size: 16px;
-  color: #f2e6d0;
-  background: #3a2a1a;
-  border: 1px solid #6b4f33;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .mode-item button:hover {
-  background: #c98a2b;
-  color: #1a120b;
+  background: var(--px-moss);
+  color: #f3fbe6;
 }
 
 .mode-desc {

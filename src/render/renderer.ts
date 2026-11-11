@@ -45,7 +45,9 @@ export class Renderer {
   private dpr = 1;
   private cssW = 1;
   private cssH = 1;
-  private vignette: CanvasGradient | null = null;
+  /** Ordered-dither vignette (one dither cell = one art pixel on screen), rebuilt when the size or the zoom changes. */
+  private vignette: CanvasLike | null = null;
+  private vignetteKey = '';
   private sorted: Ant[] = [];
   private glowCanvas: CanvasLike | null = null;
   /** Map size (art pixels) the glow and trail canvases were built for; they are rebuilt when the map grows. */
@@ -179,16 +181,46 @@ export class Renderer {
     }
     this.lastKilled = this.world.antsKilled;
 
+    // Map rim: a stepped dark frame with a lit inner edge, so the edge of the world reads as a deliberate border.
+    this.drawRim(c);
+
     // Vignette in screen space.
     c.setTransform(1, 0, 0, 1, 0, 0);
-    if (!this.vignette) {
-      const g = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.4, w / 2, h / 2, Math.hypot(w, h) * 0.55);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(8,5,2,.45)');
-      this.vignette = g;
+    const block = Math.max(2, Math.round(zoom * this.dpr));
+    const key = `${w}x${h}@${block}`;
+    if (!this.vignette || this.vignetteKey !== key) {
+      this.vignette = buildDitherVignette(this.make, Math.ceil(w / block), Math.ceil(h / block));
+      this.vignetteKey = key;
     }
-    c.fillStyle = this.vignette;
-    c.fillRect(0, 0, w, h);
+    c.imageSmoothingEnabled = false;
+    const vw = Math.ceil(w / block) * block;
+    const vh = Math.ceil(h / block) * block;
+    c.drawImage(this.vignette as unknown as CanvasImageSource, 0, 0, vw, vh);
+  }
+
+  private drawRim(c: CanvasRenderingContext2D): void {
+    const { zoom } = this.camera;
+    const t = this.world.terrain;
+    c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    c.translate(this.cssW / 2 - this.camera.x * zoom, this.cssH / 2 - this.camera.y * zoom);
+    c.scale(zoom, zoom);
+    const band = (x: number, y: number, w: number, h: number, col: string): void => {
+      c.fillStyle = col;
+      c.fillRect(x, y, w, h);
+    };
+    // 3 art px of shadow outside, a dark 1 px line, then a lit 1 px line just inside the ground.
+    for (const [o, col] of [[3, 'rgba(8,5,2,.25)'], [2, 'rgba(8,5,2,.45)'], [1, 'rgba(8,5,2,.8)']] as const) {
+      band(-o, -o, t.w + 2 * o, o, col);
+      band(-o, t.h, t.w + 2 * o, o, col);
+      band(-o, 0, o, t.h, col);
+      band(t.w, 0, o, t.h, col);
+    }
+    c.fillStyle = 'rgba(160,125,80,.35)';
+    c.fillRect(0, 0, t.w, 1);
+    c.fillRect(0, 0, 1, t.h);
+    c.fillStyle = 'rgba(8,5,2,.35)';
+    c.fillRect(0, t.h - 1, t.w, 1);
+    c.fillRect(t.w - 1, 0, 1, t.h);
   }
 
   /** Food, living prey and corpses; a hopping fly is drawn last so it is never hidden by other food. */
@@ -326,4 +358,35 @@ export class Renderer {
     c.fillStyle = 'rgba(127,209,255,.9)';
     for (const a of this.world.ants) if (a.state !== 'nest') c.fillRect(Math.round(a.x), Math.round(a.y), 1, 1);
   }
+}
+
+const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+/** w x h canvas of a dark vignette built from three alpha levels, ordered-dithered with a 4x4 Bayer matrix (clear centre). */
+function buildDitherVignette(make: CanvasFactory, w: number, h: number): CanvasLike {
+  const cv = make(w, h);
+  const g = cv.getContext('2d');
+  if (!g) return cv;
+  const img = g.createImageData(w, h);
+  const d = img.data;
+  const LEVELS = [0, 0.16, 0.3, 0.45];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = (x + 0.5 - w / 2) / (w / 2);
+      const ny = (y + 0.5 - h / 2) / (h / 2);
+      const r = Math.hypot(nx, ny);
+      const t = Math.max(0, Math.min(1, (r - 0.55) / 0.95));
+      const f = t * (LEVELS.length - 1);
+      const lo = Math.floor(f);
+      const frac = f - lo;
+      const lvl = frac > (BAYER4[(y & 3) * 4 + (x & 3)] + 0.5) / 16 ? lo + 1 : lo;
+      const i = (y * w + x) * 4;
+      d[i] = 8;
+      d[i + 1] = 5;
+      d[i + 2] = 2;
+      d[i + 3] = Math.round(LEVELS[Math.min(LEVELS.length - 1, lvl)] * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return cv;
 }
