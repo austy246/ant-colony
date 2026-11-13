@@ -52,3 +52,32 @@ describe('raid warning', () => {
     expect(w.raidWarning).toBeNull();
   });
 });
+
+describe('seasons and rain', () => {
+  it('a season lasts SEASON_S, winter is slow and sparse, rain washes trails and stops spawns', async () => {
+    const { SEASON_S, RAIN_S, SEASON_SPAWN_MUL } = await import('./sim/constants');
+    const w = World.create(3, 'normal');
+    expect(w.season).toBe(0);
+    w.time = SEASON_S;
+    expect(w.season).toBe(1);
+    w.time = 3 * SEASON_S + 1;
+    expect(w.season).toBe(3);
+    expect(w.raining).toBe(false); // never in winter
+    expect(SEASON_SPAWN_MUL[3]).toBeGreaterThan(SEASON_SPAWN_MUL[1]);
+    // some block in the first three seasons does rain, and only within its first RAIN_S seconds
+    let rained = 0;
+    for (let t = 0; t < 3 * SEASON_S; t += 5) {
+      w.time = t;
+      if (w.raining) {
+        rained++;
+        expect(t % 180).toBeLessThan(RAIN_S);
+      }
+    }
+    expect(rained).toBeGreaterThan(0);
+    expect(World.create(3, 'sandbox').season).toBe(1); // sandbox: always summer, never rain
+    w.fixedSeason = 2;
+    w.time = 0;
+    expect(w.season).toBe(2);
+    expect(w.raining).toBe(false);
+  });
+});

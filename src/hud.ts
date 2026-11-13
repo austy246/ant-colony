@@ -1,3 +1,4 @@
+import { SEASON_NAMES } from './sim/constants';
 import type { World } from './sim/world';
 
 export interface HudParts {
@@ -17,10 +18,11 @@ export function hudParts(world: World): HudParts {
   const stock = Number.isFinite(world.stock) ? world.stock : 0;
   const warn = world.raidWarning ?? null;
   const warning = warn !== null ? ` · Nálet za ${Math.ceil(warn)} s!` : '';
+  const season = world.mode === 'normal' && typeof world.season === 'number' ? ` · ${SEASON_NAMES[world.season]}${world.raining ? ' (déšť)' : ''}` : '';
   return {
     before: `Mravenci: ${total}`,
     small: inNest > 0 ? ` (na povrchu ${surface})` : '',
-    after: ` · Zásoba: ${stock.toFixed(1)}${(world.raiders ?? 0) > 0 ? ` · NÁLET: ${world.raiders} červených` : warning}`,
+    after: ` · Zásoba: ${stock.toFixed(1)}${season}${(world.raiders ?? 0) > 0 ? ` · NÁLET: ${world.raiders} červených` : warning}`,
   };
 }
 

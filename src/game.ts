@@ -81,6 +81,7 @@ export async function startGame(): Promise<void> {
     if (hudMain.textContent !== p.before) hudMain.textContent = p.before;
     if (hudSmall.textContent !== p.small) hudSmall.textContent = p.small;
     if (hudRest.textContent !== p.after) hudRest.textContent = p.after;
+    document.body.classList.toggle('raining', world.raining);
   };
 
   // --- underground ("Podzemí") ---

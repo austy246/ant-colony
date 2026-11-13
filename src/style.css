@@ -390,3 +390,13 @@ body {
   width: 150px;
   accent-color: var(--px-moss-hi);
 }
+
+/* Rain: a cool tint over the whole view. */
+body.raining::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 70, 120, 0.22);
+  pointer-events: none;
+  z-index: 1;
+}

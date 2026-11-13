@@ -1,5 +1,5 @@
 import {
-  SPAWN_MAX_BEETLES_BASE, SPAWN_MAX_FOOD_BASE, SPAWN_MAX_FOOD_PER_STEP, SPAWN_MAX_S, SPAWN_MIN_S, SPAWN_WEIGHTS, STEP_S,
+  SPAWN_MAX_BEETLES_BASE, SEASON_SPAWN_MUL, SPAWN_MAX_FOOD_BASE, SPAWN_MAX_FOOD_PER_STEP, SPAWN_MAX_S, SPAWN_MIN_S, SPAWN_WEIGHTS, STEP_S,
 } from './constants';
 import { isAlive, resolvePlacement, type FoodKind } from './food';
 import type { Rng } from './rng';
@@ -34,8 +34,9 @@ export function updateEnvironment(world: World): void {
   world.spawnTimer -= STEP_S;
   if (world.spawnTimer > 0) return;
   const rng = world.rng;
-  world.spawnTimer = SPAWN_MIN_S + (SPAWN_MAX_S - SPAWN_MIN_S) * rng.next();
+  world.spawnTimer = (SPAWN_MIN_S + (SPAWN_MAX_S - SPAWN_MIN_S) * rng.next()) * SEASON_SPAWN_MUL[world.season];
   const kind = pickSpawnKind(rng);
+  if (world.raining) return; // nothing comes out in the rain
   if (world.food.length >= SPAWN_MAX_FOOD_BASE + SPAWN_MAX_FOOD_PER_STEP * world.mapStep) return;
   if (kind === 'beetle') {
     let beetles = 0;

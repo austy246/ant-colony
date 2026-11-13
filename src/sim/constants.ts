@@ -195,6 +195,19 @@ export const RAID_MIN_S = 120;
 export const RAID_MAX_S = 360;
 /** The player is warned this many seconds before a raid starts (the HUD counts down), time to put more ants on guard duty. */
 export const RAID_WARN_S = 45;
+
+/** Normal mode seasons, a year of four SEASON_S-second seasons starting in spring (derived from the sim time, nothing extra is saved). */
+export const SEASON_S = 240;
+export const SEASON_NAMES = ['Jaro', 'Léto', 'Podzim', 'Zima'] as const;
+/** Spawn wait multiplier per season (more is slower): plenty of prey in summer, almost none in winter. */
+export const SEASON_SPAWN_MUL = [1, 0.7, 1.3, 3] as const;
+/** In winter the ants move slower (the cold). */
+export const WINTER_SPEED_MUL = 0.75;
+/** Rain: every RAID-independent RAIN_BLOCK_S block (not in winter) rains for the first RAIN_S seconds with chance RAIN_P; it washes the trails away RAIN_EVAP_MUL times faster and no prey appears. */
+export const RAIN_BLOCK_S = 180;
+export const RAIN_S = 45;
+export const RAIN_P = 0.4;
+export const RAIN_EVAP_MUL = 4;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

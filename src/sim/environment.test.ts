@@ -37,12 +37,14 @@ describe('spontaneous prey', () => {
 
   it('normal spawns food over time', () => {
     const w = World.create(3, 'normal');
+    w.fixedSeason = 0;
     for (let i = 0; i < 600; i++) w.step(0.5);
     expect(w.food.length).toBeGreaterThan(0);
   });
 
   it('spawns are spaced SPAWN_MIN_S..SPAWN_MAX_S apart', () => {
     const w = World.create(4, 'normal');
+    w.fixedSeason = 0;
     const times: number[] = [];
     let count = 0;
     for (let i = 0; i < 100 * 30 && times.length < 3; i++) {
@@ -62,6 +64,7 @@ describe('spontaneous prey', () => {
   it('spawned food stays under the cap, and reaches it', () => {
     for (const mapStep of [0, 3]) {
       const w = World.create(5, 'normal');
+    w.fixedSeason = 0;
       w.mapStep = mapStep;
       const cap = SPAWN_MAX_FOOD_BASE + SPAWN_MAX_FOOD_PER_STEP * mapStep;
       rounds(w, 400, () => expect(w.food.length).toBeLessThanOrEqual(cap));
@@ -72,6 +75,7 @@ describe('spontaneous prey', () => {
   it('keeps living beetles within the cap, and does spawn them', () => {
     for (const mapStep of [0, 2]) {
       const w = World.create(1, 'normal');
+    w.fixedSeason = 0;
       w.mapStep = mapStep;
       const cap = SPAWN_MAX_BEETLES_BASE + mapStep;
       let max = 0;
@@ -87,6 +91,7 @@ describe('spontaneous prey', () => {
 
   it('spawned food is on a free spot outside the nest radius', () => {
     const w = World.create(9, 'normal');
+    w.fixedSeason = 0;
     rounds(w, 300, () => { w.food = w.food.slice(-20); });
     expect(w.food.length).toBeGreaterThan(0);
     for (const f of w.food) expect(isFreeSpot(w.terrain, f.x, f.y)).toBe(true);
