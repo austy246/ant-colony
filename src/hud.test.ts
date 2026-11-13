@@ -39,3 +39,16 @@ describe('hudText', () => {
     expect(none.before + none.small + none.after).toBe(hudText(colony(4, 0, 1)));
   });
 });
+
+describe('raid warning', () => {
+  it('counts the seconds down in the last RAID_WARN_S of the wait and only then', () => {
+    const w = colony(5, 0, 1);
+    expect(hudText(w)).not.toContain('Nálet za');
+    w.raidWait = 200;
+    expect(w.raidWarning).toBeNull();
+    w.raidWait = 30.2;
+    expect(hudText(w)).toContain('Nálet za 31 s!');
+    w.noRaid = true;
+    expect(w.raidWarning).toBeNull();
+  });
+});

@@ -193,6 +193,8 @@ export const RAID_MIN_ANTS = 1500;
 /** Seconds between two raids (uniform in MIN..MAX, drawn when the colony reaches RAID_MIN_ANTS and after each raid). */
 export const RAID_MIN_S = 120;
 export const RAID_MAX_S = 360;
+/** The player is warned this many seconds before a raid starts (the HUD counts down), time to put more ants on guard duty. */
+export const RAID_WARN_S = 45;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

@@ -15,10 +15,12 @@ export function hudParts(world: World): HudParts {
   const inNest = Number.isFinite(world.antsInNest) ? world.antsInNest : 0;
   const surface = Number.isFinite(world.antsOnSurface) ? world.antsOnSurface : Math.max(0, total - inNest);
   const stock = Number.isFinite(world.stock) ? world.stock : 0;
+  const warn = world.raidWarning ?? null;
+  const warning = warn !== null ? ` · Nálet za ${Math.ceil(warn)} s!` : '';
   return {
     before: `Mravenci: ${total}`,
     small: inNest > 0 ? ` (na povrchu ${surface})` : '',
-    after: ` · Zásoba: ${stock.toFixed(1)}${(world.raiders ?? 0) > 0 ? ` · NÁLET: ${world.raiders} červených` : ''}`,
+    after: ` · Zásoba: ${stock.toFixed(1)}${(world.raiders ?? 0) > 0 ? ` · NÁLET: ${world.raiders} červených` : warning}`,
   };
 }
 
