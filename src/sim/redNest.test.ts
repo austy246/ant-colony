@@ -48,7 +48,7 @@ describe('the red nest', () => {
     expect(patrols.length).toBeGreaterThanOrEqual(RED_PATROL_START + 10);
     expect(patrols.length).toBeLessThanOrEqual(RED_PATROL_START + 13);
     const guards = patrols.filter((r) => r.job === 'guard');
-    expect(guards.length / patrols.length).toBeGreaterThanOrEqual(0.1);
+    expect(guards.length / patrols.length).toBeGreaterThanOrEqual(0.05);
     for (const r of guards) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(70); // they circle it
     for (const r of patrols) expect(Math.hypot(r.x - w.redNest!.x, r.y - w.redNest!.y)).toBeLessThan(RED_FORAGE_R + 80);
     expect(w.raiders).toBe(0); // patrols are not a raid

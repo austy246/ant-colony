@@ -24,13 +24,13 @@ function colony(seed: number, ants: number, majors = 0): World {
 }
 
 describe('guards of the black nest', () => {
-  it('a tenth of the colony circles the nest, majors first, and ignores food', () => {
-    const w = colony(1, 200, 12);
+  it('a twentieth of the colony circles the nest, majors first, and ignores food', () => {
+    const w = colony(1, 200, 6);
     w.placeFood('berry', NEST.x + 90, NEST.y);
     run(w, 20);
     const guards = w.ants.filter((a) => a.role === 'guard');
     expect(guards).toHaveLength(Math.floor(200 * GUARD_FRACTION));
-    expect(guards.filter((a) => a.major).length).toBe(12); // the 12 majors are all on guard
+    expect(guards.filter((a) => a.major).length).toBe(6); // the 6 majors are all on guard
     const ring = GUARD_R_MIN + 4 * GUARD_R_STEP;
     run(w, 20);
     for (const g of guards) {

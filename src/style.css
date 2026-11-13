@@ -103,6 +103,7 @@
   bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
+  width: max-content; /* otherwise left: 50% caps the width at half the screen and the buttons stack */
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -219,6 +220,7 @@ body {
     left: 0;
     right: 0;
     transform: none;
+    width: auto;
     max-width: none;
     box-sizing: border-box;
     flex-wrap: nowrap;

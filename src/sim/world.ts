@@ -1621,14 +1621,21 @@ export class World {
     });
   }
 
-  /** Heading of a ring walker: round the centre (cx, cy) on its own ring (ring k = id % 5), clockwise or not by id. */
+  /**
+   * Heading of a ring walker: roughly round the centre (cx, cy), but not like a clock. Its ring radius drifts, it turns back
+   * every few seconds (the moment and the way depend on its id), and its heading wanders.
+   */
   private orbitHeading(x: number, y: number, cx: number, cy: number, id: number): number {
+    const t = this.time;
     const r = Math.hypot(x - cx, y - cy) || 1;
     const th = Math.atan2(y - cy, x - cx);
-    const dir = id % 2 === 0 ? 1 : -1;
-    const want = GUARD_R_MIN + (id % 5) * GUARD_R_STEP;
+    const slot = Math.floor(t / 6 + id * 0.37);
+    const f = Math.sin(id * 12.9898 + slot * 78.233) * 43758.5453;
+    const dir = f - Math.floor(f) < 0.5 ? 1 : -1;
+    const want = GUARD_R_MIN + (id % 5) * GUARD_R_STEP + 10 * Math.sin(t * 0.31 + id * 1.7) + 6 * Math.sin(t * 0.83 + id * 0.6);
     const k = (want - r) / 10;
-    return Math.atan2(Math.cos(th) * dir + Math.sin(th) * k, -Math.sin(th) * dir + Math.cos(th) * k);
+    const swing = 0.9 * Math.sin(t * 1.3 + id * 2.3) + 0.6 * Math.sin(t * 3.1 + id * 0.9);
+    return Math.atan2(Math.cos(th) * dir + Math.sin(th) * k, -Math.sin(th) * dir + Math.cos(th) * k) + swing;
   }
 
   /**
