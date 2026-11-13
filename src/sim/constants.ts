@@ -248,6 +248,8 @@ export const RED_START_STOCK = 100;
 export const RED_FOOD_PER_ANT = 1;
 /** Guards: this share of the black colony (majors first) circles the nest in rings GUARD_R_MIN + k * GUARD_R_STEP px away, and fights the red ants. */
 export const GUARD_FRACTION = 0.05;
+/** The most the player can put on guard duty with the slider. */
+export const GUARD_FRACTION_MAX = 0.3;
 export const GUARD_MIN_COLONY = 20;
 export const GUARD_R_MIN = 22;
 export const GUARD_R_STEP = 7;

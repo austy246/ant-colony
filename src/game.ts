@@ -1,4 +1,5 @@
 import { confirmDialog } from './ui/confirmDialog';
+import { buildWorkPanel } from './ui/workPanel';
 import { hudParts } from './hud';
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
@@ -69,6 +70,7 @@ export async function startGame(): Promise<void> {
   const hudSmall = el('span', 'hud-small', '', hud);
   const hudRest = el('span', '', '', hud);
   el('span', 'hud-mode', world.mode === 'normal' ? 'Normal' : 'Sandbox', hud);
+  buildWorkPanel(hud, world);
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';

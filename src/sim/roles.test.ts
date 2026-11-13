@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
+import { worldFromSave, worldToSave } from './serialize';
 import { World } from './world';
 
 vi.setConfig({ testTimeout: 120_000 }); // big colonies with hundreds of red ants: slow when the whole suite runs at once
@@ -183,5 +184,30 @@ describe('the red ants forage', () => {
     run(w, 40);
     expect(cat.alive).toBeFalsy();
     expect(cat.corpseOf).toBe('caterpillar');
+  });
+});
+
+describe('the guard slider (division of labour)', () => {
+  it('guardFraction sets how many ants guard: more, fewer, none', () => {
+    const w = colony(1, 200);
+    w.guardFraction = 0.2;
+    run(w, 20);
+    expect(w.ants.filter((a) => a.role === 'guard')).toHaveLength(40);
+    w.guardFraction = 0.05;
+    run(w, 5);
+    expect(w.ants.filter((a) => a.role === 'guard')).toHaveLength(10);
+    w.guardFraction = 0;
+    run(w, 5);
+    expect(w.ants.filter((a) => a.role === 'guard')).toHaveLength(0);
+  });
+
+  it('it is saved with the game and an old save gets the default', () => {
+    const w = colony(1, 30);
+    w.guardFraction = 0.17;
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).guardFraction).toBeCloseTo(0.17);
+    const old = JSON.parse(JSON.stringify(save));
+    delete old.guardFraction;
+    expect(worldFromSave(old).guardFraction).toBe(GUARD_FRACTION);
   });
 });

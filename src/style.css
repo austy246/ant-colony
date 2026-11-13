@@ -374,3 +374,19 @@ body {
   font-size: 13px;
   opacity: 0.8;
 }
+
+/* Division of labour: the guard slider, a block inside the HUD (hidden with it). */
+.work-panel {
+  margin-top: 6px;
+  font-size: 14px;
+  user-select: none;
+}
+.work-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.work-panel input[type='range'] {
+  width: 150px;
+  accent-color: var(--px-moss-hi);
+}

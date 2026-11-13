@@ -221,6 +221,8 @@ export class World {
   raidWait = -1;
   /** Seconds since the current raid began. */
   private raidAge = 0;
+  /** Share of the colony on guard duty: the player's slider (0..GUARD_FRACTION_MAX), saved with the game. */
+  guardFraction = GUARD_FRACTION;
   /** Test hook: no guards (tests that count on every ant of a colony foraging). */
   noGuards = false;
   /** Test hook: no raids (tests that count ants exactly with a colony of 1000 or more). */
@@ -708,11 +710,11 @@ export class World {
   }
 
   /**
-   * About GUARD_FRACTION of the colony (once it has GUARD_MIN_COLONY ants) are guards: they circle the nest and fight the red
+   * About `guardFraction` of the colony (once it has GUARD_MIN_COLONY ants) are guards: they circle the nest and fight the red
    * ants instead of foraging. Majors are chosen first, then ordinary ants on the surface that carry nothing.
    */
   private updateGuards(): void {
-    const want = !this.noGuards && this.ants.length >= GUARD_MIN_COLONY ? Math.floor(this.ants.length * GUARD_FRACTION) : 0;
+    const want = !this.noGuards && this.ants.length >= GUARD_MIN_COLONY ? Math.floor(this.ants.length * this.guardFraction + 1e-9) : 0;
     let have = 0;
     for (const a of this.ants) if (a.role === 'guard') have++;
     if (have < want) {
