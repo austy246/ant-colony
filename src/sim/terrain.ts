@@ -52,8 +52,8 @@ export function generateTerrain(seed: number): Terrain {
   // Stones (ellipses), kept clear of the nest.
   const stoneCount = int(7, 10);
   for (let n = 0, tries = 0; n < stoneCount && tries < 500; tries++) {
-    const rx = range(4, 11);
-    const ry = range(3, 8);
+    const rx = range(6, 16);
+    const ry = range(4.5, 12);
     const x = range(rx + 1, WORLD_W - rx - 1);
     const y = range(ry + 1, WORLD_H - ry - 1);
     if (Math.hypot(x - NEST.x, y - NEST.y) < CLEAR_R + Math.max(rx, ry) + 2) continue;
@@ -205,8 +205,8 @@ export function extendTerrain(t: Terrain, step: number): Terrain {
   // Stones, wholly in the new area and inside the map.
   const stoneCount = count(7, 10, 1);
   for (let n = 0, tries = 0; n < stoneCount && tries < 500; tries++) {
-    const rx = range(4, 11);
-    const ry = range(3, 8);
+    const rx = range(6, 16);
+    const ry = range(4.5, 12);
     const { x, y } = point();
     if (x < rx + 1 || x > w - rx - 1 || y < ry + 1 || y > h - ry - 1) continue;
     if (inOld(x - rx - 1, y - ry - 1)) continue;

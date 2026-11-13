@@ -38,7 +38,7 @@ describe('the red nest', () => {
   });
 
   it('it appears with 100 red ants that walk around it, and a new one comes every 5 s', () => {
-    const w = bigWorld(2);
+    const w = bigWorld(3);
     run(w, 1);
     expect(RED_PATROL_START).toBe(100);
     expect(RED_TRICKLE_S).toBe(5);

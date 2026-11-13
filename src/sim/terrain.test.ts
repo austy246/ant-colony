@@ -164,9 +164,9 @@ function fnv1a(bytes: Uint8Array): number {
 describe('terrain golden values', () => {
   it('generateTerrain(42) is stable', () => {
     const t = generateTerrain(42);
-    expect(fnv1a(t.surface)).toBe(644848548);
+    expect(fnv1a(t.surface)).toBe(3448702973);
     expect(t.speed.length).toBe(64000);
-    expect(fnv1a(new Uint8Array(t.speed.buffer, t.speed.byteOffset, t.speed.byteLength))).toBe(2567583242);
+    expect(fnv1a(new Uint8Array(t.speed.buffer, t.speed.byteOffset, t.speed.byteLength))).toBe(3313483492);
     expect(t.features.length).toBe(182);
   });
 });
