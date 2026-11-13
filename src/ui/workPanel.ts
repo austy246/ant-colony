@@ -1,7 +1,8 @@
 import { GUARD_FRACTION_MAX, HATCH_FOCUSES, type HatchFocus } from '../sim/constants';
+import { formatTime, noteBest } from '../records';
 import type { World } from '../sim/world';
 
-/** Small panel with the colony's division of labour: a slider for the share of ants on guard duty. Returns a remover. */
+/** Small panel with the colony's division of labour (guards, hatch focus) and the game's seed and survival time. Returns a refresh function. */
 export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   const box = document.createElement('div');
   box.className = 'work-panel';
@@ -36,6 +37,14 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   });
   showHatch();
   box.appendChild(hatch);
+  const info = document.createElement('div');
+  info.className = 'work-info';
+  box.appendChild(info);
   root.appendChild(box);
-  return () => box.remove();
+  return () => {
+    const best = world.mode === 'normal' ? noteBest(world.time) : 0;
+    const t = `Čas ${formatTime(world.time)}${best > 0 ? ` · rekord ${formatTime(best)}` : ''}`;
+    const text = `${t} · seed ${world.terrain.seed}`;
+    if (info.textContent !== text) info.textContent = text;
+  };
 }

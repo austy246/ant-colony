@@ -237,7 +237,7 @@ export class World {
   }
   /** Raining now (normal mode, not in winter): a deterministic function of the sim time, like the season. */
   get raining(): boolean {
-    if (this.fixedSeason !== null || this.mode !== 'normal' || this.season === 3) return false;
+    if (this.fixedSeason !== null || this.mode !== 'normal' || this.season === 3 || this.time < RAIN_BLOCK_S) return false; // a calm start
     const block = Math.floor(this.time / RAIN_BLOCK_S);
     const f = Math.sin(block * 12.9898 + 4.1414) * 43758.5453;
     return f - Math.floor(f) < RAIN_P && this.time - block * RAIN_BLOCK_S < RAIN_S;

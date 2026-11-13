@@ -421,3 +421,18 @@ body.raining::after {
 .work-panel button:hover {
   background: var(--px-btn-hover);
 }
+
+.work-info {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.seed-input {
+  font-family: var(--px-font);
+  font-size: 14px;
+  padding: 6px 8px;
+  color: var(--px-ink);
+  background: var(--px-edge);
+  border: 0;
+  text-align: center;
+}

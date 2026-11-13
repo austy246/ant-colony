@@ -1,6 +1,7 @@
 import { confirmDialog } from './ui/confirmDialog';
 import { buildWorkPanel } from './ui/workPanel';
 import { hudParts } from './hud';
+import { formatTime, noteBest } from './records';
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
 import { nestHud, UndergroundView } from './render/underground';
@@ -39,8 +40,9 @@ export async function startGame(): Promise<void> {
 
   const restored = restoreLiveSave(await loadGame(), worldFromSave);
   const save = restored?.save ?? null;
-  const chosen: GameMode | null = restored ? null : await showModeSelect(ui);
-  const world = restored ? restored.world : World.create(Date.now() >>> 0, chosen ?? 'sandbox');
+  const seedOut: { seed: number | null } = { seed: null };
+  const chosen: GameMode | null = restored ? null : await showModeSelect(ui, seedOut);
+  const world = restored ? restored.world : World.create(seedOut.seed ?? Date.now() >>> 0, chosen ?? 'sandbox');
   let introDone = save !== null;
   const intro = introDone ? null : new Intro();
 
@@ -70,7 +72,7 @@ export async function startGame(): Promise<void> {
   const hudSmall = el('span', 'hud-small', '', hud);
   const hudRest = el('span', '', '', hud);
   el('span', 'hud-mode', world.mode === 'normal' ? 'Normal' : 'Sandbox', hud);
-  buildWorkPanel(hud, world);
+  const refreshWork = buildWorkPanel(hud, world);
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
@@ -82,6 +84,7 @@ export async function startGame(): Promise<void> {
     if (hudSmall.textContent !== p.small) hudSmall.textContent = p.small;
     if (hudRest.textContent !== p.after) hudRest.textContent = p.after;
     document.body.classList.toggle('raining', world.raining);
+    refreshWork();
   };
 
   // --- underground ("Podzemí") ---
@@ -262,7 +265,7 @@ export async function startGame(): Promise<void> {
       void handleExtinction({
         inFlight: () => inFlight,
         clear: clearSave,
-        show: () => showExtinct(ui, () => location.reload()),
+        show: () => showExtinct(ui, () => location.reload(), `Přežili jste ${formatTime(world.time)} · rekord ${formatTime(noteBest(world.time))} · seed ${world.terrain.seed}`),
       });
     }
     if (world.mapVersion !== seenMapVersion) {

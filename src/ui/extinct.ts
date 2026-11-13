@@ -12,7 +12,7 @@ export function restoreLiveSave<S, W extends { extinct: boolean }>(
 }
 
 /** Overlay over the game: the colony died out. Returns a function that removes it. */
-export function showExtinct(root: HTMLElement, onNewGame: () => void): () => void {
+export function showExtinct(root: HTMLElement, onNewGame: () => void, summary?: string): () => void {
   const overlay = document.createElement('div');
   overlay.className = 'mode-select';
   overlay.setAttribute('role', 'dialog');
@@ -26,7 +26,7 @@ export function showExtinct(root: HTMLElement, onNewGame: () => void): () => voi
   title.textContent = 'Kolonie zanikla';
   const desc = document.createElement('div');
   desc.className = 'mode-desc';
-  desc.textContent = 'Žádní mravenci ani zásoby.';
+  desc.textContent = summary ? `Žádní mravenci ani zásoby. ${summary}` : 'Žádní mravenci ani zásoby.';
   const item = document.createElement('div');
   item.className = 'mode-item';
   const b = document.createElement('button');

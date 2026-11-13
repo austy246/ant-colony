@@ -1,3 +1,4 @@
+import { parseSeed } from '../records';
 import type { GameMode } from '../sim/world';
 
 const CHOICES: { mode: GameMode; label: string; desc: string }[] = [
@@ -6,7 +7,7 @@ const CHOICES: { mode: GameMode; label: string; desc: string }[] = [
 ];
 
 /** Modal asking which mode to play; resolves with the choice and removes itself. */
-export function showModeSelect(root: HTMLElement): Promise<GameMode> {
+export function showModeSelect(root: HTMLElement, seedOut?: { seed: number | null }): Promise<GameMode> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.className = 'mode-select';
@@ -20,6 +21,13 @@ export function showModeSelect(root: HTMLElement): Promise<GameMode> {
     title.id = 'mode-title';
     title.textContent = 'Vyber režim hry';
     box.appendChild(title);
+    const seedInput = document.createElement('input');
+    seedInput.type = 'text';
+    seedInput.className = 'seed-input';
+    seedInput.placeholder = 'Seed mapy (prázdné = náhodný)';
+    seedInput.setAttribute('aria-label', 'Seed mapy');
+    seedInput.maxLength = 24;
+    box.appendChild(seedInput);
     for (const c of CHOICES) {
       const item = document.createElement('div');
       item.className = 'mode-item';
@@ -27,6 +35,7 @@ export function showModeSelect(root: HTMLElement): Promise<GameMode> {
       b.type = 'button';
       b.textContent = c.label;
       b.addEventListener('click', () => {
+        if (seedOut) seedOut.seed = parseSeed(seedInput.value);
         overlay.remove();
         resolve(c.mode);
       });
