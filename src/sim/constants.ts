@@ -225,8 +225,8 @@ export const RED_NEST_MIN_ANTS = 1500;
 export const RED_NEST_EDGE = 70;
 /** RED_PATROL_START red ants appear with the nest and walk around it (within RED_PATROL_R px) to defend it; a new one comes out every RED_TRICKLE_S seconds, up to RED_PATROL_MAX: the red ants are real rivals. */
 export const RED_TRICKLE_S = 5;
-export const RED_PATROL_START = 100;
-export const RED_PATROL_MAX = 300;
+export const RED_PATROL_START = 400;
+export const RED_PATROL_MAX = 600;
 export const RED_PATROL_R = 120;
 /** Black wanderers within RED_NEST_SENSE px smell the red nest and go there. */
 export const RED_NEST_SENSE = 90;

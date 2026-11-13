@@ -37,15 +37,15 @@ describe('the red nest', () => {
     }
   });
 
-  it('it appears with 100 red ants that walk around it, and a new one comes every 5 s', () => {
+  it('it appears with 400 red ants that walk around it, and a new one comes every 5 s', () => {
     const w = bigWorld(5);
     run(w, 1);
-    expect(RED_PATROL_START).toBe(100);
+    expect(RED_PATROL_START).toBe(400);
     expect(RED_TRICKLE_S).toBe(5);
     expect(w.reds.filter((r) => r.patrol)).toHaveLength(RED_PATROL_START);
-    run(w, 60); // 12 more
+    run(w, 60); // 12 more (a few red ants may die hunting meanwhile)
     const patrols = w.reds.filter((r) => r.patrol);
-    expect(patrols.length).toBeGreaterThanOrEqual(RED_PATROL_START + 10);
+    expect(patrols.length).toBeGreaterThanOrEqual(RED_PATROL_START + 6);
     expect(patrols.length).toBeLessThanOrEqual(RED_PATROL_START + 13);
     const guards = patrols.filter((r) => r.job === 'guard');
     expect(guards.length / patrols.length).toBeGreaterThanOrEqual(0.05);
