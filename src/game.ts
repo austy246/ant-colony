@@ -1,3 +1,4 @@
+import { confirmDialog } from './ui/confirmDialog';
 import { hudParts } from './hud';
 import { Intro } from './intro';
 import { Renderer } from './render/renderer';
@@ -200,10 +201,13 @@ export async function startGame(): Promise<void> {
   }
 
   newGameBtn.addEventListener('click', () => {
-    if (!window.confirm('Opravdu začít novou hru? Uložený postup se smaže.')) return;
-    resetting = true;
-    // Wait for any in-flight save so it cannot write the old game back after clearSave().
-    void inFlight.then(() => clearSave()).then(() => location.reload());
+    if (resetting) return;
+    void confirmDialog(ui, 'Opravdu začít novou hru? Uložený postup se smaže.', 'Začít znovu', 'Zrušit').then((ok) => {
+      if (!ok || resetting) return;
+      resetting = true;
+      // Wait for any in-flight save so it cannot write the old game back after clearSave().
+      void inFlight.then(() => clearSave()).then(() => location.reload());
+    });
   });
 
   // --- events ---
