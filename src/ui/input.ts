@@ -7,7 +7,9 @@ export type Tool =
   | { kind: 'move' }
   | { kind: 'delete' }
   | { kind: 'pan' }
-  | { kind: 'sugar' };
+  | { kind: 'sugar' }
+  | { kind: 'lure' }
+  | { kind: 'repel' };
 
 const PICK_RADIUS = 8;
 const CLICK_SLOP = 4;
@@ -139,6 +141,8 @@ export class Input {
     switch (tool.kind) {
       case 'place':
       case 'sugar':
+      case 'lure':
+      case 'repel':
         this.mode = 'place';
         break;
       case 'move': {
@@ -221,6 +225,12 @@ export class Input {
         } else if (tool.kind === 'sugar') {
           const w = this.camera.screenToWorld(p.x, p.y);
           this.world.placeSugar(w.x, w.y);
+        } else if (tool.kind === 'lure') {
+          const w = this.camera.screenToWorld(p.x, p.y);
+          this.world.placeLure(w.x, w.y);
+        } else if (tool.kind === 'repel') {
+          const w = this.camera.screenToWorld(p.x, p.y);
+          this.world.placeRepel(w.x, w.y);
         }
       }
     }

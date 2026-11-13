@@ -13,6 +13,8 @@ export const TOOL_BUTTONS: { label: string; tool: Tool }[] = [
   { label: 'Houba', tool: { kind: 'place', food: 'mushroom' } },
   { label: 'Přesunout', tool: { kind: 'move' } },
   { label: 'Smazat', tool: { kind: 'delete' } },
+  { label: 'Návnada', tool: { kind: 'lure' } },
+  { label: 'Zákaz', tool: { kind: 'repel' } },
   { label: 'Posun', tool: { kind: 'pan' } },
 ];
 
@@ -118,8 +120,26 @@ function buildNormalToolbar(
 
   let active = false;
   let under = false;
+  let mark: 'lure' | 'repel' | null = null;
   const sugarEl = makeButton('Cukr');
   bar.appendChild(sugarEl);
+  const markEls = (
+    [
+      ['Návnada', 'lure'],
+      ['Zákaz', 'repel'],
+    ] as const
+  ).map(([label, kind]) => {
+    const b = makeButton(label);
+    b.addEventListener('click', () => {
+      if (b.classList.contains('disabled')) return;
+      active = false;
+      mark = mark === kind ? null : kind; // click again to put it down
+      refresh();
+      onTool(mark ? { kind: mark } : { kind: 'pan' });
+    });
+    bar.appendChild(b);
+    return { b, kind };
+  });
 
   const refresh = (): void => {
     const left = sugarLeft();
@@ -131,10 +151,15 @@ function buildNormalToolbar(
     if (sugarEl.textContent !== label) sugarEl.textContent = label;
     sugarEl.classList.toggle('disabled', left > 0 || under);
     sugarEl.classList.toggle('active', active);
+    for (const m of markEls) {
+      m.b.classList.toggle('disabled', under);
+      m.b.classList.toggle('active', mark === m.kind);
+    }
   };
 
   sugarEl.addEventListener('click', () => {
     if (sugarEl.classList.contains('disabled')) return;
+    mark = null;
     active = true;
     refresh();
     onTool({ kind: 'sugar' });
@@ -151,8 +176,9 @@ function buildNormalToolbar(
     for (const b of viewEls) b.classList.toggle('active', b === el);
     under = view === 'underground';
     bar.classList.toggle('underground', under);
-    if (under && active) {
+    if (under && (active || mark)) {
       active = false;
+      mark = null;
       onTool({ kind: 'pan' });
     }
     refresh();

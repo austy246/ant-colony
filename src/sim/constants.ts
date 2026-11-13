@@ -208,6 +208,13 @@ export const RAIN_BLOCK_S = 180;
 export const RAIN_S = 45;
 export const RAIN_P = 0.4;
 export const RAIN_EVAP_MUL = 4;
+
+/** Player pheromone marks: a lure is a strong blob of trail pheromone (radius LURE_R px); a no-entry mark makes ants steer around a disc of REPEL_R px for REPEL_S seconds (at most REPEL_MAX at a time, the oldest goes first). */
+export const LURE_R = 5;
+export const REPEL_R = 24;
+export const REPEL_S = 90;
+export const REPEL_MAX = 5;
+export const REPEL_PENALTY = 4;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

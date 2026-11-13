@@ -211,3 +211,35 @@ describe('the guard slider (division of labour)', () => {
     expect(worldFromSave(old).guardFraction).toBe(GUARD_FRACTION);
   });
 });
+
+describe('player pheromone marks', () => {
+  it('a lure puts strong pheromone on the ground, off the map it does nothing', () => {
+    const w = colony(1, 5);
+    expect(w.placeLure(150, 100)).toBe(true);
+    expect(w.pher.sample(150, 100)).toBeGreaterThan(4);
+    expect(w.pher.sample(150 + 4, 100)).toBeGreaterThan(4);
+    expect(w.placeLure(-5, 10)).toBe(false);
+  });
+
+  it('a no-entry mark makes wanderers steer around it, expires, and only REPEL_MAX stay', () => {
+    const w = colony(2, 0);
+    w.fixedSeason = 0;
+    const a = w.spawnAnt();
+    a.age = 500;
+    a.state = 'wander';
+    a.x = 300;
+    a.y = 200;
+    a.heading = 0; // east, straight at the mark
+    w.placeRepel(340, 200);
+    let inside = 0;
+    for (let i = 0; i < 400; i++) {
+      w.step(STEP_S);
+      if (Math.hypot(a.x - 340, a.y - 200) < 10) inside++;
+    }
+    expect(inside).toBe(0);
+    for (let i = 0; i < 10; i++) w.placeRepel(100 + i, 100);
+    expect(w.repels.length).toBe(5);
+    run(w, 100);
+    expect(w.repels.length).toBe(0);
+  });
+});
