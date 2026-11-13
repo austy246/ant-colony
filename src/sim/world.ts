@@ -1,4 +1,5 @@
 import {
+  MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
   BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
@@ -74,6 +75,9 @@ const FAN = 0.6;
 /** How far ahead (px) and how wide (cells, each way) a pheromone-following ant senses a trail: a 1 px trail is easy to miss with less. */
 const PHER_LOOKAHEAD = 6;
 const PHER_R = 2;
+/** Half-response threshold of the trail pull (in pheromone units), and the least share of a deposit on a saturated cell. */
+const PHER_THRESHOLD = 0.25;
+const PHER_SATURATION_FLOOR = 0.2;
 /** Pheromone pull of a returning carrier (a wanderer's is 0.22, a forager walking to food 0.3). */
 const CARRY_TRAIL_PULL = 0.12;
 /** Nest-entrance trail scent: directions sampled, base chance to follow it, and the trail strength that makes it certain. */
@@ -1180,7 +1184,11 @@ export class World {
     } else if (ant.state === 'carry') {
       desired = this.carryHeading(ant);
       pherWeight = CARRY_TRAIL_PULL; // returning carriers are drawn to the existing trail, so separate lines merge into one
-      this.pher.deposit(ant.x, ant.y, DEPOSIT);
+      // Trail laying follows the food (Beckers, Deneubourg & Goss 1993: sugar trails get ~43 % more) and saturates where the
+      // trail is already strong (negative feedback of crowded trails, Czaczkes et al. 2013), so one trail cannot run away.
+      const q = (ant.carrySugar ? 1.43 : 1) * (0.7 + 0.3 * Math.min(2, ant.carry));
+      const room = Math.max(PHER_SATURATION_FLOOR, 1 - this.pher.sample(ant.x, ant.y) / MAX_PHEROMONE);
+      this.pher.deposit(ant.x, ant.y, DEPOSIT * q * room);
     } else if (ant.state === 'wander') {
       const jitter = (this.rng.next() - 0.5) * WANDER_JITTER * ant.curiosity;
       if (ant.strayT !== undefined) {
@@ -1836,7 +1844,9 @@ export class World {
       const s = Math.sin(h);
       let score = this.rayProgress(ant.x, ant.y, c, s) - TURN_ARC * (1 - Math.cos(turn));
       if (pherWeight > 0) {
-        const p = pherWeight * this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, PHER_R);
+        // Nonlinear response (Deneubourg et al. 1990): weak traces are almost ignored, a strong trail wins clearly.
+        const v = this.pher.sampleMax(ant.x + c * PHER_LOOKAHEAD, ant.y + s * PHER_LOOKAHEAD, PHER_R);
+        const p = pherWeight * ((v * v) / (v + PHER_THRESHOLD));
         score += p;
         if (p > pull) pull = p;
       }

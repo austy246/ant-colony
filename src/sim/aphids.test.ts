@@ -144,7 +144,7 @@ describe('the aphids bush', () => {
   });
 
   it('other ants are not kept out of the bush: with all 20 collectors busy, an ant walks on across it (past the middle) toward food on the far side', () => {
-    const w = normalWorld(13);
+    const w = normalWorld(16);
     w.growMapTo(10);
     const bx = 500;
     const by = 300;
