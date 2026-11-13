@@ -1,4 +1,4 @@
-import { GUARD_FRACTION_MAX } from '../sim/constants';
+import { GUARD_FRACTION_MAX, HATCH_FOCUSES, type HatchFocus } from '../sim/constants';
 import type { World } from '../sim/world';
 
 /** Small panel with the colony's division of labour: a slider for the share of ants on guard duty. Returns a remover. */
@@ -24,6 +24,18 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   show();
   label.append(text, slider);
   box.appendChild(label);
+  const NAMES: Record<HatchFocus, string> = { mix: 'směs', majors: 'majoři', workers: 'dělnice' };
+  const hatch = document.createElement('button');
+  hatch.type = 'button';
+  const showHatch = (): void => {
+    hatch.textContent = `Líhne se: ${NAMES[world.hatchFocus]}`;
+  };
+  hatch.addEventListener('click', () => {
+    world.hatchFocus = HATCH_FOCUSES[(HATCH_FOCUSES.indexOf(world.hatchFocus) + 1) % HATCH_FOCUSES.length];
+    showHatch();
+  });
+  showHatch();
+  box.appendChild(hatch);
   root.appendChild(box);
   return () => box.remove();
 }

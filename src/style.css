@@ -400,3 +400,24 @@ body.raining::after {
   pointer-events: none;
   z-index: 1;
 }
+
+.work-panel button {
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-family: var(--px-font);
+  font-size: 14px;
+  color: var(--px-ink);
+  background: var(--px-btn);
+  border: 0;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-hi),
+    inset -2px -2px 0 0 var(--px-btn-lo);
+  cursor: pointer;
+}
+.work-panel button:hover {
+  background: var(--px-btn-hover);
+}

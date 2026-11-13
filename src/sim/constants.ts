@@ -30,6 +30,11 @@ export const MAJOR_MIN_ANTS = 50;
 export const MAJOR_CHANCE = 0.08;
 /** Majors never exceed this fraction of all ants. */
 export const MAJOR_MAX_FRACTION = 0.1;
+/** What the player has the queens hatch: a mix (the defaults above), mostly majors (MAJOR_CHANCE_FOCUS, up to MAJOR_MAX_FRACTION_FOCUS of the colony) or only workers. */
+export const HATCH_FOCUSES = ['mix', 'majors', 'workers'] as const;
+export type HatchFocus = (typeof HATCH_FOCUSES)[number];
+export const MAJOR_CHANCE_FOCUS = 0.5;
+export const MAJOR_MAX_FRACTION_FOCUS = 0.3;
 /** Pieces of food a major takes per bite (an ordinary ant takes 1). */
 export const MAJOR_CARRY_PIECES = 2;
 /** Super majors: one hatches for every SUPER_MAJOR_EVERY ants of the colony (1:1000); twice the size of a major, they carry SUPER_CARRY_PIECES pieces and win a duel with SUPER_WIN_P. */

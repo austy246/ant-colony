@@ -243,3 +243,25 @@ describe('player pheromone marks', () => {
     expect(w.repels.length).toBe(0);
   });
 });
+
+describe('hatch focus', () => {
+  function hatchMany(focus: 'mix' | 'majors' | 'workers'): number {
+    const w = colony(5, 200);
+    w.hatchFocus = focus;
+    w.stock = 400;
+    run(w, 400);
+    return w.ants.filter((a) => a.major).length / w.ants.length;
+  }
+  it('majors focus gives clearly more majors than the mix, workers focus none', () => {
+    const mix = hatchMany('mix');
+    const majors = hatchMany('majors');
+    expect(majors).toBeGreaterThan(mix);
+    expect(hatchMany('workers')).toBe(0);
+  });
+  it('is saved with the game', () => {
+    const w = colony(1, 30);
+    w.hatchFocus = 'majors';
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).hatchFocus).toBe('majors');
+  });
+});

@@ -1,4 +1,4 @@
-import { APHID_MAX, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -57,6 +57,8 @@ export interface SaveV1 {
   spawnTimer?: number;
   /** Optional (absent = GUARD_FRACTION): the player's share of the colony on guard duty, 0..GUARD_FRACTION_MAX. */
   guardFraction?: number;
+  /** Optional (absent = 'mix'): what the queens hatch. */
+  hatchFocus?: string;
   /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
   raidWait?: number;
   /** Optional (absent = none yet: created on the first normal-mode step): the spider. A caught ant carries `caughtT` (seconds stuck). */
@@ -130,6 +132,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     boostUntil: w.boostUntil,
     spawnTimer: w.spawnTimer,
     guardFraction: w.guardFraction,
+    hatchFocus: w.hatchFocus,
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0 } } : {}),
@@ -157,6 +160,7 @@ export function worldFromSave(s: SaveV1): World {
   w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
   w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
+  w.hatchFocus = (HATCH_FOCUSES as readonly string[]).includes(s.hatchFocus ?? '') ? (s.hatchFocus as HatchFocus) : 'mix';
   w.guardFraction = Math.max(0, Math.min(GUARD_FRACTION_MAX, s.guardFraction ?? GUARD_FRACTION));
   w.raidWait = s.raidWait ?? -1;
   w.ants.length = 0;
@@ -288,6 +292,7 @@ export function validateSave(x: unknown): SaveV1 | null {
     if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
   }
   if (o.guardFraction !== undefined && (!isNum(o.guardFraction) || o.guardFraction < 0 || o.guardFraction > GUARD_FRACTION_MAX)) return null;
+  if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (o.bush !== undefined && !validBush(o.bush, size)) return null;
