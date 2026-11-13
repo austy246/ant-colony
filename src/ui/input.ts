@@ -9,7 +9,8 @@ export type Tool =
   | { kind: 'pan' }
   | { kind: 'sugar' }
   | { kind: 'lure' }
-  | { kind: 'repel' };
+  | { kind: 'repel' }
+  | { kind: 'found' };
 
 const PICK_RADIUS = 8;
 const CLICK_SLOP = 4;
@@ -143,6 +144,7 @@ export class Input {
       case 'sugar':
       case 'lure':
       case 'repel':
+      case 'found':
         this.mode = 'place';
         break;
       case 'move': {
@@ -228,6 +230,9 @@ export class Input {
         } else if (tool.kind === 'lure') {
           const w = this.camera.screenToWorld(p.x, p.y);
           this.world.placeLure(w.x, w.y);
+        } else if (tool.kind === 'found') {
+          const w = this.camera.screenToWorld(p.x, p.y);
+          this.world.foundNest(w.x, w.y);
         } else if (tool.kind === 'repel') {
           const w = this.camera.screenToWorld(p.x, p.y);
           this.world.placeRepel(w.x, w.y);

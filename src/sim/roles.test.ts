@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import { SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
 import { worldFromSave, worldToSave } from './serialize';
@@ -263,5 +263,42 @@ describe('hatch focus', () => {
     w.hatchFocus = 'majors';
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
     expect(worldFromSave(JSON.parse(JSON.stringify(save))).hatchFocus).toBe('majors');
+  });
+});
+
+describe('the second nest', () => {
+  it('needs enough ants, food and distance; only one; costs food', () => {
+    const small = colony(1, 20);
+    expect(small.foundNest(300, 100)).toBe(false); // too few ants
+    const w = colony(1, 100);
+    w.stock = 100;
+    expect(w.foundNest(NEST.x + 20, NEST.y)).toBe(false); // too close to the first nest
+    w.stock = 5;
+    expect(w.foundNest(300, 100)).toBe(false); // too little food
+    w.stock = 100;
+    expect(w.foundNest(300, 100)).toBe(true);
+    expect(w.stock).toBeCloseTo(100 - SATELLITE_COST);
+    expect(w.satellite).not.toBeNull();
+    expect(w.foundNest(250, 60)).toBe(false); // only one
+  });
+
+  it('a carrier near it delivers there and comes out there; it is saved', () => {
+    const w = colony(1, 100);
+    w.stock = 100;
+    w.foundNest(300, 100);
+    const sat = w.satellite!;
+    const a = w.ants[0];
+    a.state = 'carry';
+    a.carry = 1;
+    a.x = sat.x + 10;
+    a.y = sat.y;
+    a.role = 'forager';
+    const before = w.stock;
+    run(w, 6);
+    expect(w.stock).toBeGreaterThan(before);
+    // it did not walk all the way to the first nest: it is still around the satellite
+    expect(Math.hypot(a.x - sat.x, a.y - sat.y)).toBeLessThan(80);
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).satellite).toEqual(sat);
   });
 });

@@ -151,6 +151,8 @@ export class Renderer {
       // the bush lies on the ground under the food (the aphids' drops of honeydew hang on it) and the ants
       const redNest = this.world.redNest;
       if (redNest) drawRedNest(c, redNest, this.world.time);
+      const sat = this.world.satellite;
+      if (sat) drawRedNest(c, { x: sat.x, y: sat.y, owner: 'black', trickleT: 0 }, this.world.time);
       const bush = this.world.bush;
       if (bush) drawBush(c, bush, this.world.time, (this.bushSprite ??= new BushSprite(this.make)));
       this.drawFoodLayer(c);

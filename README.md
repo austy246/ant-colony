@@ -67,3 +67,12 @@ TypeScript, Vite, Canvas 2D (`image-rendering: pixelated`), vitest (jsdom, `@nap
 
 - Návrh: [`docs/superpowers/specs/2026-10-29-ant-colony-design.md`](docs/superpowers/specs/2026-10-29-ant-colony-design.md)
 - Plán implementace: [`docs/superpowers/plans/2026-10-29-ant-colony.md`](docs/superpowers/plans/2026-10-29-ant-colony.md)
+
+## Rozhodování hráče
+
+- **Strážci** (posuvník v levém horním rohu): podíl kolonie na hlídce, 0 až 30 %; před náletem v HUD svítí odpočet „Nálet za N s!“.
+- **Líhne se**: směs / majoři / dělnice (tlačítko pod posuvníkem).
+- **Návnada** a **Zákaz**: návnada je silná feromonová stopa, kterou mravenci následují; zákaz je místo, kterému se 90 s vyhýbají (nejvýš 5 najednou).
+- **Hnízdo**: druhé hnízdo od 60 mravenců za 30 jídla, nejméně 120 px od prvního; nosiči odnášejí potravu do bližšího hnízda. Jen jedno.
+- **Roční období a déšť** (Normal): jaro, léto, podzim, zima po 4 minutách; v zimě je kořisti málo a mravenci pomalejší, déšť smývá feromon a zastaví přísun kořisti.
+- **Seed**: při startu lze zadat seed mapy; HUD ukazuje čas přežití, rekord a seed.

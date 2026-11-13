@@ -220,6 +220,12 @@ export const REPEL_R = 24;
 export const REPEL_S = 90;
 export const REPEL_MAX = 5;
 export const REPEL_PENALTY = 4;
+
+/** The player can found one second nest: from SATELLITE_MIN_ANTS ants, for SATELLITE_COST food, at least SATELLITE_MIN_DIST px from the first nest and SATELLITE_RED_GAP px from the red one. Foragers deliver to whichever nest is nearer. */
+export const SATELLITE_MIN_ANTS = 60;
+export const SATELLITE_COST = 30;
+export const SATELLITE_MIN_DIST = 120;
+export const SATELLITE_RED_GAP = 80;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

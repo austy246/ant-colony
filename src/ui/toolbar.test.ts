@@ -19,10 +19,10 @@ describe('buildToolbar', () => {
     buildToolbar(root, () => {}, () => {});
     expect(buttons().map((b) => b.textContent)).toEqual([
       'Brouk', 'Housenka', 'Moucha', 'Zdechlina', 'Malina', 'Listí', 'Houba',
-      'Přesunout', 'Smazat', 'Návnada', 'Zákaz', 'Posun',
+      'Přesunout', 'Smazat', 'Návnada', 'Zákaz', 'Hnízdo', 'Posun',
       'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
     ]);
-    expect(TOOL_BUTTONS).toHaveLength(12);
+    expect(TOOL_BUTTONS).toHaveLength(13);
     expect(VIEW_BUTTONS.map((v) => v.view)).toEqual(['normal', 'pheromone', 'terrain', 'underground']);
     expect(root.querySelector('div.toolbar')).not.toBeNull();
     expect(buttons().every((b) => b.type === 'button')).toBe(true);
@@ -158,10 +158,10 @@ describe('underground view button', () => {
 });
 
 describe('buildToolbar normal mode', () => {
-  it('has only Cukr, the two marks and the four view buttons', () => {
+  it('has only Cukr, the three marks and the four view buttons', () => {
     buildToolbar(root, () => {}, () => {}, { mode: 'normal', sugarLeft: () => 0 });
     expect(buttons().map((b) => b.textContent)).toEqual([
-      'Cukr', 'Návnada', 'Zákaz', 'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
+      'Cukr', 'Návnada', 'Zákaz', 'Hnízdo', 'Běžný (1)', 'Feromony (P)', 'Terén (T)', 'Podzemí (U)',
     ]);
   });
 

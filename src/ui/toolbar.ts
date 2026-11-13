@@ -15,6 +15,7 @@ export const TOOL_BUTTONS: { label: string; tool: Tool }[] = [
   { label: 'Smazat', tool: { kind: 'delete' } },
   { label: 'Návnada', tool: { kind: 'lure' } },
   { label: 'Zákaz', tool: { kind: 'repel' } },
+  { label: 'Hnízdo', tool: { kind: 'found' } },
   { label: 'Posun', tool: { kind: 'pan' } },
 ];
 
@@ -120,13 +121,14 @@ function buildNormalToolbar(
 
   let active = false;
   let under = false;
-  let mark: 'lure' | 'repel' | null = null;
+  let mark: 'lure' | 'repel' | 'found' | null = null;
   const sugarEl = makeButton('Cukr');
   bar.appendChild(sugarEl);
   const markEls = (
     [
       ['Návnada', 'lure'],
       ['Zákaz', 'repel'],
+      ['Hnízdo', 'found'],
     ] as const
   ).map(([label, kind]) => {
     const b = makeButton(label);

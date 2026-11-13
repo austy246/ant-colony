@@ -6,7 +6,7 @@ import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
 /** Ant fields that only live while the ant is steering a certain way; never written to a save. */
-type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave';
+type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat';
 
 export interface SaveV1 {
   version: 1;
@@ -59,6 +59,8 @@ export interface SaveV1 {
   guardFraction?: number;
   /** Optional (absent = 'mix'): what the queens hatch. */
   hatchFocus?: string;
+  /** Optional (absent = none): the second nest the player founded. */
+  satellite?: { x: number; y: number };
   /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
   raidWait?: number;
   /** Optional (absent = none yet: created on the first normal-mode step): the spider. A caught ant carries `caughtT` (seconds stuck). */
@@ -82,7 +84,7 @@ function foodToSave(f: FoodItem): FoodItem {
 
 /** Persistent fields of an ant only (the transient steering state is left out). */
 function antToSave(a: Ant): SaveV1['ants'][number] {
-  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, ...rest } = a;
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, ...rest } = a;
   return rest;
 }
 
@@ -133,6 +135,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     spawnTimer: w.spawnTimer,
     guardFraction: w.guardFraction,
     hatchFocus: w.hatchFocus,
+    ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0 } } : {}),
@@ -160,6 +163,7 @@ export function worldFromSave(s: SaveV1): World {
   w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
   w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
+  w.satellite = s.satellite ? { x: s.satellite.x, y: s.satellite.y } : null;
   w.hatchFocus = (HATCH_FOCUSES as readonly string[]).includes(s.hatchFocus ?? '') ? (s.hatchFocus as HatchFocus) : 'mix';
   w.guardFraction = Math.max(0, Math.min(GUARD_FRACTION_MAX, s.guardFraction ?? GUARD_FRACTION));
   w.raidWait = s.raidWait ?? -1;
@@ -293,6 +297,11 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   if (o.guardFraction !== undefined && (!isNum(o.guardFraction) || o.guardFraction < 0 || o.guardFraction > GUARD_FRACTION_MAX)) return null;
   if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
+  const size0 = terrainSize((o.mapStep as number | undefined) ?? 0);
+  if (o.satellite !== undefined) {
+    const sat = o.satellite as Record<string, unknown> | null;
+    if (typeof sat !== 'object' || sat === null || !inRange(sat.x, 0, size0.w) || !inRange(sat.y, 0, size0.h)) return null;
+  }
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (o.bush !== undefined && !validBush(o.bush, size)) return null;
