@@ -391,12 +391,12 @@ body {
   accent-color: var(--px-moss-hi);
 }
 
-/* Rain: a cool tint over the whole view. */
-body.raining::after {
-  content: '';
+/* Rain: a canvas of falling streaks over the view (drawn by ui/rain.ts). */
+.rain {
   position: fixed;
   inset: 0;
-  background: rgba(40, 70, 120, 0.22);
+  width: 100vw;
+  height: 100dvh;
   pointer-events: none;
   z-index: 1;
 }

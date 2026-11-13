@@ -1,5 +1,6 @@
 import { confirmDialog } from './ui/confirmDialog';
 import { buildWorkPanel } from './ui/workPanel';
+import { createRain } from './ui/rain';
 import { hudParts } from './hud';
 import { formatTime, noteBest } from './records';
 import { Intro } from './intro';
@@ -83,7 +84,6 @@ export async function startGame(): Promise<void> {
     if (hudMain.textContent !== p.before) hudMain.textContent = p.before;
     if (hudSmall.textContent !== p.small) hudSmall.textContent = p.small;
     if (hudRest.textContent !== p.after) hudRest.textContent = p.after;
-    document.body.classList.toggle('raining', world.raining);
     refreshWork();
   };
 
@@ -126,6 +126,8 @@ export async function startGame(): Promise<void> {
       hud.hidden = !introDone;
     },
   });
+
+  const rain = createRain(ui);
 
   // --- saving ---
   let saving = false;
@@ -260,6 +262,7 @@ export async function startGame(): Promise<void> {
       if (intro.consumeSpawn()) world.spawnAnt();
     }
     world.step(dt);
+    rain.update(dt, world.raining && !views.isUnderground());
     if (world.extinct && !resetting) {
       resetting = true; // stops autosave
       void handleExtinction({
