@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -36,6 +36,8 @@ export interface Ant {
   timer: number;
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
+  /** Transient: seconds left of the red ants' acid on it (slowed, weaker in a duel). Not saved. */
+  acidT?: number;
   /** Transient: the player sent it to this point (it walks there, whatever it was doing, then goes on as before); `t` is the time left. Not saved. */
   goal?: { x: number; y: number; t: number };
   /** Transient: it unloaded at the satellite nest, so it comes out there (not saved). */
@@ -1279,6 +1281,10 @@ export class World {
 
   private updateAnt(ant: Ant): void {
     ant.age += STEP_S;
+    if (ant.acidT !== undefined) {
+      ant.acidT -= STEP_S;
+      if (ant.acidT <= 0) delete ant.acidT;
+    }
     if (ant.caughtT !== undefined) {
       ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
       return;
@@ -1517,6 +1523,19 @@ export class World {
       else sep.set(key, [r]);
     }
     for (const r of [...this.reds]) {
+      if (r.sprayCd !== undefined) {
+        r.sprayCd -= STEP_S;
+        if (r.sprayCd <= 0) delete r.sprayCd;
+      }
+      if (r.fightT === undefined && r.sprayT !== undefined) {
+        // flicking the abdomen: stands still until the squirt is out
+        r.sprayT -= STEP_S;
+        if (r.sprayT <= 0) {
+          delete r.sprayT;
+          delete r.sprayTo;
+        }
+        continue;
+      }
       if (r.fightT !== undefined) {
         r.fightT -= STEP_S;
         if (r.fightT <= 1e-9) this.resolveDuel(r, fights.get(r.id));
@@ -1539,6 +1558,15 @@ export class World {
             }
           }
         }
+      }
+      if (foe && best > SPRAY_MIN && best <= SPRAY_RANGE && foe.acidT === undefined && r.sprayCd === undefined && rng.next() < SPRAY_PER_S * STEP_S) {
+        // a black ant ahead: squirt acid on it (it is slowed and weaker in a duel for ACID_S seconds)
+        foe.acidT = ACID_S;
+        r.sprayT = SPRAY_ANIM_S;
+        r.sprayTo = { x: foe.x, y: foe.y };
+        r.sprayCd = SPRAY_COOLDOWN_S;
+        r.heading = Math.atan2(foe.y - r.y, foe.x - r.x);
+        continue;
       }
       if (foe && best <= RED_REACH) {
         r.fightT = DUEL_S;
@@ -1895,7 +1923,8 @@ export class World {
     delete foe.duelT;
     const i = this.ants.indexOf(foe);
     if (i < 0) return; // the black ant is gone (spider, beetle): the red one fights on
-    if (this.rng.next() < Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.researchLevel('w'))) {
+    const winP = Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.researchLevel('w'));
+    if (this.rng.next() < (foe.acidT !== undefined ? winP * ACID_WIN_MUL : winP)) {
       const k = this.reds.indexOf(r);
       if (k >= 0) this.reds.splice(k, 1);
       this.redKilled++;
@@ -2035,7 +2064,7 @@ export class World {
     }
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
-    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL * (1 + RESEARCH_CARRY_SPEED_PER_LEVEL * this.researchLevel('h')) : 1) * (this.has('h4') ? RESEARCH_SPEED_MUL : 1) * (this.time < this.boostUntil ? SUGAR_BOOST_MUL : 1) * (this.season === 3 && !this.has('n5') ? WINTER_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
+    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL * (1 + RESEARCH_CARRY_SPEED_PER_LEVEL * this.researchLevel('h')) : 1) * (this.has('h4') ? RESEARCH_SPEED_MUL : 1) * (this.time < this.boostUntil ? SUGAR_BOOST_MUL : 1) * (this.season === 3 && !this.has('n5') ? WINTER_SPEED_MUL : 1) * (ant.acidT !== undefined ? ACID_SLOW : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
     let nx = ant.x + Math.cos(ant.heading) * v;
     let ny = ant.y + Math.sin(ant.heading) * v;
     const maxX = this.terrain.w - 0.5;

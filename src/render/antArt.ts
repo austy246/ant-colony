@@ -42,6 +42,17 @@ export const SELECTED_RGBA: readonly (readonly [number, number, number, number])
   [10, 6, 3, 97],
 ];
 
+/** A black ant covered in the red ants' acid: the same sprites with a sickly bright green, clearly different from the player's selection. */
+export const ACID_RGBA: readonly (readonly [number, number, number, number])[] = [
+  [0, 0, 0, 0],
+  [0x4a, 0x7a, 0x12, 255],
+  [0xa6, 0xd8, 0x2c, 255],
+  [0x78, 0xb0, 0x1c, 255],
+  [0x34, 0x58, 0x0c, 255],
+  [0xe8, 0xe0, 0xc8, 255],
+  [10, 6, 3, 97],
+];
+
 /** Red raiding ant: the same sprites in reds. Same layout as ANT_RGBA; the crumb and the shadow are unchanged. */
 export const RED_RGBA: readonly (readonly [number, number, number, number])[] = [
   [0, 0, 0, 0],

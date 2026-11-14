@@ -313,6 +313,19 @@ export const RED_SENSE = 12;
 export const RED_REACH = 2.5;
 /** A duel lasts this many seconds; the black ant wins with BLACK_WIN_P (a major with MAJOR_WIN_P), otherwise the red one does. */
 export const DUEL_S = 2;
+/**
+ * Acid: a red ant that sees a black one ahead (closer than SPRAY_RANGE px, but not yet in a duel) flicks its abdomen for SPRAY_ANIM_S
+ * and squirts a green liquid on it, at most once per SPRAY_COOLDOWN_S. The black ant is slowed to ACID_SLOW of its speed and wins
+ * a duel with ACID_WIN_MUL times its usual chance, for ACID_S seconds.
+ */
+export const SPRAY_RANGE = 11;
+export const SPRAY_MIN = 4;
+export const SPRAY_COOLDOWN_S = 8;
+export const SPRAY_ANIM_S = 0.6;
+export const SPRAY_PER_S = 2.5;
+export const ACID_S = 10;
+export const ACID_SLOW = 0.4;
+export const ACID_WIN_MUL = 0.5;
 export const BLACK_WIN_P = 0.55;
 export const MAJOR_WIN_P = 0.9;
 /** Red ants keep this far (px) apart (they push each other away, at RED_SEP_SPEED px/s at most). */

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import { ACID_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
 import { worldFromSave, worldToSave } from './serialize';
@@ -476,5 +476,93 @@ describe('research tree', () => {
       return Math.hypot(a.x - x0, a.y - y0);
     };
     expect(walked(true)).toBeGreaterThan(walked(false) * 1.15);
+  });
+});
+
+describe('red ants spit acid', () => {
+  function duelWorld(seed: number): { w: World; red: RedAnt; ant: ReturnType<World['spawnAnt']> } {
+    const w = colony(seed, 0);
+    w.fixedSeason = 0;
+    w.noGuards = true;
+    w.noRaid = false; // the red ants move in the raid update
+    const ant = w.spawnAnt();
+    ant.age = 500;
+    ant.state = 'wander';
+    ant.x = 150;
+    ant.y = 100;
+    const red: RedAnt = { id: 99001, x: 140, y: 100, heading: 0 };
+    w.reds.push(red);
+    return { w, red, ant };
+  }
+
+  it('a red ant with a black one ahead squirts acid: the black ant is slowed and the red ant has a cooldown', () => {
+    let sprayed = false;
+    for (let seed = 1; seed <= 6 && !sprayed; seed++) {
+      const { w, red, ant } = duelWorld(seed);
+      ant.speedMul = 1;
+      for (let i = 0; i < 40; i++) {
+        w.step(STEP_S);
+        if (ant.acidT !== undefined) {
+          sprayed = true;
+          expect(red.sprayCd).toBeGreaterThan(0);
+          expect(ant.acidT).toBeLessThanOrEqual(ACID_S);
+          break;
+        }
+      }
+    }
+    expect(sprayed).toBe(true);
+  });
+
+  it('acid lasts ACID_S seconds, slows to ACID_SLOW and is not saved', () => {
+    const w = colony(7, 0);
+    w.fixedSeason = 0;
+    w.noGuards = true;
+    const a = w.spawnAnt();
+    a.age = 500;
+    a.state = 'wander';
+    a.x = 100;
+    a.y = 100;
+    a.acidT = ACID_S;
+    const slow = (acid: boolean): number => {
+      const v = colony(8, 0);
+      v.fixedSeason = 0;
+      v.noGuards = true;
+      const q = v.spawnAnt();
+      q.age = 500;
+      q.state = 'wander';
+      q.x = 40;
+      q.y = 100;
+      q.heading = 0;
+      if (acid) q.acidT = ACID_S;
+      const x0 = q.x;
+      const y0 = q.y;
+      run(v, 4);
+      return Math.hypot(q.x - x0, q.y - y0);
+    };
+    expect(slow(true)).toBeLessThan(slow(false) * 0.6);
+    run(w, ACID_S + 1);
+    expect(a.acidT).toBeUndefined();
+    a.acidT = 5;
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(JSON.stringify(save)).not.toContain('acidT');
+  });
+
+  it('an acid-covered black ant wins a duel half as often', () => {
+    const wins = (acid: boolean): number => {
+      let n = 0;
+      for (let seed = 1; seed <= 120; seed++) {
+        const { w, red, ant } = duelWorld(seed);
+        red.x = 148.5; // already in reach: the duel starts at once
+        if (acid) ant.acidT = ACID_S;
+        const before = w.reds.length;
+        for (let i = 0; i < Math.round(3 / STEP_S); i++) w.step(STEP_S);
+        if (w.reds.length < before) n++;
+      }
+      return n;
+    };
+    const normal = wins(false);
+    const sick = wins(true);
+    expect(normal).toBeGreaterThan(40);
+    expect(sick).toBeLessThan(normal * 0.75);
   });
 });

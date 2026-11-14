@@ -6,7 +6,7 @@ import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
 /** Ant fields that only live while the ant is steering a certain way; never written to a save. */
-type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat' | 'goal';
+type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat' | 'goal' | 'acidT';
 
 export interface SaveV1 {
   version: 1;
@@ -88,7 +88,7 @@ function foodToSave(f: FoodItem): FoodItem {
 
 /** Persistent fields of an ant only (the transient steering state is left out). */
 function antToSave(a: Ant): SaveV1['ants'][number] {
-  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, goal: _g, ...rest } = a;
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, goal: _g, acidT: _a, ...rest } = a;
   return rest;
 }
 

@@ -20,6 +20,10 @@ export interface RedAnt {
   gnawT?: number;
   /** Seconds left of the duel it is in (absent = not fighting). */
   fightT?: number;
+  /** Squirting acid: seconds left of the abdomen flick, where the squirt goes, and the wait until the next one. Transient. */
+  sprayT?: number;
+  sprayTo?: { x: number; y: number };
+  sprayCd?: number;
 }
 
 /** The nest of the red ants (normal mode, from RAID_MIN_ANTS black ants): red ants come out of it for good, raids set off from it. */
