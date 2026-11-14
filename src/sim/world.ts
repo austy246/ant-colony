@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -36,6 +36,8 @@ export interface Ant {
   timer: number;
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
+  /** Transient: seconds the ant cannot be caught by the spider's web again (after it freed itself). Not saved. */
+  webFreeT?: number;
   /** Transient: squirting acid on a red ant (seconds of the animation left, where it goes, wait until the next squirt). Not saved. */
   sprayT?: number;
   sprayTo?: { x: number; y: number };
@@ -238,6 +240,12 @@ export class World {
   hatchFocus: HatchFocus = 'mix';
   /** No-entry marks placed by the player (transient: they are not saved). */
   repels: { x: number; y: number; t: number }[] = [];
+  /** Patches of ground (cy * 4096 + cx of the explore grid) an ant has already stepped on; each gave XP_PER_CELL once. Saved. */
+  seenCells = new Set<number>();
+  /** Every tenth ordinary ant is a scout once the Zvědové research is bought. */
+  private isScout(ant: Ant): boolean {
+    return ant.id % 10 === 0 && ant.major !== true && this.has('p1');
+  }
   /** Experience: the currency of the research (see XP_PER_FOOD), saved. */
   xp = 0;
   /** Ids of the research nodes the player has bought (see RESEARCH_NODES, saved). */
@@ -728,7 +736,7 @@ export class World {
     let longestMajor: Ant | null = null;
     for (const a of this.ants) {
       if (a.caughtT === undefined) {
-        if (a.state === 'nest' || !inWeb(sp, a.x, a.y)) continue;
+        if (a.state === 'nest' || a.webFreeT !== undefined || !inWeb(sp, a.x, a.y)) continue;
         a.caughtT = 0;
       }
       if (a.major) {
@@ -1103,7 +1111,8 @@ export class World {
 
   private touch(f: FoodItem, ant: Ant): void {
     f.touches = (f.touches ?? 0) + 1;
-    f.cooldown = f.kind === 'fly' ? Math.max(TOUCH_COOLDOWN_S, HOP_DUR + 0.2) : TOUCH_COOLDOWN_S;
+    const cool = TOUCH_COOLDOWN_S * (this.has('p4') ? RESEARCH_TOUCH_MUL : 1);
+    f.cooldown = f.kind === 'fly' ? Math.max(cool, HOP_DUR + 0.2) : cool;
     if (f.touches >= 2 || ant.major) {
       // Second touch (or any touch of a major): the creature dies and becomes carrion with its own meat; the ant survives and goes for it.
       this.killCreature(f);
@@ -1303,9 +1312,16 @@ export class World {
       ant.sprayCd -= STEP_S;
       if (ant.sprayCd <= 0) delete ant.sprayCd;
     }
+    if (ant.webFreeT !== undefined) {
+      ant.webFreeT -= STEP_S;
+      if (ant.webFreeT <= 0) delete ant.webFreeT;
+    }
     if (ant.caughtT !== undefined) {
       ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
-      return;
+      if (this.has('p5') && ant.caughtT >= SPIDER_ESCAPE_S) {
+        delete ant.caughtT; // researched web sense: it tears itself free and is safe from the web for a while
+        ant.webFreeT = WEB_FREE_S;
+      } else return;
     }
     if (ant.duelT !== undefined) return; // fighting a red ant: stands still until the duel is decided
     if (ant.state === 'nest') {
@@ -1376,7 +1392,7 @@ export class World {
       // trail is already strong (negative feedback of crowded trails, Czaczkes et al. 2013), so one trail cannot run away.
       const q = (ant.carrySugar ? 1.43 : 1) * (0.7 + 0.3 * Math.min(2, ant.carry));
       const room = Math.max(PHER_SATURATION_FLOOR, 1 - this.pher.sample(ant.x, ant.y) / MAX_PHEROMONE);
-      this.pher.deposit(ant.x, ant.y, DEPOSIT * q * room * (this.has('g4') ? RESEARCH_TRAIL_MUL : 1));
+      this.pher.deposit(ant.x, ant.y, DEPOSIT * q * room * (this.has('g4') ? RESEARCH_TRAIL_MUL : 1) * (this.isScout(ant) ? RESEARCH_SCOUT_TRAIL : 1));
     } else if (ant.state === 'wander') {
       const jitter = (this.rng.next() - 0.5) * WANDER_JITTER * ant.curiosity;
       if (ant.strayT !== undefined) {
@@ -1397,7 +1413,7 @@ export class World {
       if (homeD < OUTBOUND_R) {
         desired += wrapAngle(Math.atan2(ant.y - NEST.y, ant.x - NEST.x) - desired) * OUTBOUND_K;
       }
-      const range = YOUNG_R0 + YOUNG_GROW * ant.age;
+      const range = (YOUNG_R0 + YOUNG_GROW * ant.age) * (this.isScout(ant) ? RESEARCH_SCOUT_RANGE : 1);
       if (homeD > range && range < this.terrain.w + this.terrain.h) {
         const w = Math.min(YOUNG_MAX, (YOUNG_K * (homeD - range)) / YOUNG_SPAN);
         desired += wrapAngle(Math.atan2(NEST.y - ant.y, NEST.x - ant.x) - desired) * w;
@@ -1988,8 +2004,9 @@ export class World {
     // Every aphid makes one drop of honeydew per APHID_HONEY_S and holds it, at the rear of its body, until an ant takes it
     // (at most one per aphid). A drop is a food item at the aphid's rear; ants walk to the aphid and take it from there.
     b.dropT += b.aphids * STEP_S;
-    if (b.dropT < APHID_HONEY_S - 1e-9) return;
-    b.dropT -= APHID_HONEY_S;
+    const honeyS = APHID_HONEY_S * (this.has('p3') ? RESEARCH_HONEY_MUL : 1);
+    if (b.dropT < honeyS - 1e-9) return;
+    b.dropT -= honeyS;
     const free: number[] = [];
     for (let i = 0; i < b.aphids; i++) {
       const s = dropSpot(b, i);
@@ -2055,6 +2072,13 @@ export class World {
   }
 
   private markExplored(x: number, y: number): void {
+    const cx = Math.max(0, Math.min(this.exploreW - 1, Math.floor(x / EXPLORE_CELL)));
+    const cy = Math.max(0, Math.min(this.exploreH - 1, Math.floor(y / EXPLORE_CELL)));
+    const key = cy * 4096 + cx;
+    if (!this.seenCells.has(key)) {
+      this.seenCells.add(key);
+      this.xp += XP_PER_CELL;
+    }
     const i = this.exploreIndex(x, y);
     this.explored[i] = Math.min(EXPLORE_CAP, this.explored[i] + STEP_S * EXPLORE_RATE);
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ACID_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import { ACID_S, APHID_HONEY_S, SPIDER_ESCAPE_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
 import { worldFromSave, worldToSave } from './serialize';
@@ -664,5 +664,100 @@ describe('black ants squirt acid (chemistry research)', () => {
     const worse = wins(true, true);
     expect(sprayed).toBeGreaterThan(normal);
     expect(worse).toBeGreaterThan(sprayed);
+  });
+});
+
+describe('nature research (Priroda) and exploring', () => {
+  it('stepping on new ground gives experience once per patch, and it is saved', () => {
+    const w = colony(11, 0);
+    w.fixedSeason = 0;
+    const a = w.spawnAnt();
+    a.age = 500;
+    a.state = 'wander';
+    a.x = 60;
+    a.y = 60;
+    const xp0 = w.xp;
+    w.step(STEP_S);
+    const first = w.xp - xp0;
+    expect(first).toBeGreaterThan(0.04); // one new patch (0.05), plus a sliver of time
+    const seen = w.seenCells.size;
+    expect(seen).toBeGreaterThan(0);
+    a.x = 60;
+    a.y = 60;
+    const xp1 = w.xp;
+    w.step(STEP_S);
+    expect(w.xp - xp1).toBeLessThan(0.02); // the same patch gives nothing again
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).seenCells.size).toBe(w.seenCells.size);
+  });
+
+  it('p1 scouts: every tenth ant lays twice the trail', () => {
+    const laid = (bought: boolean): number => {
+      const w = colony(12, 0);
+      w.fixedSeason = 0;
+      if (bought) w.unlocked.add('p1');
+      const a = w.spawnAnt();
+      a.id = 10;
+      a.state = 'carry';
+      a.carry = 1;
+      a.x = 120;
+      a.y = 100;
+      w.step(STEP_S);
+      return w.pher.sample(120, 100);
+    };
+    expect(laid(true)).toBeGreaterThan(laid(false) * 1.8);
+  });
+
+  it('p2 winter stores: the wait for the next prey in winter is shorter', () => {
+    const wait = (bought: boolean): number => {
+      const w = colony(13, 20);
+      w.fixedSeason = 3;
+      if (bought) w.unlocked.add('p2');
+      w.spawnTimer = 0;
+      w.step(STEP_S);
+      return w.spawnTimer;
+    };
+    // the wait is drawn from SPAWN_MIN_S..SPAWN_MAX_S times 3 (winter) or 1.5 (stores)
+    expect(wait(true)).toBeLessThan(wait(false) * 0.75);
+  });
+
+  it('p3 aphid pasture: the aphids give honeydew faster', () => {
+    const drops = (bought: boolean): number => {
+      const w = colony(14, 0);
+      w.fixedSeason = 0;
+      if (bought) w.unlocked.add('p3');
+      w.bush = { x: 200, y: 120, aphids: 20, dropT: 0 };
+      run(w, APHID_HONEY_S * 0.6); // before the bush is full (one drop per aphid)
+      return w.food.filter((f) => f.kind === 'honeydew').length;
+    };
+    expect(drops(true)).toBeGreaterThan(drops(false));
+  });
+
+  it('p4 hunting: prey touches come twice as fast', () => {
+    const cool = (bought: boolean): number => {
+      const w = colony(15, 0);
+      if (bought) w.unlocked.add('p4');
+      const a = w.spawnAnt();
+      const f = w.placeFood('beetle', 100, 100)!;
+      (w as unknown as { touch(f: unknown, a: unknown): void }).touch(f, a);
+      return f.cooldown ?? 0;
+    };
+    expect(cool(true)).toBeCloseTo(cool(false) * 0.5);
+  });
+
+  it('p5 web sense: an ant caught in the web frees itself and is safe from it for a while', () => {
+    const state = (bought: boolean): { caught: boolean; free: boolean } => {
+      const w = colony(16, 0);
+      w.fixedSeason = 0;
+      if (bought) w.unlocked.add('p5');
+      const a = w.spawnAnt();
+      a.age = 500;
+      a.state = 'wander';
+      a.caughtT = SPIDER_ESCAPE_S - STEP_S / 2;
+      w.step(STEP_S);
+      return { caught: a.caughtT !== undefined, free: a.webFreeT !== undefined };
+    };
+    expect(state(false)).toEqual({ caught: true, free: false });
+    expect(state(true)).toEqual({ caught: false, free: true });
   });
 });

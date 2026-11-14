@@ -4,13 +4,14 @@ import type { World } from '../sim/world';
 /** Direction of each arm (rad): up, right, down, left. */
 const ARM_ANGLE: Record<ResearchArm, number> = {
   gather: -Math.PI / 2,
-  haul: -Math.PI / 2 + (Math.PI * 2) / 5,
-  war: -Math.PI / 2 + (Math.PI * 4) / 5,
-  nest: -Math.PI / 2 + (Math.PI * 6) / 5,
-  chem: -Math.PI / 2 + (Math.PI * 8) / 5,
+  haul: -Math.PI / 2 + Math.PI / 3,
+  war: -Math.PI / 2 + (Math.PI * 2) / 3,
+  nest: -Math.PI / 2 + Math.PI,
+  chem: -Math.PI / 2 + (Math.PI * 4) / 3,
+  wild: -Math.PI / 2 + (Math.PI * 5) / 3,
 };
-const ARM_COLOR: Record<ResearchArm, string> = { gather: '#e0a030', haul: '#5aa0e0', war: '#d05a4a', nest: '#6cc070', chem: '#b6e03a' };
-const ARM_NAME: Record<ResearchArm, string> = { gather: 'Sběr', haul: 'Nosnost', war: 'Boj', nest: 'Hnízdo', chem: 'Chemie' };
+const ARM_COLOR: Record<ResearchArm, string> = { gather: '#e0a030', haul: '#5aa0e0', war: '#d05a4a', nest: '#6cc070', chem: '#b6e03a', wild: '#4fc0b0' };
+const ARM_NAME: Record<ResearchArm, string> = { gather: 'Sběr', haul: 'Nosnost', war: 'Boj', nest: 'Hnízdo', chem: 'Chemie', wild: 'Příroda' };
 /** Distance of the three chain nodes and of the two branches from the nest (layout units), and the branches' spread (rad). */
 const RING = [92, 170, 248] as const;
 const BRANCH_R = 330;

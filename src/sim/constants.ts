@@ -237,15 +237,17 @@ export const GARDEN_RATE = 0.08;
 export const GARDEN_WINTER_MUL = 2;
 
 /**
- * Research tree (permanent upgrades the player buys with experience, see XP_PER_FOOD). Five arms radiate from the nest; each is a chain of three nodes
+ * Research tree (permanent upgrades the player buys with experience, see XP_PER_FOOD). Six arms radiate from the nest; each is a chain of three nodes
  * (price 3, 6, 12) ending in two branches (15 each). A node can be bought once the node it hangs from is bought.
  *   gather: g1-g3 smell (food noticed 25 % further per level), g4 stronger trail, g5 longer-lasting trail
  *   haul:   h1-h3 carry (carriers 8 % faster per level; level 2: workers take two pieces; level 3: majors one more), h4 all ants faster, h5 longer sugar boost
  *   war:    w1-w3 fight (+5 % duel win chance per level), w4 more majors, w5 red ants noticed from further away
  *   nest:   n1-n3 faster hatching (8 % each), n4 mushroom gardens (+50 % food, a fourth garden), n5 winter coat (no winter slowdown)
  *   chem:   c1 black ants squirt acid on red ants (like the red ones do), c2 it lasts longer, c3 shorter wait, c4 slows more, c5 weakens more in a duel
+ *   wild:   p1 scouts (every tenth ant roams three times as far and lays double trail), p2 winter stores (twice as much prey in winter), p3 aphid pasture (honeydew 30 % faster),
+ *           p4 hunting (prey is killed with the touches twice as fast), p5 web sense (an ant caught in the spider's web frees itself after SPIDER_ESCAPE_S seconds)
  */
-export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest' | 'chem';
+export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest' | 'chem' | 'wild';
 export interface ResearchNode {
   id: string;
   arm: ResearchArm;
@@ -288,6 +290,10 @@ export const RESEARCH_NODES: readonly ResearchNode[] = [
     'Černí mravenci stříkají kyselinu na červené: zpomalí je a oslabí v souboji.', 'Kyselina působí o polovinu déle.', 'Mravenci stříkají o 40 % častěji.',
     'Postříkaní červení se hýbou jen čtvrtinovou rychlostí.', 'Postříkaný červený vyhraje souboj jen s třetinou obvyklé šance.',
   ]),
+  ...arm('wild', 'p', ['Zvědové', 'Zimní zásoby', 'Pastvina mšic', 'Lov', 'Pavoučí smysl'], [
+    'Každý desátý mravenec chodí třikrát dál a nechává dvojnásobnou stopu.', 'V zimě se objevuje dvakrát víc kořisti.', 'Mšice dávají medovici o 30 % rychleji.',
+    'Dotyky kořisti se opakují dvakrát rychleji, takže ji mravenci zabijí dřív.', 'Mravenec chycený v pavoučí síti se sám osvobodí a chvíli je před sítí v bezpečí.',
+  ]),
 ];
 export const RESEARCH_IDS: ReadonlySet<string> = new Set(RESEARCH_NODES.map((n) => n.id));
 export const RESEARCH_SMELL_PER_LEVEL = 0.25;
@@ -306,11 +312,21 @@ export const RESEARCH_ACID_LONG = 1.5;
 export const RESEARCH_COOLDOWN_MUL = 0.6;
 export const RESEARCH_ACID_SLOW = 0.25;
 export const RESEARCH_ACID_WIN = 0.35;
+export const RESEARCH_SCOUT_RANGE = 3;
+export const RESEARCH_SCOUT_TRAIL = 2;
+export const RESEARCH_WINTER_SPAWN = 1.5;
+export const RESEARCH_HONEY_MUL = 0.7;
+export const RESEARCH_TOUCH_MUL = 0.5;
+/** Researched web sense: a caught ant frees itself after SPIDER_ESCAPE_S seconds and cannot be caught again for WEB_FREE_S seconds. */
+export const SPIDER_ESCAPE_S = 2.5;
+export const WEB_FREE_S = 6;
 
 /** Experience, the currency of the research: a tenth of a point for every food delivered, a point for every red ant killed and one a minute. */
 export const XP_PER_FOOD = 0.1;
 export const XP_PER_KILL = 1;
 export const XP_PER_S = 1 / 60;
+/** ... and a twentieth of a point for every patch of ground (EXPLORE_CELL px square) an ant sets foot on for the first time. */
+export const XP_PER_CELL = 0.05;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;
