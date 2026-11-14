@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
+  BLACK_SEP_SPEED, CARRY_SPEED_MUL, FOOD_PER_ANT, GNAW_S, HATCH_INTERVAL_S, MAX_ANTS, NEST, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, WORLD_H, WORLD_W,
 } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import { Surface } from './terrain';
@@ -413,7 +413,7 @@ describe('World', () => {
     expect(w.time - t0).toBeLessThanOrEqual(0.5 + 1e-6);
     expect(w.time - t0).toBeGreaterThan(0.4);
     w.ants.forEach((a, i) => {
-      expect(Math.hypot(a.x - start[i].x, a.y - start[i].y)).toBeLessThanOrEqual(12 * 0.5 + 1);
+      expect(Math.hypot(a.x - start[i].x, a.y - start[i].y)).toBeLessThanOrEqual((12 + BLACK_SEP_SPEED) * 0.5 + 1); // walking plus the push of the neighbours
     });
     for (const a of w.ants) {
       expect(Number.isFinite(a.x)).toBe(true);

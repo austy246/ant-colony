@@ -361,6 +361,9 @@ export const MAJOR_WIN_P = 0.9;
 /** Red ants keep this far (px) apart (they push each other away, at RED_SEP_SPEED px/s at most). */
 export const RED_SEP = 8;
 export const RED_SEP_SPEED = 10;
+/** Black ants keep apart the same way: closer than BLACK_SEP px they push each other away, at BLACK_SEP_SPEED px/s at most. */
+export const BLACK_SEP = 4.5;
+export const BLACK_SEP_SPEED = 8;
 /** A wandering black ant notices a red one this far away (px) and goes to fight it. */
 export const ANT_SENSE_RED = 40;
 

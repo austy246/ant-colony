@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ACID_S, APHID_HONEY_S, SPIDER_ESCAPE_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import { BLACK_SEP, ACID_S, APHID_HONEY_S, SPIDER_ESCAPE_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
 import { worldFromSave, worldToSave } from './serialize';
@@ -759,5 +759,59 @@ describe('nature research (Priroda) and exploring', () => {
     };
     expect(state(false)).toEqual({ caught: true, free: false });
     expect(state(true)).toEqual({ caught: false, free: true });
+  });
+});
+
+describe('black ants keep apart', () => {
+  it('an ant right next to another is pushed away (a standing ant is not moved), and nobody is pushed onto a stone', () => {
+    const w = colony(21, 0);
+    w.fixedSeason = 0;
+    w.noGuards = true;
+    const a = w.spawnAnt();
+    a.age = 500;
+    a.caughtT = 0; // stands still (as if caught): pushes the others, is not pushed
+    a.x = 100;
+    a.y = 100;
+    const b = w.spawnAnt();
+    b.age = 500;
+    b.state = 'wander';
+    b.speedMul = 0.05; // hardly walks by itself, so the push shows
+    b.x = 101;
+    b.y = 100;
+    b.heading = Math.PI; // straight at the other one
+    run(w, 3);
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeGreaterThan(BLACK_SEP * 0.75);
+    expect(a.x).toBeCloseTo(100);
+    expect(a.y).toBeCloseTo(100);
+    // a stone cell is never entered by the push
+    const i = Math.floor(100) * w.terrain.w + 104;
+    w.terrain.surface[i] = Surface.Stone;
+    b.speedMul = 0; // only the push can move it now
+    b.x = 103.2;
+    b.y = 100.5;
+    run(w, 2);
+    expect(Math.floor(b.x)).not.toBe(104);
+  });
+
+  it('ants emerging at one spot spread out instead of sitting on top of each other', () => {
+    const w = colony(22, 0);
+    w.fixedSeason = 0;
+    w.noGuards = true;
+    for (let i = 0; i < 30; i++) {
+      const q = w.spawnAnt();
+      q.age = 500;
+      q.state = 'wander';
+      q.x = 160;
+      q.y = 100;
+      q.speedMul = 0.05;
+    }
+    run(w, 6);
+    let tooClose = 0;
+    for (let i = 0; i < w.ants.length; i++) {
+      for (let j = i + 1; j < w.ants.length; j++) {
+        if (Math.hypot(w.ants[i].x - w.ants[j].x, w.ants[i].y - w.ants[j].y) < 1) tooClose++;
+      }
+    }
+    expect(tooClose).toBeLessThan(10); // of 435 pairs; without the push they would all sit within a pixel
   });
 });
