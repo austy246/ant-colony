@@ -7,7 +7,7 @@ import { Intro } from './intro';
 import { Renderer } from './render/renderer';
 import { nestHud, UndergroundView } from './render/underground';
 import { clearSave, loadGame, saveGame } from './save';
-import { GARDEN_COST, GARDEN_MAX, GARDEN_MIN_ANTS, NEST, SCALE } from './sim/constants';
+import { GARDEN_COST, GARDEN_MIN_ANTS, NEST, SCALE } from './sim/constants';
 import { worldFromSave, worldToSave } from './sim/serialize';
 import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
@@ -115,9 +115,9 @@ export async function startGame(): Promise<void> {
     if (nestNext.textContent !== next) nestNext.textContent = next;
     nestNext.hidden = next === '';
     if (nestChambers.textContent !== h.chambers) nestChambers.textContent = h.chambers;
-    const gb = world.gardens >= GARDEN_MAX ? 'Houbové zahrady: nejvíc' : `Vykopat houbovou zahradu (${GARDEN_COST} jídla)`;
+    const gb = world.gardens >= world.gardenMax ? 'Houbové zahrady: nejvíc' : `Vykopat houbovou zahradu (${GARDEN_COST} jídla)`;
     if (gardenBtn.textContent !== gb) gardenBtn.textContent = gb;
-    gardenBtn.disabled = world.gardens >= GARDEN_MAX || world.ants.length < GARDEN_MIN_ANTS || world.stock < GARDEN_COST;
+    gardenBtn.disabled = world.gardens >= world.gardenMax || world.ants.length < GARDEN_MIN_ANTS || world.stock < GARDEN_COST;
   };
   const views = createViewController({
     setSurfaceView: (v) => renderer.setView(v),

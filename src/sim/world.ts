@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_MAX, RESEARCH_COSTS, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, type ResearchKey, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -232,26 +232,38 @@ export class World {
   hatchFocus: HatchFocus = 'mix';
   /** No-entry marks placed by the player (transient: they are not saved). */
   repels: { x: number; y: number; t: number }[] = [];
-  /** Research levels the player has bought (0..RESEARCH_MAX each, saved). */
-  research: Record<ResearchKey, number> = { smell: 0, carry: 0, fight: 0 };
-  /** Price of the next level of `key`, or null at the maximum. */
-  researchCost(key: ResearchKey): number | null {
-    const lvl = this.research[key];
-    return lvl >= RESEARCH_MAX ? null : RESEARCH_COSTS[lvl];
+  /** Ids of the research nodes the player has bought (see RESEARCH_NODES, saved). */
+  unlocked = new Set<string>();
+  /** True once the research node `id` is bought. */
+  has(id: string): boolean {
+    return this.unlocked.has(id);
   }
-  /** Buys the next level of `key` for food; false at the maximum or without enough food. */
-  buyResearch(key: ResearchKey): boolean {
-    const cost = this.researchCost(key);
-    if (cost === null || this.stock + 1e-9 < cost) return false;
-    this.stock -= cost;
-    this.research[key]++;
+  /** How many of the chain nodes `<prefix>1..3` are bought (0..3). */
+  researchLevel(prefix: 'g' | 'h' | 'w' | 'n'): number {
+    return (this.has(`${prefix}1`) ? 1 : 0) + (this.has(`${prefix}2`) ? 1 : 0) + (this.has(`${prefix}3`) ? 1 : 0);
+  }
+  /** Can node `id` be bought right now: known, not yet bought, the node it hangs from is bought and the food suffices. */
+  canBuyResearch(id: string): boolean {
+    const n = RESEARCH_NODES.find((q) => q.id === id);
+    if (!n || this.has(id) || (n.req !== null && !this.has(n.req))) return false;
+    return this.stock + 1e-9 >= n.cost;
+  }
+  /** Buys research node `id` for food; false when canBuyResearch says no. */
+  buyResearch(id: string): boolean {
+    if (!this.canBuyResearch(id)) return false;
+    this.stock -= RESEARCH_NODES.find((q) => q.id === id)!.cost;
+    this.unlocked.add(id);
     return true;
   }
   /** Mushroom gardens the player has dug in the nest (0..GARDEN_MAX, saved). */
   gardens = 0;
+  /** The most gardens the colony can dig (one more with the Zahradník research). */
+  get gardenMax(): number {
+    return GARDEN_MAX + (this.has('n4') ? 1 : 0);
+  }
   /** Buys one mushroom garden: GARDEN_COST food, from GARDEN_MIN_ANTS ants, at most GARDEN_MAX. */
   buyGarden(): boolean {
-    if (this.gardens >= GARDEN_MAX || this.ants.length < GARDEN_MIN_ANTS || this.stock + 1e-9 < GARDEN_COST) return false;
+    if (this.gardens >= this.gardenMax || this.ants.length < GARDEN_MIN_ANTS || this.stock + 1e-9 < GARDEN_COST) return false;
     this.stock -= GARDEN_COST;
     this.gardens++;
     return true;
@@ -389,7 +401,7 @@ export class World {
 
   /** Seconds between two hatches: each queen lays on her own HATCH_INTERVAL_S cycle. */
   get hatchInterval(): number {
-    return (HATCH_INTERVAL_S / this.queens) * (this.redNest?.owner === 'black' ? CAPTURED_HATCH_MUL : 1);
+    return (HATCH_INTERVAL_S / this.queens) * (this.redNest?.owner === 'black' ? CAPTURED_HATCH_MUL : 1) * Math.pow(RESEARCH_HATCH_MUL, this.researchLevel('n'));
   }
 
   /** Progress of the current hatching cycle in [0, 1] (the cycle is `hatchInterval * hatchMul` long). */
@@ -657,8 +669,8 @@ export class World {
     }
     this.updateRaid(); // also in sandbox, so the secret raid key works there (it never starts by itself below RAID_MIN_ANTS ants)
     this.updateSpider();
-    this.pher.step(this.raining ? STEP_S * RAIN_EVAP_MUL : STEP_S);
-    if (this.gardens > 0) this.stock += this.gardens * GARDEN_RATE * (this.season === 3 ? GARDEN_WINTER_MUL : 1) * STEP_S;
+    this.pher.step((this.raining ? STEP_S * RAIN_EVAP_MUL : STEP_S) / (this.has('g5') ? RESEARCH_TRAIL_LIFE_MUL : 1));
+    if (this.gardens > 0) this.stock += this.gardens * GARDEN_RATE * (this.has('n4') ? RESEARCH_GARDEN_MUL : 1) * (this.season === 3 ? GARDEN_WINTER_MUL : 1) * STEP_S;
     for (let i = this.repels.length - 1; i >= 0; i--) {
       this.repels[i].t -= STEP_S;
       if (this.repels[i].t <= 0) this.repels.splice(i, 1);
@@ -1151,8 +1163,9 @@ export class World {
       const hatched = this.spawnAnt(true);
       // Drawn after every other draw of this hatch; below MAJOR_MIN_ANTS nothing is drawn (seeded sequences stay unchanged).
       const focus = this.hatchFocus;
-      const chance = focus === 'majors' ? MAJOR_CHANCE_FOCUS : MAJOR_CHANCE;
-      const cap = focus === 'majors' ? MAJOR_MAX_FRACTION_FOCUS : MAJOR_MAX_FRACTION;
+      const w4 = this.has('w4');
+      const chance = (focus === 'majors' ? MAJOR_CHANCE_FOCUS : MAJOR_CHANCE) * (w4 ? RESEARCH_MAJOR_CHANCE_MUL : 1);
+      const cap = Math.max(focus === 'majors' ? MAJOR_MAX_FRACTION_FOCUS : MAJOR_MAX_FRACTION, w4 ? RESEARCH_MAJOR_CAP : 0);
       if (focus !== 'workers' && this.ants.length >= MAJOR_MIN_ANTS && this.rng.next() < chance
         && this.majors + 1 <= Math.floor(this.ants.length * cap + 1e-9)) {
         hatched.major = true;
@@ -1185,7 +1198,7 @@ export class World {
 
   private nearestFood(x: number, y: number, asker?: Ant): FoodItem | undefined {
     let best: FoodItem | undefined;
-    const sense = SENSE_FOOD * (1 + RESEARCH_SMELL_PER_LEVEL * this.research.smell);
+    const sense = SENSE_FOOD * (1 + RESEARCH_SMELL_PER_LEVEL * this.researchLevel('g'));
     let bestD = sense;
     for (const f of this.food) {
       if (f.piecesLeft <= 0 || f.stuck) continue;
@@ -1339,7 +1352,7 @@ export class World {
       // trail is already strong (negative feedback of crowded trails, Czaczkes et al. 2013), so one trail cannot run away.
       const q = (ant.carrySugar ? 1.43 : 1) * (0.7 + 0.3 * Math.min(2, ant.carry));
       const room = Math.max(PHER_SATURATION_FLOOR, 1 - this.pher.sample(ant.x, ant.y) / MAX_PHEROMONE);
-      this.pher.deposit(ant.x, ant.y, DEPOSIT * q * room);
+      this.pher.deposit(ant.x, ant.y, DEPOSIT * q * room * (this.has('g4') ? RESEARCH_TRAIL_MUL : 1));
     } else if (ant.state === 'wander') {
       const jitter = (this.rng.next() - 0.5) * WANDER_JITTER * ant.curiosity;
       if (ant.strayT !== undefined) {
@@ -1411,7 +1424,7 @@ export class World {
       delete ant.lostH;
       this.deliveryCount++;
       if (ant.carrySugar) {
-        this.boostUntil = this.time + SUGAR_BOOST_S;
+        this.boostUntil = this.time + SUGAR_BOOST_S * (this.has('h5') ? RESEARCH_SUGAR_MUL : 1);
         delete ant.carrySugar;
       }
       // The forager goes down into the nest to unload and rest; it keeps its food target if that food still exists.
@@ -1633,10 +1646,11 @@ export class World {
   private nearestRed(x: number, y: number): RedAnt | null {
     if (this.redGrid.size === 0) return null;
     let best: RedAnt | null = null;
-    let bestD = ANT_SENSE_RED;
+    const sense = ANT_SENSE_RED * (this.has('w5') ? RESEARCH_RED_SENSE_MUL : 1);
+    let bestD = sense;
     const cx = Math.floor(x / RED_CELL);
     const cy = Math.floor(y / RED_CELL);
-    const n = Math.ceil(ANT_SENSE_RED / RED_CELL);
+    const n = Math.ceil(sense / RED_CELL);
     for (let dy = -n; dy <= n; dy++) {
       for (let dx = -n; dx <= n; dx++) {
         const list = this.redGrid.get((cy + dy) * 4096 + cx + dx);
@@ -1881,7 +1895,7 @@ export class World {
     delete foe.duelT;
     const i = this.ants.indexOf(foe);
     if (i < 0) return; // the black ant is gone (spider, beetle): the red one fights on
-    if (this.rng.next() < Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.research.fight)) {
+    if (this.rng.next() < Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.researchLevel('w'))) {
       const k = this.reds.indexOf(r);
       if (k >= 0) this.reds.splice(k, 1);
       this.redKilled++;
@@ -1956,8 +1970,8 @@ export class World {
     const pieces = ant.superMajor
       ? Math.min(f.piecesLeft, SUPER_CARRY_PIECES)
       : ant.major
-        ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES + (this.research.carry >= 3 ? 1 : 0))
-        : Math.min(f.piecesLeft, this.research.carry >= 2 ? 2 : 1);
+        ? Math.min(f.piecesLeft, MAJOR_CARRY_PIECES + (this.researchLevel('h') >= 3 ? 1 : 0))
+        : Math.min(f.piecesLeft, this.researchLevel('h') >= 2 ? 2 : 1);
     f.piecesLeft -= pieces;
     ant.carry = pieces * FOOD_TABLE[f.kind].value;
     if (f.kind === 'sugar') ant.carrySugar = true;
@@ -2021,7 +2035,7 @@ export class World {
     }
     const diff = wrapAngle(best - ant.heading);
     ant.heading = wrapAngle(ant.heading + Math.max(-MAX_TURN, Math.min(MAX_TURN, diff)));
-    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL * (1 + RESEARCH_CARRY_SPEED_PER_LEVEL * this.research.carry) : 1) * (this.time < this.boostUntil ? SUGAR_BOOST_MUL : 1) * (this.season === 3 ? WINTER_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
+    const v = BASE_SPEED * ant.speedMul * (ant.state === 'carry' ? CARRY_SPEED_MUL * (1 + RESEARCH_CARRY_SPEED_PER_LEVEL * this.researchLevel('h')) : 1) * (this.has('h4') ? RESEARCH_SPEED_MUL : 1) * (this.time < this.boostUntil ? SUGAR_BOOST_MUL : 1) * (this.season === 3 && !this.has('n5') ? WINTER_SPEED_MUL : 1) * speedAt(this.terrain, ant.x, ant.y) * STEP_S;
     let nx = ant.x + Math.cos(ant.heading) * v;
     let ny = ant.y + Math.sin(ant.heading) * v;
     const maxX = this.terrain.w - 0.5;

@@ -10,7 +10,7 @@
  * seconds with a few crumbs of soil flying back, then the chamber itself grows from nothing. Chambers that exist when the
  * view is opened (or the game is loaded) are simply there.
  */
-import { FOOD_PER_ANT, GARDEN_MAX, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
+import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
 import { chamberFills } from '../sim/nestNeeds';
 import type { World } from '../sim/world';
 import { ANT_CENTER, ANT_SIZE, CALLOW_RGBA } from './antArt';
@@ -75,7 +75,7 @@ export function nestHud(world: World): NestHud {
     hatch: canHatch ? world.hatchFraction : null,
     wait: stock < FOOD_PER_ANT ? `Královna čeká na potravu (${FOOD_PER_ANT})` : null,
     nextQueen: world.queens < MAX_QUEENS ? `Další královna za ${missing} jídla` : null,
-    chambers: `Spíže ${n.pantries} (jídlo ${Math.floor(stock)}/${n.pantries * PANTRY_CAPACITY}) · Larvária ${n.larvaeChambers} (larvy ${world.larvae}/${n.larvaeChambers * LARVAE_PER_CHAMBER}) · Houbové zahrady ${world.gardens}/${GARDEN_MAX}`,
+    chambers: `Spíže ${n.pantries} (jídlo ${Math.floor(stock)}/${n.pantries * PANTRY_CAPACITY}) · Larvária ${n.larvaeChambers} (larvy ${world.larvae}/${n.larvaeChambers * LARVAE_PER_CHAMBER}) · Houbové zahrady ${world.gardens}/${world.gardenMax}`,
   };
 }
 

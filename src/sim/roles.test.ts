@@ -393,31 +393,32 @@ describe('mushroom gardens', () => {
   });
 });
 
-describe('research', () => {
-  it('levels cost food, rise one at a time, stop at the maximum and are saved', () => {
+describe('research tree', () => {
+  it('a node needs the one it hangs from, costs food and is bought once; it is saved', () => {
     const w = colony(1, 20);
     w.stock = 1000;
-    expect(w.researchCost('smell')).toBe(30);
-    expect(w.buyResearch('smell')).toBe(true);
-    expect(w.researchCost('smell')).toBe(70);
-    expect(w.buyResearch('smell')).toBe(true);
-    expect(w.buyResearch('smell')).toBe(true);
-    expect(w.buyResearch('smell')).toBe(false);
-    expect(w.researchCost('smell')).toBeNull();
-    expect(w.stock).toBeCloseTo(1000 - 30 - 70 - 140);
+    expect(w.buyResearch('g2')).toBe(false); // g1 first
+    expect(w.buyResearch('g1')).toBe(true);
+    expect(w.stock).toBeCloseTo(970);
+    expect(w.buyResearch('g1')).toBe(false); // only once
+    expect(w.buyResearch('g2')).toBe(true);
+    expect(w.buyResearch('g3')).toBe(true);
+    expect(w.buyResearch('g4')).toBe(true); // a branch hangs from g3
+    expect(w.buyResearch('g5')).toBe(true);
+    expect(w.researchLevel('g')).toBe(3);
+    expect(w.buyResearch('zzz')).toBe(false);
     w.stock = 10;
-    expect(w.buyResearch('carry')).toBe(false); // too little food
-    w.research.fight = 2;
+    expect(w.buyResearch('h1')).toBe(false); // too little food
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
     const back = worldFromSave(JSON.parse(JSON.stringify(save)));
-    expect(back.research).toEqual({ smell: 3, carry: 0, fight: 2 });
+    expect([...back.unlocked].sort()).toEqual(['g1', 'g2', 'g3', 'g4', 'g5']);
   });
 
   it('smell: ants notice food from further; carry 2: workers take two pieces', () => {
     const near = (lvl: number): boolean => {
       const w = colony(2, 0);
       w.fixedSeason = 0;
-      w.research.smell = lvl;
+      for (let i = 1; i <= lvl; i++) w.unlocked.add(`g${i}`);
       const a = w.spawnAnt();
       a.age = 500;
       a.state = 'wander';
@@ -425,7 +426,7 @@ describe('research', () => {
       a.y = 100;
       w.placeFood('berry', 100 + 40, 100); // 40 px: beyond the base sense of 32 px, inside 40 at level 1
       w.step(STEP_S);
-      return a.state === 'toFood';
+      return (a.state as string) === 'toFood';
     };
     expect(near(0)).toBe(false);
     expect(near(1)).toBe(true);
@@ -433,7 +434,7 @@ describe('research', () => {
     const take = (lvl: number): number => {
       const w = colony(3, 0);
       w.fixedSeason = 0;
-      w.research.carry = lvl;
+      for (let i = 1; i <= lvl; i++) w.unlocked.add(`h${i}`);
       const a = w.spawnAnt();
       const f = w.placeFood('berry', 100, 100)!;
       a.state = 'gnaw';
@@ -446,5 +447,34 @@ describe('research', () => {
     };
     expect(take(0)).toBeCloseTo(1);
     expect(take(2)).toBeCloseTo(2);
+  });
+
+  it('the branches: stronger trail, faster hatching, a fourth garden, no winter slowdown', () => {
+    const w = colony(4, 40);
+    w.fixedSeason = 1;
+    const hatch = w.hatchInterval;
+    for (const id of ['n1', 'n2', 'n3']) w.unlocked.add(id);
+    expect(w.hatchInterval).toBeCloseTo(hatch * 0.92 ** 3);
+    expect(w.gardenMax).toBe(3);
+    w.unlocked.add('n4');
+    expect(w.gardenMax).toBe(4);
+    // winter slows an ant by WINTER_SPEED_MUL, unless the winter coat (n5) is bought
+    const walked = (coat: boolean): number => {
+      const v = colony(5, 0);
+      v.noGuards = true;
+      v.fixedSeason = 3;
+      if (coat) v.unlocked.add('n5');
+      const a = v.spawnAnt();
+      a.age = 500;
+      a.state = 'wander';
+      a.x = 160;
+      a.y = 100;
+      a.heading = 0;
+      const x0 = a.x;
+      const y0 = a.y;
+      run(v, 5);
+      return Math.hypot(a.x - x0, a.y - y0);
+    };
+    expect(walked(true)).toBeGreaterThan(walked(false) * 1.15);
   });
 });

@@ -237,18 +237,66 @@ export const GARDEN_RATE = 0.08;
 export const GARDEN_WINTER_MUL = 2;
 
 /**
- * Research (permanent upgrades the player buys with food, three tracks of RESEARCH_MAX levels, the price of level n is RESEARCH_COSTS[n - 1]):
- * smell = ants notice food from 25 % further per level; carry = carriers walk 8 % faster per level, from level 2 workers take two pieces
- * at once, at level 3 majors take one more; fight = black ants win a duel with 5 % more chance per level.
+ * Research tree (permanent upgrades the player buys with food). Four arms radiate from the nest; each is a chain of three nodes
+ * (price 30, 70, 140) ending in two branches (150 each). A node can be bought once the node it hangs from is bought.
+ *   gather: g1-g3 smell (food noticed 25 % further per level), g4 stronger trail, g5 longer-lasting trail
+ *   haul:   h1-h3 carry (carriers 8 % faster per level; level 2: workers take two pieces; level 3: majors one more), h4 all ants faster, h5 longer sugar boost
+ *   war:    w1-w3 fight (+5 % duel win chance per level), w4 more majors, w5 red ants noticed from further away
+ *   nest:   n1-n3 faster hatching (8 % each), n4 mushroom gardens (+50 % food, a fourth garden), n5 winter coat (no winter slowdown)
  */
-export const RESEARCH_KEYS = ['smell', 'carry', 'fight'] as const;
-export type ResearchKey = (typeof RESEARCH_KEYS)[number];
-export const RESEARCH_MAX = 3;
-export const RESEARCH_COSTS = [30, 70, 140] as const;
-export const RESEARCH_NAMES: Record<ResearchKey, string> = { smell: 'Čich', carry: 'Nosnost', fight: 'Odolnost' };
+export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest';
+export interface ResearchNode {
+  id: string;
+  arm: ResearchArm;
+  /** 0..2 = the chain, 3 and 4 = the two branches at its end. */
+  pos: number;
+  name: string;
+  desc: string;
+  cost: number;
+  /** Id of the node it hangs from, null for the first node of an arm (it hangs from the nest). */
+  req: string | null;
+}
+const arm = (a: ResearchArm, p: string, names: [string, string, string, string, string], descs: [string, string, string, string, string]): ResearchNode[] =>
+  names.map((name, pos) => ({
+    id: `${p}${pos + 1}`,
+    arm: a,
+    pos,
+    name,
+    desc: descs[pos],
+    cost: pos < 3 ? ([30, 70, 140] as const)[pos] : 150,
+    req: pos === 0 ? null : pos < 4 ? `${p}${pos}` : `${p}3`,
+  }));
+export const RESEARCH_NODES: readonly ResearchNode[] = [
+  ...arm('gather', 'g', ['Čich I', 'Čich II', 'Čich III', 'Silná stopa', 'Trvanlivá stopa'], [
+    'Mravenci vycítí jídlo o 25 % dál.', 'Jídlo vycítí dalších 25 % dál.', 'A zase o 25 % dál.',
+    'Nosiči nechávají o 40 % víc feromonu.', 'Feromonová stopa se vypařuje o 60 % pomaleji.',
+  ]),
+  ...arm('haul', 'h', ['Nosnost I', 'Nosnost II', 'Nosnost III', 'Spěch', 'Cukrové žíly'], [
+    'Nosiči jsou o 8 % rychlejší.', 'Další 8 %; dělnice berou dva kousky najednou.', 'Další 8 %; majoři berou o kousek víc.',
+    'Všichni mravenci jsou o 8 % rychlejší.', 'Zrychlení po cukru trvá o polovinu déle.',
+  ]),
+  ...arm('war', 'w', ['Odolnost I', 'Odolnost II', 'Odolnost III', 'Majoři', 'Ostražití'], [
+    '+5 % šance vyhrát souboj.', 'Dalších +5 %.', 'Dalších +5 %.',
+    'Líhne se víc majorů a mohou tvořit větší část kolonie.', 'Červené mravence ucítí z o polovinu větší dálky.',
+  ]),
+  ...arm('nest', 'n', ['Líhně I', 'Líhně II', 'Líhně III', 'Zahradník', 'Zimní kožich'], [
+    'Mravenci se líhnou o 8 % rychleji.', 'Dalších 8 %.', 'Dalších 8 %.',
+    'Houbové zahrady dávají o 50 % víc jídla a jde jich vykopat čtyři.', 'V zimě se mravenci nezpomalují.',
+  ]),
+];
+export const RESEARCH_IDS: ReadonlySet<string> = new Set(RESEARCH_NODES.map((n) => n.id));
 export const RESEARCH_SMELL_PER_LEVEL = 0.25;
 export const RESEARCH_CARRY_SPEED_PER_LEVEL = 0.08;
 export const RESEARCH_FIGHT_PER_LEVEL = 0.05;
+export const RESEARCH_TRAIL_MUL = 1.4;
+export const RESEARCH_TRAIL_LIFE_MUL = 1.6;
+export const RESEARCH_SPEED_MUL = 1.08;
+export const RESEARCH_SUGAR_MUL = 1.5;
+export const RESEARCH_MAJOR_CHANCE_MUL = 1.6;
+export const RESEARCH_MAJOR_CAP = 0.14;
+export const RESEARCH_RED_SENSE_MUL = 1.5;
+export const RESEARCH_HATCH_MUL = 0.92;
+export const RESEARCH_GARDEN_MUL = 1.5;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;
