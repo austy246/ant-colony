@@ -596,6 +596,53 @@ export function paintFlyRemains(c: Ctx2D, ch: Blob, rx: number, ry: number): voi
   c.fillRect(x + 9, y, 1, 2);
 }
 
+// ---- mushroom garden -----------------------------------------------------------------------------------------------------
+
+/** Deterministic 0..1 noise for the mushroom placement. */
+const gh = (a: number, b: number): number => {
+  const f = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return f - Math.floor(f);
+};
+
+/**
+ * A mushroom garden on the floor of a chamber (the left part, so the pantry's crumbs stay on the right): a dark bed of leaf mould with
+ * pale stems and tan or reddish caps, and a few spores drifting up (`time` in seconds). `seed` differs per garden.
+ */
+export function paintGarden(c: Ctx2D, ch: Blob, rx: number, ry: number, seed: number, time: number): void {
+  const base = floorY(ch, ry);
+  const w = Math.max(10, Math.min(34, Math.round(rx * 0.9)));
+  const x0 = Math.round(ch.cx - rx * 0.55);
+  // the bed: leaf mould, lighter on top
+  c.fillStyle = '#2b2218';
+  c.fillRect(x0, base - 1, w, 3);
+  c.fillStyle = '#4a3a28';
+  c.fillRect(x0 + 1, base - 2, w - 2, 1);
+  c.fillStyle = '#5a7a3a'; // a little moss at the rim
+  for (let i = 0; i < w; i += 5) c.fillRect(x0 + i + Math.floor(gh(i, seed) * 3), base - 2, 1, 1);
+  const n = Math.max(3, Math.floor(w / 5));
+  for (let i = 0; i < n; i++) {
+    const mx = x0 + 2 + Math.floor(((i + gh(i, seed + 3) * 0.7) / n) * (w - 6));
+    const h = 3 + Math.floor(gh(i, seed + 7) * 4); // stem height 3..6
+    const cap = 3 + Math.floor(gh(i, seed + 11) * 3); // cap width 3..5
+    const red = gh(i, seed + 13) < 0.35;
+    const top = base - 2 - h;
+    c.fillStyle = '#d9d0b0';
+    c.fillRect(mx + Math.floor(cap / 2), top + 1, 1, h);
+    c.fillStyle = red ? '#a8503a' : '#c9aa72';
+    c.fillRect(mx, top, cap, 1);
+    c.fillStyle = red ? '#7a3624' : '#9a7e4c';
+    c.fillRect(mx + 1, top + 1, cap - 2, 1);
+    c.fillStyle = '#efe6c9'; // a pale speck on the cap
+    c.fillRect(mx + 1, top, 1, 1);
+  }
+  // spores: two or three faint greenish motes rising from the bed
+  c.fillStyle = 'rgba(170,215,140,.55)';
+  for (let i = 0; i < 3; i++) {
+    const phase = (time * 0.35 + i * 0.33 + gh(i, seed) ) % 1;
+    c.fillRect(x0 + 3 + Math.floor(gh(i, seed + 5) * (w - 6)) + Math.round(Math.sin(phase * 6 + i) * 1.5), base - 8 - Math.floor(phase * 12), 1, 1);
+  }
+}
+
 // ---- eggs ------------------------------------------------------------------------------------------------------------
 
 export function paintEggs(c: Ctx2D, x: number, y: number, extra: boolean): void {

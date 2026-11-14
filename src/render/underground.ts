@@ -16,7 +16,7 @@ import type { World } from '../sim/world';
 import { ANT_CENTER, ANT_SIZE, CALLOW_RGBA } from './antArt';
 import {
   colonyTint, drawText, floorY, larvaRaster, larvaSlots, LARVA_FRAMES, LARVA_GROW, LARVA_SIZE, LARVA_VARIANTS, MAX_CRUMBS,
-  paintChamberInterior, paintChamberRim, paintCrumbs, paintEggPile, paintFlyRemains, paintTunnelInteriors, paintTunnelRims,
+  paintChamberInterior, paintChamberRim, paintCrumbs, paintEggPile, paintFlyRemains, paintGarden, paintTunnelInteriors, paintTunnelRims,
   pantryCrumbs, renderBackdrop, vignettePixels, VOID_COLOR, type Crumb, type Tint,
 } from './nestArt';
 import { MOUTH_RISE, nestAntPose, type NestPose } from './nestChoreo';
@@ -458,6 +458,10 @@ export class UndergroundView {
       if (ch.rx < ch.rxMax * 0.4) continue;
       if (ch.kind === 'queen') this.drawQueen(c, ch);
       else if (ch.kind === 'pantry' && !cached?.contents.has(ch.id)) this.drawPantry(c, ch);
+    }
+    // the player's mushroom gardens grow on the floors of the first pantries
+    for (const ch of shown) {
+      if (ch.kind === 'pantry' && ch.index < this.world.gardens && ch.rx >= ch.rxMax * 0.4) paintGarden(c, ch, ch.rx, ch.ry, ch.index * 17 + 3, this.t);
     }
     this.drawDust(c, heads);
     this.drawNestAnts(c, shown);
