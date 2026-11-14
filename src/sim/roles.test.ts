@@ -392,3 +392,59 @@ describe('mushroom gardens', () => {
     expect(gain(3, 1)).toBeGreaterThan(summer * 1.7);
   });
 });
+
+describe('research', () => {
+  it('levels cost food, rise one at a time, stop at the maximum and are saved', () => {
+    const w = colony(1, 20);
+    w.stock = 1000;
+    expect(w.researchCost('smell')).toBe(30);
+    expect(w.buyResearch('smell')).toBe(true);
+    expect(w.researchCost('smell')).toBe(70);
+    expect(w.buyResearch('smell')).toBe(true);
+    expect(w.buyResearch('smell')).toBe(true);
+    expect(w.buyResearch('smell')).toBe(false);
+    expect(w.researchCost('smell')).toBeNull();
+    expect(w.stock).toBeCloseTo(1000 - 30 - 70 - 140);
+    w.stock = 10;
+    expect(w.buyResearch('carry')).toBe(false); // too little food
+    w.research.fight = 2;
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    const back = worldFromSave(JSON.parse(JSON.stringify(save)));
+    expect(back.research).toEqual({ smell: 3, carry: 0, fight: 2 });
+  });
+
+  it('smell: ants notice food from further; carry 2: workers take two pieces', () => {
+    const near = (lvl: number): boolean => {
+      const w = colony(2, 0);
+      w.fixedSeason = 0;
+      w.research.smell = lvl;
+      const a = w.spawnAnt();
+      a.age = 500;
+      a.state = 'wander';
+      a.x = 100;
+      a.y = 100;
+      w.placeFood('berry', 100 + 40, 100); // 40 px: beyond the base sense of 32 px, inside 40 at level 1
+      w.step(STEP_S);
+      return a.state === 'toFood';
+    };
+    expect(near(0)).toBe(false);
+    expect(near(1)).toBe(true);
+
+    const take = (lvl: number): number => {
+      const w = colony(3, 0);
+      w.fixedSeason = 0;
+      w.research.carry = lvl;
+      const a = w.spawnAnt();
+      const f = w.placeFood('berry', 100, 100)!;
+      a.state = 'gnaw';
+      a.targetFood = f.id;
+      a.timer = 0;
+      a.x = 100;
+      a.y = 100;
+      w.step(STEP_S);
+      return a.carry;
+    };
+    expect(take(0)).toBeCloseTo(1);
+    expect(take(2)).toBeCloseTo(2);
+  });
+});

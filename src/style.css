@@ -459,3 +459,20 @@ body {
   opacity: 0.45;
   cursor: default;
 }
+
+.work-panel .research {
+  margin-top: 6px;
+}
+.work-panel .research summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.work-panel .research button {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.work-panel button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

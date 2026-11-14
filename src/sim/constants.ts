@@ -235,6 +235,20 @@ export const GARDEN_MIN_ANTS = 30;
 export const GARDEN_MAX = 3;
 export const GARDEN_RATE = 0.08;
 export const GARDEN_WINTER_MUL = 2;
+
+/**
+ * Research (permanent upgrades the player buys with food, three tracks of RESEARCH_MAX levels, the price of level n is RESEARCH_COSTS[n - 1]):
+ * smell = ants notice food from 25 % further per level; carry = carriers walk 8 % faster per level, from level 2 workers take two pieces
+ * at once, at level 3 majors take one more; fight = black ants win a duel with 5 % more chance per level.
+ */
+export const RESEARCH_KEYS = ['smell', 'carry', 'fight'] as const;
+export type ResearchKey = (typeof RESEARCH_KEYS)[number];
+export const RESEARCH_MAX = 3;
+export const RESEARCH_COSTS = [30, 70, 140] as const;
+export const RESEARCH_NAMES: Record<ResearchKey, string> = { smell: 'Čich', carry: 'Nosnost', fight: 'Odolnost' };
+export const RESEARCH_SMELL_PER_LEVEL = 0.25;
+export const RESEARCH_CARRY_SPEED_PER_LEVEL = 0.08;
+export const RESEARCH_FIGHT_PER_LEVEL = 0.05;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

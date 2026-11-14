@@ -1,4 +1,4 @@
-import { GUARD_FRACTION_MAX, HATCH_FOCUSES, type HatchFocus } from '../sim/constants';
+import { GUARD_FRACTION_MAX, HATCH_FOCUSES, RESEARCH_KEYS, RESEARCH_MAX, RESEARCH_NAMES, type HatchFocus, type ResearchKey } from '../sim/constants';
 import { formatTime, noteBest } from '../records';
 import type { World } from '../sim/world';
 
@@ -37,11 +37,37 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   });
   showHatch();
   box.appendChild(hatch);
+  const details = document.createElement('details');
+  details.className = 'research';
+  const summary = document.createElement('summary');
+  summary.textContent = 'Výzkum';
+  details.appendChild(summary);
+  const researchBtns = RESEARCH_KEYS.map((key) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      world.buyResearch(key);
+      refreshResearch();
+    });
+    details.appendChild(b);
+    return { key, b };
+  });
+  function refreshResearch(): void {
+    for (const { key, b } of researchBtns) {
+      const cost = world.researchCost(key as ResearchKey);
+      const text = `${RESEARCH_NAMES[key]} ${world.research[key]}/${RESEARCH_MAX}${cost === null ? ' ✓' : ` · ${cost} jídla`}`;
+      if (b.textContent !== text) b.textContent = text;
+      b.disabled = cost === null || world.stock < cost;
+    }
+  }
+  refreshResearch();
+  box.appendChild(details);
   const info = document.createElement('div');
   info.className = 'work-info';
   box.appendChild(info);
   root.appendChild(box);
   return () => {
+    refreshResearch();
     const best = world.mode === 'normal' ? noteBest(world.time) : 0;
     const t = `Čas ${formatTime(world.time)}${best > 0 ? ` · rekord ${formatTime(best)}` : ''}`;
     const text = `${t} · seed ${world.terrain.seed}`;
