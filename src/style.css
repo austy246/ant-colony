@@ -541,3 +541,14 @@ body {
   float: none;
   margin: 0;
 }
+
+/* Sound switches next to "Nová hra". */
+.panel {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.panel button.sound-toggle.off {
+  opacity: 0.5;
+  text-decoration: line-through;
+}

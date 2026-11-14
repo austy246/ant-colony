@@ -1,3 +1,4 @@
+import { sound } from '../audio/sound';
 import { RESEARCH_NODES, type ResearchArm, type ResearchNode } from '../sim/constants';
 import type { World } from '../sim/world';
 
@@ -214,7 +215,11 @@ export function openResearchTree(root: HTMLElement, world: World): () => void {
   canvas.addEventListener('click', (e) => {
     const p = nodeAt(local(e).x, local(e).y);
     if (!p) return;
-    if (!world.buyResearch(p.node.id)) flash = { id: p.node.id, until: performance.now() + 350 };
+    if (world.buyResearch(p.node.id)) sound.play('research');
+    else {
+      flash = { id: p.node.id, until: performance.now() + 350 };
+      sound.play('deny');
+    }
     draw();
   });
 

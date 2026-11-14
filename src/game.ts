@@ -1,4 +1,6 @@
 import { confirmDialog } from './ui/confirmDialog';
+import { soundsFor, type Snapshot } from './audio/events';
+import { sound } from './audio/sound';
 import { buildWorkPanel } from './ui/workPanel';
 import { createRain } from './ui/rain';
 import { hudParts } from './hud';
@@ -99,6 +101,19 @@ export async function startGame(): Promise<void> {
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
+  // music and effects can be switched off (remembered)
+  for (const [label, get, set] of [
+    ['Hudba', () => sound.musicOn, (on: boolean) => sound.setMusic(on)],
+    ['Efekty', () => sound.sfxOn, (on: boolean) => sound.setSfx(on)],
+  ] as const) {
+    const b = el('button', 'sound-toggle', label, panel);
+    b.type = 'button';
+    b.classList.toggle('off', !get());
+    b.addEventListener('click', () => {
+      set(!get());
+      b.classList.toggle('off', !get());
+    });
+  }
   let skipBtn: HTMLButtonElement | null = null;
 
   const updateHud = (): void => {
@@ -121,7 +136,7 @@ export async function startGame(): Promise<void> {
   const gardenBtn = el('button', 'garden-btn', '', nest);
   gardenBtn.type = 'button';
   gardenBtn.addEventListener('click', () => {
-    world.buyGarden();
+    sound.play(world.buyGarden() ? 'garden' : 'deny');
     updateNestHud();
   });
   let underground: UndergroundView | null = null;
@@ -161,6 +176,28 @@ export async function startGame(): Promise<void> {
   });
 
   const rain = createRain(ui);
+
+  // --- sound: the browser only allows audio after a user gesture; effects follow changes of the game state ---
+  document.addEventListener(
+    'click',
+    (e) => {
+      if ((e.target as HTMLElement | null)?.closest?.('button')) sound.play('click');
+    },
+    true,
+  );
+  const takeSnapshot = (): Snapshot => ({
+    deliveries: world.deliveryCount,
+    antsKilled: world.antsKilled,
+    redKilled: world.redKilled,
+    sprays: world.spraysFired,
+    ants: world.ants.length,
+    queens: world.queens,
+    raids: world.raidsStarted,
+    warning: world.raidWarning !== null,
+    season: world.season,
+    extinct: world.extinct,
+  });
+  let lastSnap = takeSnapshot();
 
   // --- saving ---
   let saving = false;
@@ -296,6 +333,10 @@ export async function startGame(): Promise<void> {
     }
     world.step(dt);
     rain.update(dt, world.raining && !views.isUnderground());
+    sound.setRain(world.raining);
+    const cur = takeSnapshot();
+    for (const s of soundsFor(lastSnap, cur)) sound.play(s);
+    lastSnap = cur;
     if (world.extinct && !resetting) {
       resetting = true; // stops autosave
       void handleExtinction({

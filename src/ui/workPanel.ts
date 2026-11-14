@@ -1,4 +1,5 @@
 import { GUARD_FRACTION_MAX, HATCH_FOCUSES, type HatchFocus } from '../sim/constants';
+import { sound } from '../audio/sound';
 import { openResearchTree } from './researchTree';
 import { formatTime, noteBest } from '../records';
 import type { World } from '../sim/world';
@@ -21,6 +22,7 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   slider.value = String(Math.round(world.guardFraction * 100));
   slider.addEventListener('input', () => {
     world.guardFraction = Number(slider.value) / 100;
+    sound.play('tick');
     show();
   });
   show();

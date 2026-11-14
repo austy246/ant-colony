@@ -1,3 +1,4 @@
+import { sound } from '../audio/sound';
 import type { FoodItem, FoodKind } from '../sim/food';
 import type { World } from '../sim/world';
 import type { Camera } from './camera';
@@ -160,7 +161,10 @@ export class Input {
       }
       case 'delete': {
         const item = pickFood(this.world, w.x, w.y, PICK_RADIUS);
-        if (item) this.world.removeFood(item.id);
+        if (item) {
+          this.world.removeFood(item.id);
+          sound.play('remove');
+        }
         break;
       }
     }
@@ -171,11 +175,13 @@ export class Input {
     const hit = this.world.pickAnt(w.x, w.y, ANT_PICK_RADIUS);
     if (hit) {
       this.world.selectedAntId = this.world.selectedAntId === hit.id ? null : hit.id;
+      if (this.world.selectedAntId !== null) sound.play('select');
       return;
     }
     const id = this.world.selectedAntId;
     if (id === null) return;
-    if (!this.world.sendAnt(id, w.x, w.y) && !this.world.ants.some((a) => a.id === id)) this.world.selectedAntId = null;
+    if (this.world.sendAnt(id, w.x, w.y)) sound.play('send');
+    else if (!this.world.ants.some((a) => a.id === id)) this.world.selectedAntId = null;
   }
 
   private beginPinch(): void {
@@ -241,19 +247,19 @@ export class Input {
         const tool = this.getTool();
         if (tool.kind === 'place') {
           const w = this.camera.screenToWorld(p.x, p.y);
-          this.world.placeFood(tool.food, w.x, w.y);
+          sound.play(this.world.placeFood(tool.food, w.x, w.y) ? 'place' : 'deny');
         } else if (tool.kind === 'sugar') {
           const w = this.camera.screenToWorld(p.x, p.y);
-          this.world.placeSugar(w.x, w.y);
+          sound.play(this.world.placeSugar(w.x, w.y) ? 'sugar' : 'deny');
         } else if (tool.kind === 'lure') {
           const w = this.camera.screenToWorld(p.x, p.y);
-          this.world.placeLure(w.x, w.y);
+          if (this.world.placeLure(w.x, w.y)) sound.play('lure');
         } else if (tool.kind === 'found') {
           const w = this.camera.screenToWorld(p.x, p.y);
-          this.world.foundNest(w.x, w.y);
+          sound.play(this.world.foundNest(w.x, w.y) ? 'found' : 'deny');
         } else if (tool.kind === 'repel') {
           const w = this.camera.screenToWorld(p.x, p.y);
-          this.world.placeRepel(w.x, w.y);
+          if (this.world.placeRepel(w.x, w.y)) sound.play('repel');
         }
       }
     }

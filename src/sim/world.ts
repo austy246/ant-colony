@@ -343,6 +343,8 @@ export class World {
   /** Red ants killed in raids so far, and raids started (transient). */
   redKilled = 0;
   raidsStarted = 0;
+  /** Acid squirts fired by red and black ants so far (transient; the sound system listens for changes). */
+  spraysFired = 0;
   /** Test hook: no spider is ever created (tests of unrelated mechanics that place ants anywhere on the map). */
   noSpider = false;
   /** Sim time (`time`) at which the next sugar piece may be placed (normal mode). */
@@ -1430,6 +1432,7 @@ export class World {
           ant.sprayT = SPRAY_ANIM_S;
           ant.sprayTo = { x: red.x, y: red.y };
           ant.sprayCd = SPRAY_COOLDOWN_S * (this.has('c3') ? RESEARCH_COOLDOWN_MUL : 1);
+          this.spraysFired++;
         }
       }
       if (ant.role === 'guard' && !red) {
@@ -1614,6 +1617,7 @@ export class World {
         r.sprayT = SPRAY_ANIM_S;
         r.sprayTo = { x: foe.x, y: foe.y };
         r.sprayCd = SPRAY_COOLDOWN_S;
+        this.spraysFired++;
         r.heading = Math.atan2(foe.y - r.y, foe.x - r.x);
         continue;
       }
