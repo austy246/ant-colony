@@ -10,7 +10,7 @@
  * seconds with a few crumbs of soil flying back, then the chamber itself grows from nothing. Chambers that exist when the
  * view is opened (or the game is loaded) are simply there.
  */
-import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
+import { FOOD_PER_ANT, GARDEN_MAX, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
 import { chamberFills } from '../sim/nestNeeds';
 import type { World } from '../sim/world';
 import { ANT_CENTER, ANT_SIZE, CALLOW_RGBA } from './antArt';
@@ -59,6 +59,8 @@ export interface NestHud {
   wait: string | null;
   /** Food missing to the next queen, null at the maximum. */
   nextQueen: string | null;
+  /** Chambers and gardens: "Spíže 2 (jídlo 31/50) · Larvária 1 (larvy 4/10) · Houbové zahrady 1/3". */
+  chambers: string;
 }
 
 /** Texts of the in-view HUD (Czech). */
@@ -66,12 +68,14 @@ export function nestHud(world: World): NestHud {
   const stock = Number.isFinite(world.stock) ? world.stock : 0;
   const ants = world.ants.length;
   const canHatch = stock >= FOOD_PER_ANT && ants < world.maxAnts;
+  const n = world.nestNeeds;
   const missing = Math.max(1, Math.ceil(FOOD_PER_QUEEN - (world.totalDelivered % FOOD_PER_QUEEN)));
   return {
     line: `Královny: ${world.queens} · Larvy: ${world.larvae} · Zásoba: ${stock.toFixed(1)} · Mravenci: ${ants}`,
     hatch: canHatch ? world.hatchFraction : null,
     wait: stock < FOOD_PER_ANT ? `Královna čeká na potravu (${FOOD_PER_ANT})` : null,
     nextQueen: world.queens < MAX_QUEENS ? `Další královna za ${missing} jídla` : null,
+    chambers: `Spíže ${n.pantries} (jídlo ${Math.floor(stock)}/${n.pantries * PANTRY_CAPACITY}) · Larvária ${n.larvaeChambers} (larvy ${world.larvae}/${n.larvaeChambers * LARVAE_PER_CHAMBER}) · Houbové zahrady ${world.gardens}/${GARDEN_MAX}`,
   };
 }
 

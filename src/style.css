@@ -436,3 +436,26 @@ body {
   border: 0;
   text-align: center;
 }
+
+.nest-hud .garden-btn {
+  pointer-events: auto;
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-family: var(--px-font);
+  font-size: 13px;
+  color: var(--px-ink);
+  background: var(--px-btn);
+  border: 0;
+  cursor: pointer;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-hi),
+    inset -2px -2px 0 0 var(--px-btn-lo);
+}
+.nest-hud .garden-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

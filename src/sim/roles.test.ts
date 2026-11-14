@@ -352,3 +352,43 @@ describe('controlling one ant', () => {
     expect(JSON.stringify(save)).not.toContain('"goal"');
   });
 });
+
+describe('mushroom gardens', () => {
+  /** Stock gained by `gardens` gardens over 60 s compared with an identical colony without any (the queens eat stock meanwhile). */
+  function gain(season: number, gardens: number): number {
+    const mk = (): World => {
+      const w = colony(1, 40);
+      w.fixedSeason = season;
+      w.stock = 100;
+      w.gardens = 0;
+      return w;
+    };
+    const a = mk();
+    const b = mk();
+    b.gardens = gardens;
+    run(a, 60);
+    run(b, 60);
+    return b.stock - a.stock;
+  }
+
+  it('cost food, need ants, are capped and are saved', () => {
+    const w = colony(1, 40);
+    w.fixedSeason = 1;
+    w.stock = 100;
+    expect(w.buyGarden()).toBe(true);
+    expect(w.stock).toBeCloseTo(60);
+    w.stock = 500;
+    expect(w.buyGarden()).toBe(true);
+    expect(w.buyGarden()).toBe(true);
+    expect(w.buyGarden()).toBe(false); // at most GARDEN_MAX
+    expect(colony(1, 10).buyGarden()).toBe(false); // too few ants
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).gardens).toBe(3);
+  });
+
+  it('they grow food, twice as much in winter', () => {
+    const summer = gain(1, 1);
+    expect(summer).toBeGreaterThan(3);
+    expect(gain(3, 1)).toBeGreaterThan(summer * 1.7);
+  });
+});

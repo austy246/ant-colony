@@ -1,4 +1,4 @@
-import { APHID_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -59,6 +59,8 @@ export interface SaveV1 {
   guardFraction?: number;
   /** Optional (absent = 'mix'): what the queens hatch. */
   hatchFocus?: string;
+  /** Optional (absent = 0): mushroom gardens dug in the nest. */
+  gardens?: number;
   /** Optional (absent = none): the second nest the player founded. */
   satellite?: { x: number; y: number };
   /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
@@ -135,6 +137,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     spawnTimer: w.spawnTimer,
     guardFraction: w.guardFraction,
     hatchFocus: w.hatchFocus,
+    gardens: w.gardens,
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
@@ -163,6 +166,7 @@ export function worldFromSave(s: SaveV1): World {
   w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
   w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
+  w.gardens = Math.max(0, Math.min(GARDEN_MAX, Math.floor(s.gardens ?? 0)));
   w.satellite = s.satellite ? { x: s.satellite.x, y: s.satellite.y } : null;
   w.hatchFocus = (HATCH_FOCUSES as readonly string[]).includes(s.hatchFocus ?? '') ? (s.hatchFocus as HatchFocus) : 'mix';
   w.guardFraction = Math.max(0, Math.min(GUARD_FRACTION_MAX, s.guardFraction ?? GUARD_FRACTION));
@@ -297,6 +301,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   if (o.guardFraction !== undefined && (!isNum(o.guardFraction) || o.guardFraction < 0 || o.guardFraction > GUARD_FRACTION_MAX)) return null;
   if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
+  if (o.gardens !== undefined && (!isInt(o.gardens) || o.gardens < 0 || o.gardens > GARDEN_MAX)) return null;
   const size0 = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.satellite !== undefined) {
     const sat = o.satellite as Record<string, unknown> | null;

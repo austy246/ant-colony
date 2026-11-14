@@ -228,6 +228,13 @@ export const SATELLITE_MIN_DIST = 120;
 export const SATELLITE_RED_GAP = 80;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */
 export const GOAL_MAX_S = 600;
+
+/** Mushroom gardens (underground upgrade): each costs GARDEN_COST food (from GARDEN_MIN_ANTS ants), at most GARDEN_MAX, and grows GARDEN_RATE food per second (GARDEN_WINTER_MUL times that in winter, when there is little prey above). */
+export const GARDEN_COST = 40;
+export const GARDEN_MIN_ANTS = 30;
+export const GARDEN_MAX = 3;
+export const GARDEN_RATE = 0.08;
+export const GARDEN_WINTER_MUL = 2;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

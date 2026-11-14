@@ -77,3 +77,4 @@ TypeScript, Vite, Canvas 2D (`image-rendering: pixelated`), vitest (jsdom, `@nap
 - **Roční období a déšť** (Normal): jaro, léto, podzim, zima po 4 minutách; v zimě je kořisti málo a mravenci pomalejší, déšť smývá feromon a zastaví přísun kořisti.
 - **Seed**: při startu lze zadat seed mapy; HUD ukazuje čas přežití, rekord a seed.
 - **Řízení jednoho mravence**: s nástrojem „Posun“ klikni na mravence (zezelená), pak klikni kamkoli na mapu a mravenec tam dojde, i přes celou mapu (ukáže jídlo nebo směr). Dalším kliknutím na něj ho pustíš.
+- **Podzemí**: v pohledu na hnízdo je přehled spíží, larvárií a houbových zahrad a tlačítko pro vykopání **houbové zahrady** (40 jídla, nejvýš 3): každá vyrábí jídlo, v zimě dvakrát víc.
