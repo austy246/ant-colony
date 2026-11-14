@@ -69,6 +69,28 @@ export async function startGame(): Promise<void> {
   const input = new Input(canvas, camera, world, () => tool);
 
   const hud = el('div', 'hud', '', ui);
+  // The panel can be folded away to a small "open" button, so the whole map stays in view.
+  const HUD_KEY = 'ant-colony-hud-collapsed';
+  const hudToggle = el('button', 'hud-toggle', 'Zavřít', hud);
+  hudToggle.type = 'button';
+  const setCollapsed = (c: boolean): void => {
+    hud.classList.toggle('collapsed', c);
+    hudToggle.textContent = c ? 'Otevřít' : 'Zavřít';
+    hudToggle.setAttribute('aria-expanded', String(!c));
+    try {
+      localStorage.setItem(HUD_KEY, c ? '1' : '0');
+    } catch {
+      /* remembering is best effort */
+    }
+  };
+  hudToggle.addEventListener('click', () => setCollapsed(!hud.classList.contains('collapsed')));
+  let wasCollapsed = false;
+  try {
+    wasCollapsed = localStorage.getItem(HUD_KEY) === '1';
+  } catch {
+    /* ignore */
+  }
+  setCollapsed(wasCollapsed);
   const hudMain = el('span', '', '', hud);
   const hudSmall = el('span', 'hud-small', '', hud);
   const hudRest = el('span', '', '', hud);

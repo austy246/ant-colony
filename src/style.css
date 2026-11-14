@@ -506,3 +506,38 @@ body {
   touch-action: manipulation;
   cursor: pointer;
 }
+
+/* The HUD folds away to one small button (top left) so the whole map stays in view. */
+.hud-toggle {
+  float: right;
+  margin: 0 0 4px 10px;
+  padding: 2px 8px;
+  font-family: var(--px-font);
+  font-size: 12px;
+  color: var(--px-ink);
+  background: var(--px-btn);
+  border: 0;
+  cursor: pointer;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-hi),
+    inset -2px -2px 0 0 var(--px-btn-lo);
+}
+.hud-toggle:hover {
+  background: var(--px-btn-hover);
+}
+.hud.collapsed {
+  padding: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+.hud.collapsed > :not(.hud-toggle) {
+  display: none;
+}
+.hud.collapsed .hud-toggle {
+  float: none;
+  margin: 0;
+}
