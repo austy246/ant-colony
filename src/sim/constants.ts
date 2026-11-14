@@ -238,7 +238,7 @@ export const GARDEN_WINTER_MUL = 2;
 
 /**
  * Research tree (permanent upgrades the player buys with experience, see XP_PER_FOOD). Six arms radiate from the nest; each is a chain of three nodes
- * (price 3, 6, 12) ending in two branches (15 each). A node can be bought once the node it hangs from is bought.
+ * (base price 4, 10, 24) ending in two branches (55 each); every node bought makes the rest 6 % dearer. A node can be bought once the node it hangs from is bought.
  *   gather: g1-g3 smell (food noticed 25 % further per level), g4 stronger trail, g5 longer-lasting trail
  *   haul:   h1-h3 carry (carriers 8 % faster per level; level 2: workers take two pieces; level 3: majors one more), h4 all ants faster, h5 longer sugar boost
  *   war:    w1-w3 fight (+5 % duel win chance per level), w4 more majors, w5 red ants noticed from further away
@@ -259,6 +259,10 @@ export interface ResearchNode {
   /** Id of the node it hangs from, null for the first node of an arm (it hangs from the nest). */
   req: string | null;
 }
+/** Price of the node by distance from the nest: the first ones are cheap, the outer ones (the branches) cost a lot. */
+export const RESEARCH_BASE_COSTS = [4, 10, 24, 55, 55] as const;
+/** Every node already bought makes all the others this much dearer (a fraction of the base price), so a late game cannot buy the whole tree. */
+export const RESEARCH_ESCALATION = 0.06;
 const arm = (a: ResearchArm, p: string, names: [string, string, string, string, string], descs: [string, string, string, string, string]): ResearchNode[] =>
   names.map((name, pos) => ({
     id: `${p}${pos + 1}`,
@@ -266,7 +270,7 @@ const arm = (a: ResearchArm, p: string, names: [string, string, string, string, 
     pos,
     name,
     desc: descs[pos],
-    cost: pos < 3 ? ([3, 6, 12] as const)[pos] : 15,
+    cost: RESEARCH_BASE_COSTS[pos],
     req: pos === 0 ? null : pos < 4 ? `${p}${pos}` : `${p}3`,
   }));
 export const RESEARCH_NODES: readonly ResearchNode[] = [
@@ -321,12 +325,14 @@ export const RESEARCH_TOUCH_MUL = 0.5;
 export const SPIDER_ESCAPE_S = 2.5;
 export const WEB_FREE_S = 6;
 
-/** Experience, the currency of the research: a tenth of a point for every food delivered, a point for every red ant killed and one a minute. */
-export const XP_PER_FOOD = 0.1;
-export const XP_PER_KILL = 1;
+/** Experience, the currency of the research: a fiftieth of a point for every food delivered (scaled down for colonies above XP_REF_ANTS ants), a tenth for every red ant killed and a point a minute. */
+export const XP_PER_FOOD = 0.02;
+/** A big colony delivers far more food, so the points per food shrink with the number of ants above XP_REF_ANTS: the income stays about the same at any size. */
+export const XP_REF_ANTS = 100;
+export const XP_PER_KILL = 0.1;
 export const XP_PER_S = 1 / 60;
 /** ... and a twentieth of a point for every patch of ground (EXPLORE_CELL px square) an ant sets foot on for the first time. */
-export const XP_PER_CELL = 0.05;
+export const XP_PER_CELL = 0.01;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

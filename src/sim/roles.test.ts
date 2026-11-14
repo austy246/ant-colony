@@ -396,11 +396,11 @@ describe('mushroom gardens', () => {
 describe('research tree', () => {
   it('a node needs the one it hangs from, costs experience (not food) and is bought once; it is saved', () => {
     const w = colony(1, 20);
-    w.xp = 100;
+    w.xp = 1000;
     w.stock = 5;
     expect(w.buyResearch('g2')).toBe(false); // g1 first
     expect(w.buyResearch('g1')).toBe(true);
-    expect(w.xp).toBeCloseTo(97);
+    expect(w.xp).toBeCloseTo(996); // g1 costs 4
     expect(w.stock).toBeCloseTo(5); // food is untouched
     expect(w.buyResearch('g1')).toBe(false); // only once
     expect(w.buyResearch('g2')).toBe(true);
@@ -410,7 +410,7 @@ describe('research tree', () => {
     expect(w.researchLevel('g')).toBe(3);
     expect(w.buyResearch('zzz')).toBe(false);
     w.xp = 1;
-    expect(w.buyResearch('h1')).toBe(false); // too little experience
+    expect(w.buyResearch('h1')).toBe(false); // too little experience (and dearer: five nodes are already bought)
     w.xp = 12.5;
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
     const back = worldFromSave(JSON.parse(JSON.stringify(save)));
@@ -432,7 +432,7 @@ describe('research tree', () => {
     a.y = NEST.y;
     const before = w.xp;
     w.step(STEP_S);
-    expect(w.xp - before).toBeGreaterThan(0.29); // 3 food = 0.3 point (plus a sliver of time)
+    expect(w.xp - before).toBeGreaterThan(0.055); // 3 food = 0.06 point (plus a sliver of time)
   });
 
   it('smell: ants notice food from further; carry 2: workers take two pieces', () => {
@@ -679,7 +679,7 @@ describe('nature research (Priroda) and exploring', () => {
     const xp0 = w.xp;
     w.step(STEP_S);
     const first = w.xp - xp0;
-    expect(first).toBeGreaterThan(0.04); // one new patch (0.05), plus a sliver of time
+    expect(first).toBeGreaterThan(0.009); // one new patch (0.01), plus a sliver of time
     const seen = w.seenCells.size;
     expect(seen).toBeGreaterThan(0);
     a.x = 60;
@@ -813,5 +813,42 @@ describe('black ants keep apart', () => {
       }
     }
     expect(tooClose).toBeLessThan(10); // of 435 pairs; without the push they would all sit within a pixel
+  });
+});
+
+describe('research prices', () => {
+  it('outer nodes cost much more than the first ones, and every bought node makes the rest dearer', () => {
+    const w = colony(31, 0);
+    expect(w.researchCost('g1')).toBe(4);
+    expect(w.researchCost('g2')).toBe(10);
+    expect(w.researchCost('g3')).toBe(24);
+    expect(w.researchCost('g4')).toBe(55);
+    expect(w.researchCost('nope')).toBeNull();
+    w.xp = 1000;
+    w.buyResearch('g1');
+    expect(w.researchCost('g2')).toBe(11); // 10 + 6 %, rounded up
+    for (const id of ['g2', 'g3']) w.buyResearch(id);
+    expect(w.researchCost('g4')).toBeGreaterThan(62);
+  });
+
+  it('a big colony does not earn more experience from its food than a small one', () => {
+    const delivered = (ants: number): number => {
+      const gain = (carrying: boolean): number => {
+        const w = colony(32, ants);
+        const a = w.ants[0];
+        a.state = 'carry';
+        a.carry = carrying ? 1 : 0;
+        a.x = NEST.x;
+        a.y = NEST.y;
+        const before = w.xp;
+        w.step(STEP_S);
+        return w.xp - before;
+      };
+      return gain(true) - gain(false); // only what the delivery adds (exploring and time cancel out)
+    };
+    const small = delivered(50);
+    const big = delivered(1000);
+    expect(small).toBeGreaterThan(0);
+    expect(big).toBeLessThan(small * 0.3);
   });
 });

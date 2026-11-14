@@ -42,7 +42,7 @@ type State = 'bought' | 'ready' | 'poor' | 'locked';
 function stateOf(world: World, n: ResearchNode): State {
   if (world.has(n.id)) return 'bought';
   if (n.req !== null && !world.has(n.req)) return 'locked';
-  return world.xp + 1e-9 >= n.cost ? 'ready' : 'poor';
+  return world.xp + 1e-9 >= (world.researchCost(n.id) ?? n.cost) ? 'ready' : 'poor';
 }
 
 /**
@@ -158,7 +158,7 @@ export function openResearchTree(root: HTMLElement, world: World): () => void {
       }
       ctx.font = `${Math.round(15 * Math.max(0.8, scale))}px "Pixelify Sans", monospace`;
       ctx.fillStyle = st === 'bought' ? '#10161f' : st === 'locked' ? 'rgba(140,160,190,.5)' : '#f1f1e6';
-      ctx.fillText(st === 'bought' ? '✓' : String(p.node.cost), x, y);
+      ctx.fillText(st === 'bought' ? '✓' : String(world.researchCost(p.node.id) ?? p.node.cost), x, y);
       ctx.font = `${Math.round(13 * Math.max(0.8, scale))}px "Pixelify Sans", monospace`;
       const ly = y + nr + 13 * Math.max(0.8, scale);
       const lw = ctx.measureText(p.node.name).width + 8;
@@ -171,7 +171,7 @@ export function openResearchTree(root: HTMLElement, world: World): () => void {
     if (hover) {
       const n = hover.node;
       const st = stateOf(world, n);
-      const lines = [n.name, n.desc, st === 'bought' ? 'Hotovo' : st === 'locked' ? 'Nejdřív předchozí uzel' : `Cena: ${n.cost} zkušenosti`];
+      const lines = [n.name, n.desc, st === 'bought' ? 'Hotovo' : st === 'locked' ? 'Nejdřív předchozí uzel' : `Cena: ${world.researchCost(n.id) ?? n.cost} zkušenosti`];
       ctx.font = `${Math.round(14 * Math.max(0.85, scale))}px "Pixelify Sans", monospace`;
       const tw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 20;
       const lh = 20 * Math.max(0.85, scale);

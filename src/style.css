@@ -552,3 +552,85 @@ body {
   opacity: 0.5;
   text-decoration: line-through;
 }
+
+/* Tutorial of a new Normal game: a card over the map, the part it talks about is lit up. */
+.tutorial {
+  position: fixed;
+  z-index: 15;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, calc(100vw - 28px));
+  box-sizing: border-box;
+  padding: 14px 16px;
+  font-family: var(--px-font);
+  color: var(--px-ink);
+  background: var(--px-panel);
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 #44311f,
+    inset -2px -2px 0 0 #1a120b;
+}
+.tutorial-count {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.tutorial-title {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  color: #ffd24a;
+}
+.tutorial-text {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.tutorial-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tutorial button {
+  padding: 6px 12px;
+  font-family: var(--px-font);
+  font-size: 15px;
+  color: var(--px-ink);
+  background: var(--px-btn);
+  border: 0;
+  cursor: pointer;
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 var(--px-btn-hi),
+    inset -2px -2px 0 0 var(--px-btn-lo);
+}
+.tutorial button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tutorial .tutorial-never {
+  margin-top: 10px;
+  padding: 0;
+  font-size: 12px;
+  background: none;
+  box-shadow: none;
+  opacity: 0.7;
+  text-decoration: underline;
+}
+.tutorial-hl {
+  outline: 3px solid #ffd24a;
+  outline-offset: 3px;
+  animation: tutorial-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes tutorial-pulse {
+  from {
+    outline-color: rgba(255, 210, 74, 0.35);
+  }
+  to {
+    outline-color: rgba(255, 210, 74, 1);
+  }
+}

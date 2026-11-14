@@ -1,6 +1,7 @@
 import { confirmDialog } from './ui/confirmDialog';
 import { soundsFor, type Snapshot } from './audio/events';
 import { sound } from './audio/sound';
+import { showTutorial, tutorialDismissed } from './ui/tutorial';
 import { buildWorkPanel } from './ui/workPanel';
 import { createRain } from './ui/rain';
 import { hudParts } from './hud';
@@ -238,6 +239,19 @@ export async function startGame(): Promise<void> {
   canvas.addEventListener('wheel', cancelSettle, { passive: true });
   canvas.addEventListener('pointerdown', cancelSettle);
 
+  /** The tutorial of a new Normal game: the game stands still while it is open. */
+  let paused = false;
+  const startTutorial = (): void => {
+    if (world.mode !== 'normal' || tutorialDismissed()) return;
+    paused = true;
+    showTutorial(ui, {
+      onClose: () => {
+        paused = false;
+        resetClock();
+      },
+    });
+  };
+
   const finishIntro = (): void => {
     introDone = true;
     skipBtn?.remove();
@@ -259,6 +273,7 @@ export async function startGame(): Promise<void> {
     panel.hidden = false;
     updateHud();
     void autosave();
+    startTutorial();
   };
 
   if (intro) {
@@ -331,7 +346,7 @@ export async function startGame(): Promise<void> {
       renderer.setQueen(intro.queen());
       if (intro.consumeSpawn()) world.spawnAnt();
     }
-    world.step(dt);
+    if (!paused) world.step(dt); // the tutorial pauses the game
     rain.update(dt, world.raining && !views.isUnderground());
     sound.setRain(world.raining);
     const cur = takeSnapshot();
