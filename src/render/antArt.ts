@@ -53,6 +53,17 @@ export const ACID_RGBA: readonly (readonly [number, number, number, number])[] =
   [10, 6, 3, 97],
 ];
 
+/** A red ant covered in the black ants' acid: the red sprites gone a sickly olive. */
+export const ACID_RED_RGBA: readonly (readonly [number, number, number, number])[] = [
+  [0, 0, 0, 0],
+  [0x6a, 0x5a, 0x14, 255],
+  [0x9a, 0x92, 0x24, 255],
+  [0x7c, 0x6e, 0x1a, 255],
+  [0x4a, 0x40, 0x0c, 255],
+  [0xe8, 0xe0, 0xc8, 255],
+  [10, 6, 3, 97],
+];
+
 /** Red raiding ant: the same sprites in reds. Same layout as ANT_RGBA; the crumb and the shadow are unchanged. */
 export const RED_RGBA: readonly (readonly [number, number, number, number])[] = [
   [0, 0, 0, 0],

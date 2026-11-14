@@ -40,7 +40,7 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   box.appendChild(hatch);
   const treeBtn = document.createElement('button');
   treeBtn.type = 'button';
-  treeBtn.textContent = 'Výzkum';
+  treeBtn.textContent = 'Výzkum (0 zk.)';
   treeBtn.addEventListener('click', () => openResearchTree(document.getElementById('ui') ?? root, world));
   box.appendChild(treeBtn);
   const info = document.createElement('div');
@@ -48,6 +48,8 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   box.appendChild(info);
   root.appendChild(box);
   return () => {
+    const xpText = `Výzkum (${Math.floor(world.xp)} zk.)`;
+    if (treeBtn.textContent !== xpText) treeBtn.textContent = xpText;
     const best = world.mode === 'normal' ? noteBest(world.time) : 0;
     const t = `Čas ${formatTime(world.time)}${best > 0 ? ` · rekord ${formatTime(best)}` : ''}`;
     const text = `${t} · seed ${world.terrain.seed}`;

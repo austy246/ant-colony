@@ -394,12 +394,14 @@ describe('mushroom gardens', () => {
 });
 
 describe('research tree', () => {
-  it('a node needs the one it hangs from, costs food and is bought once; it is saved', () => {
+  it('a node needs the one it hangs from, costs experience (not food) and is bought once; it is saved', () => {
     const w = colony(1, 20);
-    w.stock = 1000;
+    w.xp = 100;
+    w.stock = 5;
     expect(w.buyResearch('g2')).toBe(false); // g1 first
     expect(w.buyResearch('g1')).toBe(true);
-    expect(w.stock).toBeCloseTo(970);
+    expect(w.xp).toBeCloseTo(97);
+    expect(w.stock).toBeCloseTo(5); // food is untouched
     expect(w.buyResearch('g1')).toBe(false); // only once
     expect(w.buyResearch('g2')).toBe(true);
     expect(w.buyResearch('g3')).toBe(true);
@@ -407,11 +409,30 @@ describe('research tree', () => {
     expect(w.buyResearch('g5')).toBe(true);
     expect(w.researchLevel('g')).toBe(3);
     expect(w.buyResearch('zzz')).toBe(false);
-    w.stock = 10;
-    expect(w.buyResearch('h1')).toBe(false); // too little food
+    w.xp = 1;
+    expect(w.buyResearch('h1')).toBe(false); // too little experience
+    w.xp = 12.5;
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
     const back = worldFromSave(JSON.parse(JSON.stringify(save)));
     expect([...back.unlocked].sort()).toEqual(['g1', 'g2', 'g3', 'g4', 'g5']);
+    expect(back.xp).toBeCloseTo(12.5);
+  });
+
+  it('experience comes from delivered food, killed red ants and time', () => {
+    const w = colony(9, 0);
+    w.fixedSeason = 0;
+    const t = w.xp;
+    run(w, 60);
+    expect(w.xp - t).toBeGreaterThan(0.9); // about a point a minute
+    expect(w.xp - t).toBeLessThan(1.2);
+    const a = w.spawnAnt();
+    a.state = 'carry';
+    a.carry = 3;
+    a.x = NEST.x;
+    a.y = NEST.y;
+    const before = w.xp;
+    w.step(STEP_S);
+    expect(w.xp - before).toBeGreaterThan(0.29); // 3 food = 0.3 point (plus a sliver of time)
   });
 
   it('smell: ants notice food from further; carry 2: workers take two pieces', () => {
@@ -564,5 +585,84 @@ describe('red ants spit acid', () => {
     const sick = wins(true);
     expect(normal).toBeGreaterThan(40);
     expect(sick).toBeLessThan(normal * 0.75);
+  });
+});
+
+describe('black ants squirt acid (chemistry research)', () => {
+  function pair(seed: number, bought: string[]): { w: World; red: RedAnt; ant: ReturnType<World['spawnAnt']> } {
+    const w = colony(seed, 0);
+    w.fixedSeason = 0;
+    w.noGuards = true;
+    w.noRaid = false;
+    for (const id of bought) w.unlocked.add(id);
+    const ant = w.spawnAnt();
+    ant.age = 500;
+    ant.state = 'wander';
+    ant.x = 100;
+    ant.y = 100;
+    ant.heading = 0;
+    const red: RedAnt = { id: 99100, x: 110, y: 100, heading: Math.PI };
+    w.reds.push(red);
+    return { w, red, ant };
+  }
+
+  it('without the research a black ant never squirts; with it the red ant is sprayed, slowed and the ant has a wait', () => {
+    let sprayed = false;
+    for (let seed = 1; seed <= 6; seed++) {
+      const { w, red } = pair(seed, []);
+      for (let i = 0; i < 30; i++) w.step(STEP_S);
+      expect(red.acidT).toBeUndefined();
+    }
+    for (let seed = 1; seed <= 6 && !sprayed; seed++) {
+      const { w, red, ant } = pair(seed, ['c1']);
+      for (let i = 0; i < 60; i++) {
+        w.step(STEP_S);
+        if (red.acidT !== undefined) {
+          sprayed = true;
+          expect(ant.sprayCd).toBeGreaterThan(0);
+          break;
+        }
+      }
+    }
+    expect(sprayed).toBe(true);
+  });
+
+  it('c2 makes the acid last longer, c3 shortens the wait', () => {
+    const run1 = (ids: string[]): { acid: number; cd: number } | null => {
+      for (let seed = 1; seed <= 8; seed++) {
+        const { w, red, ant } = pair(seed, ids);
+        for (let i = 0; i < 80; i++) {
+          w.step(STEP_S);
+          if (red.acidT !== undefined) return { acid: red.acidT, cd: ant.sprayCd ?? 0 };
+        }
+      }
+      return null;
+    };
+    const base = run1(['c1'])!;
+    const strong = run1(['c1', 'c2', 'c3'])!;
+    expect(base).not.toBeNull();
+    expect(strong.acid).toBeGreaterThan(base.acid * 1.3);
+    expect(strong.cd).toBeLessThan(base.cd * 0.8);
+  });
+
+  it('a sprayed red ant loses a duel more often (and c5 makes it worse)', () => {
+    const wins = (acid: boolean, c5: boolean): number => {
+      let n = 0;
+      for (let seed = 1; seed <= 150; seed++) {
+        const { w, red, ant } = pair(seed, c5 ? ['c5'] : []);
+        red.x = 101.5; // in reach at once
+        if (acid) red.acidT = 10;
+        ant.speedMul = 1;
+        const before = w.reds.length;
+        for (let i = 0; i < Math.round(3 / STEP_S); i++) w.step(STEP_S);
+        if (w.reds.length < before) n++;
+      }
+      return n;
+    };
+    const normal = wins(false, false);
+    const sprayed = wins(true, false);
+    const worse = wins(true, true);
+    expect(sprayed).toBeGreaterThan(normal);
+    expect(worse).toBeGreaterThan(sprayed);
   });
 });

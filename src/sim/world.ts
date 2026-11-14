@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -36,6 +36,10 @@ export interface Ant {
   timer: number;
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
+  /** Transient: squirting acid on a red ant (seconds of the animation left, where it goes, wait until the next squirt). Not saved. */
+  sprayT?: number;
+  sprayTo?: { x: number; y: number };
+  sprayCd?: number;
   /** Transient: seconds left of the red ants' acid on it (slowed, weaker in a duel). Not saved. */
   acidT?: number;
   /** Transient: the player sent it to this point (it walks there, whatever it was doing, then goes on as before); `t` is the time left. Not saved. */
@@ -234,6 +238,8 @@ export class World {
   hatchFocus: HatchFocus = 'mix';
   /** No-entry marks placed by the player (transient: they are not saved). */
   repels: { x: number; y: number; t: number }[] = [];
+  /** Experience: the currency of the research (see XP_PER_FOOD), saved. */
+  xp = 0;
   /** Ids of the research nodes the player has bought (see RESEARCH_NODES, saved). */
   unlocked = new Set<string>();
   /** True once the research node `id` is bought. */
@@ -241,19 +247,19 @@ export class World {
     return this.unlocked.has(id);
   }
   /** How many of the chain nodes `<prefix>1..3` are bought (0..3). */
-  researchLevel(prefix: 'g' | 'h' | 'w' | 'n'): number {
+  researchLevel(prefix: 'g' | 'h' | 'w' | 'n' | 'c'): number {
     return (this.has(`${prefix}1`) ? 1 : 0) + (this.has(`${prefix}2`) ? 1 : 0) + (this.has(`${prefix}3`) ? 1 : 0);
   }
-  /** Can node `id` be bought right now: known, not yet bought, the node it hangs from is bought and the food suffices. */
+  /** Can node `id` be bought right now: known, not yet bought, the node it hangs from is bought and the experience suffices. */
   canBuyResearch(id: string): boolean {
     const n = RESEARCH_NODES.find((q) => q.id === id);
     if (!n || this.has(id) || (n.req !== null && !this.has(n.req))) return false;
-    return this.stock + 1e-9 >= n.cost;
+    return this.xp + 1e-9 >= n.cost;
   }
-  /** Buys research node `id` for food; false when canBuyResearch says no. */
+  /** Buys research node `id` for experience; false when canBuyResearch says no. */
   buyResearch(id: string): boolean {
     if (!this.canBuyResearch(id)) return false;
-    this.stock -= RESEARCH_NODES.find((q) => q.id === id)!.cost;
+    this.xp -= RESEARCH_NODES.find((q) => q.id === id)!.cost;
     this.unlocked.add(id);
     return true;
   }
@@ -672,6 +678,7 @@ export class World {
     this.updateRaid(); // also in sandbox, so the secret raid key works there (it never starts by itself below RAID_MIN_ANTS ants)
     this.updateSpider();
     this.pher.step((this.raining ? STEP_S * RAIN_EVAP_MUL : STEP_S) / (this.has('g5') ? RESEARCH_TRAIL_LIFE_MUL : 1));
+    this.xp += XP_PER_S * STEP_S;
     if (this.gardens > 0) this.stock += this.gardens * GARDEN_RATE * (this.has('n4') ? RESEARCH_GARDEN_MUL : 1) * (this.season === 3 ? GARDEN_WINTER_MUL : 1) * STEP_S;
     for (let i = this.repels.length - 1; i >= 0; i--) {
       this.repels[i].t -= STEP_S;
@@ -1285,6 +1292,17 @@ export class World {
       ant.acidT -= STEP_S;
       if (ant.acidT <= 0) delete ant.acidT;
     }
+    if (ant.sprayT !== undefined) {
+      ant.sprayT -= STEP_S;
+      if (ant.sprayT <= 0) {
+        delete ant.sprayT;
+        delete ant.sprayTo;
+      }
+    }
+    if (ant.sprayCd !== undefined) {
+      ant.sprayCd -= STEP_S;
+      if (ant.sprayCd <= 0) delete ant.sprayCd;
+    }
     if (ant.caughtT !== undefined) {
       ant.caughtT += STEP_S; // stuck in the web: stays put, keeps what it carries
       return;
@@ -1388,6 +1406,16 @@ export class World {
       this.markExplored(ant.x, ant.y);
       const red = this.reds.length > 0 ? this.sensedRed(ant) : null;
       const rn = this.redNest?.owner === 'red' ? this.redNest : null;
+      if (red && ant.sprayCd === undefined && red.acidT === undefined && this.has('c1')) {
+        // researched: a black ant with a red one ahead squirts acid on it, like the red ants do
+        const d = Math.hypot(red.x - ant.x, red.y - ant.y);
+        if (d > SPRAY_MIN && d <= SPRAY_RANGE && this.rng.next() < SPRAY_PER_S * STEP_S) {
+          red.acidT = ACID_S * (this.has('c2') ? RESEARCH_ACID_LONG : 1);
+          ant.sprayT = SPRAY_ANIM_S;
+          ant.sprayTo = { x: red.x, y: red.y };
+          ant.sprayCd = SPRAY_COOLDOWN_S * (this.has('c3') ? RESEARCH_COOLDOWN_MUL : 1);
+        }
+      }
       if (ant.role === 'guard' && !red) {
         // a guard circles the nest on its own ring
         desired = this.orbitHeading(ant.x, ant.y, NEST.x, NEST.y, ant.id);
@@ -1424,6 +1452,7 @@ export class World {
     const homeNow = ant.state === 'carry' ? this.homeFor(ant) : NEST;
     if (ant.state === 'carry' && ant.carryLeaf === undefined && Math.hypot(ant.x - homeNow.x, ant.y - homeNow.y) <= NEST.r) {
       this.stock += ant.carry;
+      this.xp += ant.carry * XP_PER_FOOD;
       this.totalDelivered += ant.carry;
       ant.carry = 0;
       delete ant.lostT;
@@ -1527,6 +1556,10 @@ export class World {
         r.sprayCd -= STEP_S;
         if (r.sprayCd <= 0) delete r.sprayCd;
       }
+      if (r.acidT !== undefined) {
+        r.acidT -= STEP_S;
+        if (r.acidT <= 0) delete r.acidT;
+      }
       if (r.fightT === undefined && r.sprayT !== undefined) {
         // flicking the abdomen: stands still until the squirt is out
         r.sprayT -= STEP_S;
@@ -1607,7 +1640,7 @@ export class World {
       } else {
         r.heading = Math.atan2(ty - r.y, tx - r.x) + (rng.next() - 0.5) * 0.9; // wanders a little on the way
       }
-      const v = RED_SPEED * (r.spd ?? 1) * (r.carry ? CARRY_SPEED_MUL : 1) * STEP_S;
+      const v = RED_SPEED * (r.spd ?? 1) * (r.carry ? CARRY_SPEED_MUL : 1) * (r.acidT !== undefined ? (this.has('c4') ? RESEARCH_ACID_SLOW : ACID_SLOW) : 1) * STEP_S;
       let px = 0;
       let py = 0;
       const gx = Math.floor(r.x / RED_SEP);
@@ -1923,11 +1956,15 @@ export class World {
     delete foe.duelT;
     const i = this.ants.indexOf(foe);
     if (i < 0) return; // the black ant is gone (spider, beetle): the red one fights on
-    const winP = Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.researchLevel('w'));
-    if (this.rng.next() < (foe.acidT !== undefined ? winP * ACID_WIN_MUL : winP)) {
+    let winP = Math.min(0.97, (foe.superMajor ? SUPER_WIN_P : foe.major ? MAJOR_WIN_P : BLACK_WIN_P) + RESEARCH_FIGHT_PER_LEVEL * this.researchLevel('w'));
+    // the acid on the red ant makes it lose more often; the acid on the black ant makes it lose more often too
+    if (r.acidT !== undefined) winP = 1 - (1 - winP) * (this.has('c5') ? RESEARCH_ACID_WIN : ACID_WIN_MUL);
+    if (foe.acidT !== undefined) winP *= ACID_WIN_MUL;
+    if (this.rng.next() < winP) {
       const k = this.reds.indexOf(r);
       if (k >= 0) this.reds.splice(k, 1);
       this.redKilled++;
+      this.xp += XP_PER_KILL;
       this.food.push({ id: this.nextId++, kind: 'redant', x: r.x, y: r.y, piecesLeft: FOOD_TABLE.redant.pieces });
     } else {
       this.ants.splice(i, 1);

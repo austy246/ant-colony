@@ -2,9 +2,15 @@ import { RESEARCH_NODES, type ResearchArm, type ResearchNode } from '../sim/cons
 import type { World } from '../sim/world';
 
 /** Direction of each arm (rad): up, right, down, left. */
-const ARM_ANGLE: Record<ResearchArm, number> = { gather: -Math.PI / 2, haul: 0, war: Math.PI / 2, nest: Math.PI };
-const ARM_COLOR: Record<ResearchArm, string> = { gather: '#e0a030', haul: '#5aa0e0', war: '#d05a4a', nest: '#6cc070' };
-const ARM_NAME: Record<ResearchArm, string> = { gather: 'Sběr', haul: 'Nosnost', war: 'Boj', nest: 'Hnízdo' };
+const ARM_ANGLE: Record<ResearchArm, number> = {
+  gather: -Math.PI / 2,
+  haul: -Math.PI / 2 + (Math.PI * 2) / 5,
+  war: -Math.PI / 2 + (Math.PI * 4) / 5,
+  nest: -Math.PI / 2 + (Math.PI * 6) / 5,
+  chem: -Math.PI / 2 + (Math.PI * 8) / 5,
+};
+const ARM_COLOR: Record<ResearchArm, string> = { gather: '#e0a030', haul: '#5aa0e0', war: '#d05a4a', nest: '#6cc070', chem: '#b6e03a' };
+const ARM_NAME: Record<ResearchArm, string> = { gather: 'Sběr', haul: 'Nosnost', war: 'Boj', nest: 'Hnízdo', chem: 'Chemie' };
 /** Distance of the three chain nodes and of the two branches from the nest (layout units), and the branches' spread (rad). */
 const RING = [92, 170, 248] as const;
 const BRANCH_R = 330;
@@ -34,7 +40,7 @@ type State = 'bought' | 'ready' | 'poor' | 'locked';
 function stateOf(world: World, n: ResearchNode): State {
   if (world.has(n.id)) return 'bought';
   if (n.req !== null && !world.has(n.req)) return 'locked';
-  return world.stock + 1e-9 >= n.cost ? 'ready' : 'poor';
+  return world.xp + 1e-9 >= n.cost ? 'ready' : 'poor';
 }
 
 /**
@@ -82,7 +88,7 @@ export function openResearchTree(root: HTMLElement, world: World): () => void {
   const sy = (y: number): number => h / 2 + y * scale;
 
   const draw = (): void => {
-    title.textContent = `Výzkum · Zásoba: ${world.stock.toFixed(1)}`;
+    title.textContent = `Výzkum · Zkušenost: ${world.xp.toFixed(1)}`;
     if (!ctx) return;
     ctx.clearRect(0, 0, w, h);
     // faint rings round the nest
@@ -163,7 +169,7 @@ export function openResearchTree(root: HTMLElement, world: World): () => void {
     if (hover) {
       const n = hover.node;
       const st = stateOf(world, n);
-      const lines = [n.name, n.desc, st === 'bought' ? 'Hotovo' : st === 'locked' ? 'Nejdřív předchozí uzel' : `Cena: ${n.cost} jídla`];
+      const lines = [n.name, n.desc, st === 'bought' ? 'Hotovo' : st === 'locked' ? 'Nejdřív předchozí uzel' : `Cena: ${n.cost} zkušenosti`];
       ctx.font = `${Math.round(14 * Math.max(0.85, scale))}px "Pixelify Sans", monospace`;
       const tw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 20;
       const lh = 20 * Math.max(0.85, scale);

@@ -12,7 +12,7 @@ import { drawRedNest } from './redNestArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { drawSquirt } from './squirt';
-import { ACID_RGBA, RED_RGBA, SELECTED_RGBA } from './antArt';
+import { ACID_RED_RGBA, ACID_RGBA, RED_RGBA, SELECTED_RGBA } from './antArt';
 import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
 import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
@@ -69,6 +69,7 @@ export class Renderer {
   private redSprites: AntSprites | null = null;
   private selectedSprites: AntSprites | null = null;
   private acidSprites: AntSprites | null = null;
+  private acidRedSprites: AntSprites | null = null;
   private bushSprite: BushSprite | null = null;
   /** Walking-animation state per ant id; entries of ants that are gone are pruned by generation. */
   private strides = new Map<number, StrideState>();
@@ -191,12 +192,13 @@ export class Renderer {
             : sprites;
         drawAnt(c, spr, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
       }
+      for (const a of ants) if (a.sprayT !== undefined) drawSquirt(c, a);
       const reds = this.world.reds;
       if (reds.length > 0) {
         // red raiders: the same ant art in red, a simple time-driven gait (they are not tracked by the stride state)
         const rs = (this.redSprites ??= new AntSprites(this.make, RED_RGBA));
         for (const r of reds) {
-          drawAnt(c, rs, r.x, r.y, antDirection(r.heading), r.fightT !== undefined || r.sprayT !== undefined || r.gnawT !== undefined ? 0 : Math.floor(this.world.time * 8 + r.id) % ANT_FRAMES, (r.carry ?? 0) > 0);
+          drawAnt(c, r.acidT !== undefined ? (this.acidRedSprites ??= new AntSprites(this.make, ACID_RED_RGBA)) : rs, r.x, r.y, antDirection(r.heading), r.fightT !== undefined || r.sprayT !== undefined || r.gnawT !== undefined ? 0 : Math.floor(this.world.time * 8 + r.id) % ANT_FRAMES, (r.carry ?? 0) > 0);
           if (r.sprayT !== undefined) drawSquirt(c, r);
         }
       }

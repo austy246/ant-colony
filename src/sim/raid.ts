@@ -24,6 +24,8 @@ export interface RedAnt {
   sprayT?: number;
   sprayTo?: { x: number; y: number };
   sprayCd?: number;
+  /** Seconds left of the black ants' acid on it (slowed, weaker in a duel). Transient. */
+  acidT?: number;
 }
 
 /** The nest of the red ants (normal mode, from RAID_MIN_ANTS black ants): red ants come out of it for good, raids set off from it. */

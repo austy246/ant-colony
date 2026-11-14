@@ -1,14 +1,13 @@
 import { SPRAY_ANIM_S } from '../sim/constants';
-import type { RedAnt } from '../sim/raid';
 import type { Ctx2D } from './sprites';
 
 const snap = (v: number): number => Math.round(v * 2) / 2;
 
 /**
- * A red ant squirting acid: it cocks its abdomen up (a little green drop at its rear, pulsing), then a short chain of green
+ * An ant squirting acid: it cocks its abdomen up (a little green drop at its rear, pulsing), then a short chain of green
  * drops flies in an arc to the black ant in front of it (`r.sprayTo`). Drawn over the red ant while `r.sprayT` runs.
  */
-export function drawSquirt(c: Ctx2D, r: RedAnt): void {
+export function drawSquirt(c: Ctx2D, r: { x: number; y: number; heading: number; sprayT?: number; sprayTo?: { x: number; y: number } }): void {
   if (r.sprayT === undefined || !r.sprayTo) return;
   const t = Math.max(0, Math.min(1, 1 - r.sprayT / SPRAY_ANIM_S)); // 0 at the start of the flick, 1 at its end
   const hx = Math.cos(r.heading);

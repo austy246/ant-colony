@@ -237,14 +237,15 @@ export const GARDEN_RATE = 0.08;
 export const GARDEN_WINTER_MUL = 2;
 
 /**
- * Research tree (permanent upgrades the player buys with food). Four arms radiate from the nest; each is a chain of three nodes
- * (price 30, 70, 140) ending in two branches (150 each). A node can be bought once the node it hangs from is bought.
+ * Research tree (permanent upgrades the player buys with experience, see XP_PER_FOOD). Five arms radiate from the nest; each is a chain of three nodes
+ * (price 3, 6, 12) ending in two branches (15 each). A node can be bought once the node it hangs from is bought.
  *   gather: g1-g3 smell (food noticed 25 % further per level), g4 stronger trail, g5 longer-lasting trail
  *   haul:   h1-h3 carry (carriers 8 % faster per level; level 2: workers take two pieces; level 3: majors one more), h4 all ants faster, h5 longer sugar boost
  *   war:    w1-w3 fight (+5 % duel win chance per level), w4 more majors, w5 red ants noticed from further away
  *   nest:   n1-n3 faster hatching (8 % each), n4 mushroom gardens (+50 % food, a fourth garden), n5 winter coat (no winter slowdown)
+ *   chem:   c1 black ants squirt acid on red ants (like the red ones do), c2 it lasts longer, c3 shorter wait, c4 slows more, c5 weakens more in a duel
  */
-export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest';
+export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest' | 'chem';
 export interface ResearchNode {
   id: string;
   arm: ResearchArm;
@@ -263,7 +264,7 @@ const arm = (a: ResearchArm, p: string, names: [string, string, string, string, 
     pos,
     name,
     desc: descs[pos],
-    cost: pos < 3 ? ([30, 70, 140] as const)[pos] : 150,
+    cost: pos < 3 ? ([3, 6, 12] as const)[pos] : 15,
     req: pos === 0 ? null : pos < 4 ? `${p}${pos}` : `${p}3`,
   }));
 export const RESEARCH_NODES: readonly ResearchNode[] = [
@@ -283,6 +284,10 @@ export const RESEARCH_NODES: readonly ResearchNode[] = [
     'Mravenci se líhnou o 8 % rychleji.', 'Dalších 8 %.', 'Dalších 8 %.',
     'Houbové zahrady dávají o 50 % víc jídla a jde jich vykopat čtyři.', 'V zimě se mravenci nezpomalují.',
   ]),
+  ...arm('chem', 'c', ['Kyselina', 'Hojná kyselina', 'Rychlé žlázy', 'Silný jed', 'Žíravina'], [
+    'Černí mravenci stříkají kyselinu na červené: zpomalí je a oslabí v souboji.', 'Kyselina působí o polovinu déle.', 'Mravenci stříkají o 40 % častěji.',
+    'Postříkaní červení se hýbou jen čtvrtinovou rychlostí.', 'Postříkaný červený vyhraje souboj jen s třetinou obvyklé šance.',
+  ]),
 ];
 export const RESEARCH_IDS: ReadonlySet<string> = new Set(RESEARCH_NODES.map((n) => n.id));
 export const RESEARCH_SMELL_PER_LEVEL = 0.25;
@@ -297,6 +302,15 @@ export const RESEARCH_MAJOR_CAP = 0.14;
 export const RESEARCH_RED_SENSE_MUL = 1.5;
 export const RESEARCH_HATCH_MUL = 0.92;
 export const RESEARCH_GARDEN_MUL = 1.5;
+export const RESEARCH_ACID_LONG = 1.5;
+export const RESEARCH_COOLDOWN_MUL = 0.6;
+export const RESEARCH_ACID_SLOW = 0.25;
+export const RESEARCH_ACID_WIN = 0.35;
+
+/** Experience, the currency of the research: a tenth of a point for every food delivered, a point for every red ant killed and one a minute. */
+export const XP_PER_FOOD = 0.1;
+export const XP_PER_KILL = 1;
+export const XP_PER_S = 1 / 60;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

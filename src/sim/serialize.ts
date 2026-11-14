@@ -6,7 +6,7 @@ import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
 /** Ant fields that only live while the ant is steering a certain way; never written to a save. */
-type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat' | 'goal' | 'acidT';
+type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat' | 'goal' | 'acidT' | 'sprayT' | 'sprayTo' | 'sprayCd';
 
 export interface SaveV1 {
   version: 1;
@@ -63,6 +63,8 @@ export interface SaveV1 {
   gardens?: number;
   /** Optional (absent = none): ids of the bought research nodes. */
   research?: string[];
+  /** Optional (absent = 0): experience points, the currency of the research. */
+  xp?: number;
   /** Optional (absent = none): the second nest the player founded. */
   satellite?: { x: number; y: number };
   /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
@@ -88,7 +90,7 @@ function foodToSave(f: FoodItem): FoodItem {
 
 /** Persistent fields of an ant only (the transient steering state is left out). */
 function antToSave(a: Ant): SaveV1['ants'][number] {
-  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, goal: _g, acidT: _a, ...rest } = a;
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, goal: _g, acidT: _a, sprayT: _st, sprayTo: _sto, sprayCd: _scd, ...rest } = a;
   return rest;
 }
 
@@ -141,6 +143,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     hatchFocus: w.hatchFocus,
     gardens: w.gardens,
     research: [...w.unlocked],
+    xp: w.xp,
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
@@ -169,6 +172,7 @@ export function worldFromSave(s: SaveV1): World {
   w.sugarReadyAt = Math.min(s.sugarReadyAt ?? 0, s.time + SUGAR_COOLDOWN_S);
   w.boostUntil = Math.min(s.boostUntil ?? 0, s.time + SUGAR_BOOST_S);
   w.spawnTimer = s.spawnTimer ?? 0;
+  w.xp = Math.max(0, s.xp ?? 0);
   w.unlocked = new Set((s.research ?? []).filter((id) => RESEARCH_IDS.has(id)));
   w.gardens = Math.max(0, Math.min(w.gardenMax, Math.floor(s.gardens ?? 0)));
   w.satellite = s.satellite ? { x: s.satellite.x, y: s.satellite.y } : null;
@@ -306,6 +310,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.guardFraction !== undefined && (!isNum(o.guardFraction) || o.guardFraction < 0 || o.guardFraction > GUARD_FRACTION_MAX)) return null;
   if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
   if (o.gardens !== undefined && (!isInt(o.gardens) || o.gardens < 0 || o.gardens > GARDEN_MAX + 1)) return null;
+  if (o.xp !== undefined && (!isNum(o.xp) || o.xp < 0)) return null;
   if (o.research !== undefined && (!Array.isArray(o.research) || o.research.some((id) => typeof id !== 'string'))) return null;
   const size0 = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.satellite !== undefined) {
