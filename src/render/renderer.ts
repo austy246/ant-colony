@@ -11,7 +11,7 @@ import { BushSprite, drawBush } from './bushArt';
 import { drawRedNest } from './redNestArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
-import { RED_RGBA } from './antArt';
+import { RED_RGBA, SELECTED_RGBA } from './antArt';
 import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
 import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
@@ -66,6 +66,7 @@ export class Renderer {
   private trailImage: ImageData | null = null;
   private antSprites: AntSprites | null = null;
   private redSprites: AntSprites | null = null;
+  private selectedSprites: AntSprites | null = null;
   private bushSprite: BushSprite | null = null;
   /** Walking-animation state per ant id; entries of ants that are gone are pruned by generation. */
   private strides = new Map<number, StrideState>();
@@ -181,7 +182,8 @@ export class Renderer {
         const st = advanceStride(this.strides.get(a.id), a.x, a.y);
         st.gen = gen;
         this.strides.set(a.id, st);
-        drawAnt(c, sprites, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
+        const spr = a.id === this.world.selectedAntId ? (this.selectedSprites ??= new AntSprites(this.make, SELECTED_RGBA)) : sprites;
+        drawAnt(c, spr, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
       }
       const reds = this.world.reds;
       if (reds.length > 0) {

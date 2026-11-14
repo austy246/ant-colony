@@ -226,6 +226,8 @@ export const SATELLITE_MIN_ANTS = 60;
 export const SATELLITE_COST = 30;
 export const SATELLITE_MIN_DIST = 120;
 export const SATELLITE_RED_GAP = 80;
+/** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */
+export const GOAL_MAX_S = 600;
 /** A raid brings RAID_SIZE_MIN..RAID_SIZE_MAX red ants (never more than half of the black ones). */
 export const RAID_SIZE_MIN = 100;
 export const RAID_SIZE_MAX = 500;

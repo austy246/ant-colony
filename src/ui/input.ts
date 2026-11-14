@@ -13,6 +13,7 @@ export type Tool =
   | { kind: 'found' };
 
 const PICK_RADIUS = 8;
+const ANT_PICK_RADIUS = 7;
 const CLICK_SLOP = 4;
 const WHEEL_SENSITIVITY = 0.0015;
 
@@ -165,6 +166,18 @@ export class Input {
     }
   };
 
+  /** Click on an ant: select it (click it again to let go); click elsewhere with an ant selected: it walks there. */
+  private antClick(w: { x: number; y: number }): void {
+    const hit = this.world.pickAnt(w.x, w.y, ANT_PICK_RADIUS);
+    if (hit) {
+      this.world.selectedAntId = this.world.selectedAntId === hit.id ? null : hit.id;
+      return;
+    }
+    const id = this.world.selectedAntId;
+    if (id === null) return;
+    if (!this.world.sendAnt(id, w.x, w.y) && !this.world.ants.some((a) => a.id === id)) this.world.selectedAntId = null;
+  }
+
   private beginPinch(): void {
     const [a, b] = this.touchPoints();
     this.pinching = true;
@@ -217,6 +230,11 @@ export class Input {
     }
     if (e.pointerId !== this.primaryId) return;
 
+    if (this.mode === 'pan' && e.button === 0 && this.getTool().kind === 'pan') {
+      // a plain click with the Posun tool: pick an ant, or send the picked one there
+      const slop = Math.hypot(p.x - this.start.x, p.y - this.start.y);
+      if (!this.moved && slop < CLICK_SLOP) this.antClick(this.camera.screenToWorld(p.x, p.y));
+    }
     if (this.mode === 'place' && e.button === 0) {
       const slop = Math.hypot(p.x - this.start.x, p.y - this.start.y);
       if (!this.moved && slop < CLICK_SLOP) {

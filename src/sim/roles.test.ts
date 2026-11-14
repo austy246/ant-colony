@@ -302,3 +302,53 @@ describe('the second nest', () => {
     expect(worldFromSave(JSON.parse(JSON.stringify(save))).satellite).toEqual(sat);
   });
 });
+
+describe('controlling one ant', () => {
+  it('an ant sent across the map walks there, ignoring food on the way, then goes on as before', () => {
+    const w = colony(2, 0);
+    w.fixedSeason = 0;
+    const a = w.spawnAnt();
+    a.age = 500;
+    a.state = 'wander';
+    a.x = 40;
+    a.y = 40;
+    w.placeFood('berry', 60, 40); // right on its way
+    expect(w.sendAnt(a.id, 300, 150)).toBe(true);
+    let arrived = -1;
+    for (let i = 0; i < Math.round(300 / STEP_S); i++) {
+      w.step(STEP_S);
+      if (a.goal === undefined) {
+        arrived = i * STEP_S;
+        break;
+      }
+    }
+    expect(arrived).toBeGreaterThan(0);
+    expect(Math.hypot(a.x - 300, a.y - 150)).toBeLessThan(6);
+  });
+
+  it('pickAnt finds the nearest surface ant; sendAnt refuses nest ants and unknown ids', () => {
+    const w = colony(3, 3);
+    const a = w.ants[0];
+    a.state = 'wander';
+    a.x = 100;
+    a.y = 100;
+    for (const o of w.ants.slice(1)) {
+      o.x = 10;
+      o.y = 10;
+    }
+    expect(w.pickAnt(102, 100, 5)?.id).toBe(a.id);
+    expect(w.pickAnt(150, 150, 5)).toBeNull();
+    a.state = 'nest';
+    expect(w.pickAnt(100, 100, 5)).toBeNull();
+    expect(w.sendAnt(a.id, 50, 50)).toBe(false);
+    expect(w.sendAnt(99999, 50, 50)).toBe(false);
+  });
+
+  it('the order is not saved', () => {
+    const w = colony(1, 5);
+    w.ants[0].state = 'wander';
+    w.sendAnt(w.ants[0].id, 100, 100);
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(JSON.stringify(save)).not.toContain('"goal"');
+  });
+});

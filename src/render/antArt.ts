@@ -31,6 +31,17 @@ export const ANT_RGBA: readonly (readonly [number, number, number, number])[] = 
   [10, 6, 3, 97], // rgba(10,6,3,.38)
 ];
 
+/** The ant the player has selected: the same sprites with a slight green cast. Same layout as ANT_RGBA; the crumb and the shadow are unchanged. */
+export const SELECTED_RGBA: readonly (readonly [number, number, number, number])[] = [
+  [0, 0, 0, 0],
+  [0x24, 0x40, 0x1a, 255],
+  [0x4a, 0x7c, 0x34, 255],
+  [0x34, 0x5c, 0x26, 255],
+  [0x18, 0x30, 0x12, 255],
+  [0xe8, 0xe0, 0xc8, 255],
+  [10, 6, 3, 97],
+];
+
 /** Red raiding ant: the same sprites in reds. Same layout as ANT_RGBA; the crumb and the shadow are unchanged. */
 export const RED_RGBA: readonly (readonly [number, number, number, number])[] = [
   [0, 0, 0, 0],

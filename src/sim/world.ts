@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -36,6 +36,8 @@ export interface Ant {
   timer: number;
   /** Only while state is 'nest': why the ant is inside. Absent on the surface. */
   nestKind?: NestKind;
+  /** Transient: the player sent it to this point (it walks there, whatever it was doing, then goes on as before); `t` is the time left. Not saved. */
+  goal?: { x: number; y: number; t: number };
   /** Transient: it unloaded at the satellite nest, so it comes out there (not saved). */
   homeSat?: true;
   role: AntRole;
@@ -230,6 +232,38 @@ export class World {
   hatchFocus: HatchFocus = 'mix';
   /** No-entry marks placed by the player (transient: they are not saved). */
   repels: { x: number; y: number; t: number }[] = [];
+  /** The ant the player has selected (drawn greenish); the next click on the map sends it there. Transient. */
+  selectedAntId: number | null = null;
+  /** The nearest surface ant within `radius` of (x, y), or null. */
+  pickAnt(x: number, y: number, radius: number): Ant | null {
+    let best: Ant | null = null;
+    let bestD = radius;
+    for (const a of this.ants) {
+      if (a.state === 'nest') continue;
+      const d = Math.hypot(a.x - x, a.y - y);
+      if (d <= bestD) {
+        best = a;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+  /** Sends ant `id` to (x, y) (clamped to the map): it walks there across the whole map, whatever it was doing. */
+  sendAnt(id: number, x: number, y: number): boolean {
+    const a = this.ants.find((q) => q.id === id);
+    if (!a || a.state === 'nest' || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+    a.goal = { x: Math.max(1, Math.min(this.terrain.w - 1, x)), y: Math.max(1, Math.min(this.terrain.h - 1, y)), t: GOAL_MAX_S };
+    if (a.state === 'gnaw') {
+      a.state = 'wander';
+      a.timer = 0;
+      a.targetFood = null;
+    }
+    delete a.strayT;
+    delete a.strayH;
+    delete a.lostT;
+    delete a.lostH;
+    return true;
+  }
   /** The second nest the player founded (null = none). Foragers deliver to the nearer of it and NEST. */
   satellite: { x: number; y: number } | null = null;
   /** Test hook: pins the season (0..3) and switches the rain off, so long runs see a steady environment. */
@@ -1214,6 +1248,17 @@ export class World {
     if (ant.state === 'nest') {
       this.updateNestAnt(ant);
       return;
+    }
+
+    if (ant.goal) {
+      // Under the player's orders: straight (around obstacles) to the point, nothing else interrupts it.
+      const g = ant.goal;
+      g.t -= STEP_S;
+      if (g.t <= 0 || Math.hypot(g.x - ant.x, g.y - ant.y) <= 3) delete ant.goal;
+      else {
+        this.move(ant, Math.atan2(g.y - ant.y, g.x - ant.x), 0);
+        return;
+      }
     }
 
     if (ant.state === 'wander' && ant.role !== 'guard') {
