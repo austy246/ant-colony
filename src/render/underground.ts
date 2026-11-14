@@ -606,13 +606,13 @@ export class UndergroundView {
 
   /** Plates of the labels, drawn last (above ants, larvae and crumbs). */
   private drawLabels(c: Ctx2D, layout: NestLayout, shown: Chamber[], dug: Tunnel[]): void {
-    const sig = `${layout.key}|${shown.map((s) => s.id).join(',')}`;
+    const sig = `${layout.key}|${shown.map((s) => s.id).join(',')}|${this.world.gardens}`;
     if (this.platesSig !== sig) {
       // too many chambers for plates: skip the search among them (labelPlates would give none)
       this.plates =
         shown.length > MAX_LABELED_CHAMBERS
           ? []
-          : labelPlates(layout.chambers.filter((x) => shown.some((s) => s.id === x.id)), dug, this.sw, this.sh, layout.surfaceY);
+          : labelPlates(layout.chambers.filter((x) => shown.some((s) => s.id === x.id)), dug, this.sw, this.sh, layout.surfaceY, this.world.gardens);
       this.platesSig = sig;
     }
     for (const p of this.plates) {

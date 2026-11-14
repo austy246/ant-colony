@@ -404,6 +404,9 @@ const GLYPHS: Record<string, string[]> = {
   P: ['##.', '#.#', '##.', '#..', '#..'],
   I: ['###', '.#.', '.#.', '.#.', '###'],
   Z: ['###', '..#', '.#.', '#..', '###'],
+  H: ['#.#', '#.#', '###', '#.#', '#.#'],
+  U: ['#.#', '#.#', '#.#', '#.#', '###'],
+  B: ['##.', '#.#', '##.', '#.#', '##.'],
   '1': ['.#.', '##.', '.#.', '.#.', '###'],
   '2': ['##.', '..#', '.#.', '#..', '###'],
   '3': ['##.', '..#', '.#.', '..#', '##.'],
@@ -610,7 +613,7 @@ const gh = (a: number, b: number): number => {
  */
 export function paintGarden(c: Ctx2D, ch: Blob, rx: number, ry: number, seed: number, time: number): void {
   const base = floorY(ch, ry);
-  const w = Math.max(10, Math.min(34, Math.round(rx * 0.9)));
+  const w = Math.max(16, Math.min(44, Math.round(rx * 1.1)));
   const x0 = Math.round(ch.cx - rx * 0.55);
   // the bed: leaf mould, lighter on top
   c.fillStyle = '#2b2218';
@@ -622,18 +625,23 @@ export function paintGarden(c: Ctx2D, ch: Blob, rx: number, ry: number, seed: nu
   const n = Math.max(3, Math.floor(w / 5));
   for (let i = 0; i < n; i++) {
     const mx = x0 + 2 + Math.floor(((i + gh(i, seed + 3) * 0.7) / n) * (w - 6));
-    const h = 3 + Math.floor(gh(i, seed + 7) * 4); // stem height 3..6
-    const cap = 3 + Math.floor(gh(i, seed + 11) * 3); // cap width 3..5
+    const h = 5 + Math.floor(gh(i, seed + 7) * 5); // stem height 5..9
+    const cap = 5 + Math.floor(gh(i, seed + 11) * 4); // cap width 5..8
     const red = gh(i, seed + 13) < 0.35;
     const top = base - 2 - h;
-    c.fillStyle = '#d9d0b0';
-    c.fillRect(mx + Math.floor(cap / 2), top + 1, 1, h);
-    c.fillStyle = red ? '#a8503a' : '#c9aa72';
-    c.fillRect(mx, top, cap, 1);
-    c.fillStyle = red ? '#7a3624' : '#9a7e4c';
-    c.fillRect(mx + 1, top + 1, cap - 2, 1);
-    c.fillStyle = '#efe6c9'; // a pale speck on the cap
+    // a faint glow around the cap so the garden stands out from the crumbs of the pantry
+    c.fillStyle = 'rgba(150,230,170,.22)';
+    c.fillRect(mx - 1, top - 2, cap + 2, 4);
+    c.fillStyle = '#e6dcb8';
+    c.fillRect(mx + Math.floor(cap / 2), top + 2, 2, h);
+    c.fillStyle = red ? '#c0583e' : '#d8b878';
+    c.fillRect(mx, top, cap, 2);
+    c.fillRect(mx + 1, top - 1, cap - 2, 1);
+    c.fillStyle = red ? '#8a3a28' : '#a8884e';
+    c.fillRect(mx, top + 2, cap, 1);
+    c.fillStyle = '#fff6dc'; // pale specks on the cap
     c.fillRect(mx + 1, top, 1, 1);
+    c.fillRect(mx + cap - 3, top + 1, 1, 1);
   }
   // spores: two or three faint greenish motes rising from the bed
   c.fillStyle = 'rgba(170,215,140,.55)';

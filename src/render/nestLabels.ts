@@ -22,8 +22,9 @@ export interface Plate {
 const NAMES = { queen: 'Královna', larvae: 'Larvy', pantry: 'Spíž' } as const;
 
 /** The label of a chamber; `several` adds the number (1-based) of the chamber within its kind. */
-export function chamberLabel(c: Pick<Chamber, 'kind' | 'index'>, several: boolean): string {
-  return several ? `${NAMES[c.kind]} ${c.index + 1}` : NAMES[c.kind];
+export function chamberLabel(c: Pick<Chamber, 'kind' | 'index'>, several: boolean, garden = false): string {
+  const base = several ? `${NAMES[c.kind]} ${c.index + 1}` : NAMES[c.kind];
+  return garden && c.kind === 'pantry' ? `${base} Houby` : base;
 }
 
 export const PLATE_H = 9;
@@ -40,6 +41,7 @@ export function labelPlates(
   width: number,
   height: number,
   surfaceY: number,
+  gardens = 0,
 ): Plate[] {
   if (chambers.length > MAX_LABELED_CHAMBERS) return [];
   const counts = { queen: 0, larvae: 0, pantry: 0 };
@@ -65,7 +67,7 @@ export function labelPlates(
   };
 
   chambers.forEach((c, i) => {
-    const text = chamberLabel(c, counts[c.kind] > 1);
+    const text = chamberLabel(c, counts[c.kind] > 1, c.kind === 'pantry' && c.index < gardens);
     const w = textW(text) + 4;
     const e = { rx: c.rx * (1 + c.lobes.reduce((a, l) => a + Math.abs(l.a), 0)), ry: c.ry * (1 + c.lobes.reduce((a, l) => a + Math.abs(l.a), 0)) };
     const mk = (x: number, y: number): Plate => ({ id: c.id, text, x: Math.round(x), y: Math.round(y), w, h: PLATE_H });
