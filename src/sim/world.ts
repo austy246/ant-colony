@@ -412,7 +412,7 @@ export class World {
     return f - Math.floor(f) < RAIN_P && this.time - block * RAIN_BLOCK_S < RAIN_S;
   }
   /** Seconds since the current raid began. */
-  private raidAge = 0;
+  raidAge = 0;
   /** Share of the colony on guard duty: the player's slider (0..GUARD_FRACTION_MAX), saved with the game. */
   guardFraction = GUARD_FRACTION;
   /** Test hook: no guards (tests that count on every ant of a colony foraging). */
@@ -443,7 +443,7 @@ export class World {
   private exploreH: number;
   private acc = 0;
   /** Seconds the colony has been empty and out of food (rescue clock; transient, not saved). */
-  private rescueTimer = 0;
+  rescueTimer = 0;
   /** Index of the last NURSE_EVAL_S slot of sim time in which the nurse count was re-evaluated (-1 = not yet; transient, derived from `time`). */
   private nurseSlot = -1;
 
@@ -1881,7 +1881,7 @@ export class World {
     return r && this.reds.length > 0 ? r : null;
   }
 
-  private redPherDirty = false;
+  redPherDirty = false;
   private redTargets = new WeakMap<Ant, RedAnt | null>();
   /** Which ant is on its way to which drop of honeydew (id -> claim), and how many ants are in the bush now. Transient. */
   private honeyClaims = new Map<number, { ant: Ant; t: number }>();
@@ -1966,8 +1966,8 @@ export class World {
     });
   }
 
-  /** Raiders still to come out of the red nest (transient). */
-  private raidPending = 0;
+  /** Raiders still to come out of the red nest (saved, so a raid in progress goes on after a reload). */
+  raidPending = 0;
   private raidEmerge = 0;
   /** Lets up to `max` of the pending raiders (at the rate RAID_EMERGE_PER_S) out of the red nest's mouth. */
   private emergeRaiders(max: number): void {

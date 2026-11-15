@@ -192,14 +192,15 @@ describe('exploration', () => {
     expect(a.state === 'gnaw' || a.state === 'carry').toBe(true);
   });
 
-  it('a world restored from a save starts with an empty grid and keeps working', () => {
+  it('a world restored from a save keeps the explored grid and keeps working', () => {
     const w = flatWorld(10);
     for (let i = 0; i < 4; i++) w.spawnAnt();
     run(w, 20);
     expect(total(w)).toBeGreaterThan(0);
     const r = worldFromSave(worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } }));
     expect(r.explored.length).toBe(CW * CH);
-    expect(total(r)).toBe(0);
+    expect(total(r)).toBeGreaterThan(total(w) * 0.9);
+    expect(total(r)).toBeLessThan(total(w) * 1.1);
     run(r, 30);
     expect(total(r)).toBeGreaterThan(0);
     expect(r.explored.every((v) => Number.isFinite(v) && v >= 0 && v <= EXPLORE_CAP)).toBe(true);

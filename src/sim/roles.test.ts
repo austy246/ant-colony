@@ -344,12 +344,13 @@ describe('controlling one ant', () => {
     expect(w.sendAnt(99999, 50, 50)).toBe(false);
   });
 
-  it('the order is not saved', () => {
+  it('the order is saved, so the ant goes on after a reload', () => {
     const w = colony(1, 5);
     w.ants[0].state = 'wander';
     w.sendAnt(w.ants[0].id, 100, 100);
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
-    expect(JSON.stringify(save)).not.toContain('"goal"');
+    expect(JSON.stringify(save)).toContain('"goal"');
+    expect(worldFromSave(JSON.parse(JSON.stringify(save))).ants[0].goal).toBeDefined();
   });
 });
 
@@ -534,7 +535,7 @@ describe('red ants spit acid', () => {
     expect(sprayed).toBe(true);
   });
 
-  it('acid lasts ACID_S seconds, slows to ACID_SLOW and is not saved', () => {
+  it('acid lasts ACID_S seconds, slows to ACID_SLOW and is saved while it lasts', () => {
     const w = colony(7, 0);
     w.fixedSeason = 0;
     w.noGuards = true;
@@ -565,7 +566,7 @@ describe('red ants spit acid', () => {
     expect(a.acidT).toBeUndefined();
     a.acidT = 5;
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
-    expect(JSON.stringify(save)).not.toContain('acidT');
+    expect(JSON.stringify(save)).toContain('acidT');
   });
 
   it('an acid-covered black ant wins a duel half as often', () => {

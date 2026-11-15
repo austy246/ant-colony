@@ -1,13 +1,14 @@
-import { APHID_MAX, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, EXPLORE_CAP, REPEL_MAX, SORTIE_COOLDOWN_S, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { antRarity, rarityBonus, type StoredAnt } from './collection';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
+import type { RedAnt } from './raid';
 import type { Bush } from './aphids';
 import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
 /** Ant fields that only live while the ant is steering a certain way; never written to a save. */
-type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'homeSat' | 'goal' | 'acidT' | 'sprayT' | 'sprayTo' | 'sprayCd' | 'webFreeT';
+type TransientAntKey = 'strayT' | 'strayH' | 'lostT' | 'lostH' | 'weave' | 'sprayT' | 'sprayTo' | 'sprayCd';
 
 export interface SaveV1 {
   version: 1;
@@ -68,6 +69,21 @@ export interface SaveV1 {
   xp?: number;
   /** Optional (absent = none): the explored patches that already gave experience, as cy * 4096 + cx. */
   seen?: number[];
+  /** Optional (absent = none): the red ants on the map (patrols and raiders); only what is needed to carry on, not their fights or acid. */
+  reds?: SavedRed[];
+  /** Optional (absent = none): the red ants' own pheromone, same coding as `pheromone` (only saved when there is any). */
+  redPheromone?: string;
+  /** Optional (absent = none): the player's no-entry marks (position, seconds left). */
+  repels?: { x: number; y: number; t: number }[];
+  /** Optional (absent = empty): the explored grid (what the ants walked over lately), one byte per cell. */
+  explored?: string;
+  /** Optional: seconds since the raid in progress started, raiders still to come out of the red nest, and when the next Výpad may be launched. */
+  raidAge?: number;
+  raidPending?: number;
+  sortieReadyAt?: number;
+  /** Optional: seconds the colony has been empty and out of food (the rescue clock), and the ant the player has selected. */
+  rescueTimer?: number;
+  selectedAntId?: number | null;
   /** Optional (absent = false: an older save): the rarity bonus is already part of every ant's speed, curiosity and stubbornness. */
   raritiesApplied?: boolean;
   /** Optional (absent = none): the ants kept safe in the terrarium of the collection. */
@@ -83,7 +99,35 @@ export interface SaveV1 {
   /** Optional (absent = no bush yet): the aphids bush (normal mode). */
   bush?: Bush;
   /** Optional (absent = none yet): the red ants' nest (normal mode) and who holds it. */
-  redNest?: { x: number; y: number; owner: 'red' | 'black'; stock?: number };
+  redNest?: { x: number; y: number; owner: 'red' | 'black'; stock?: number; delivered?: number };
+}
+
+/** A red ant as saved: its place, way and job, nothing that is over in a few seconds. */
+export type SavedRed = Pick<RedAnt, 'id' | 'x' | 'y' | 'heading' | 'spd' | 'ox' | 'oy' | 'patrol' | 'job' | 'carry' | 'tf' | 'gnawT'>;
+
+function redToSave(r: RedAnt): SavedRed {
+  const o: SavedRed = { id: r.id, x: r.x, y: r.y, heading: r.heading };
+  if (r.spd !== undefined) o.spd = r.spd;
+  if (r.ox !== undefined) o.ox = r.ox;
+  if (r.oy !== undefined) o.oy = r.oy;
+  if (r.patrol) o.patrol = true;
+  if (r.job !== undefined) o.job = r.job;
+  if (r.carry !== undefined) o.carry = r.carry;
+  if (r.tf !== undefined) o.tf = r.tf;
+  if (r.gnawT !== undefined) o.gnawT = r.gnawT;
+  return o;
+}
+
+/** A pheromone field as one byte per cell, base64; null when there is nothing in it. */
+function fieldToBase64(data: Float32Array, max: number, skipEmpty: boolean): string | null {
+  const bytes = new Uint8Array(data.length);
+  let any = false;
+  for (let i = 0; i < bytes.length; i++) {
+    const v = Math.max(0, Math.min(255, Math.round((data[i] / max) * 255)));
+    bytes[i] = v;
+    if (v > 0) any = true;
+  }
+  return skipEmpty && !any ? null : bytesToBase64(bytes);
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -99,7 +143,7 @@ function foodToSave(f: FoodItem): FoodItem {
 
 /** Persistent fields of an ant only (the transient steering state is left out). */
 function antToSave(a: Ant): SaveV1['ants'][number] {
-  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, homeSat: _hs, goal: _g, acidT: _a, sprayT: _st, sprayTo: _sto, sprayCd: _scd, webFreeT: _wf, ...rest } = a;
+  const { strayT: _s, strayH: _sh, lostT: _l, lostH: _lh, weave: _w, carryLeaf: _cl, duelT: _d, sprayT: _st, sprayTo: _sto, sprayCd: _scd, ...rest } = a;
   return rest;
 }
 
@@ -117,6 +161,11 @@ function base64ToBytes(b64: string): Uint8Array {
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+function redField(w: World): { redPheromone?: string } {
+  const r = fieldToBase64(w.redPher.data, MAX_PHEROMONE, true);
+  return r === null ? {} : { redPheromone: r };
 }
 
 export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV1['camera'] }): SaveV1 {
@@ -160,7 +209,16 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
-    ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0 } } : {}),
+    ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0, delivered: w.redNest.delivered ?? 0 } } : {}),
+    reds: w.reds.map(redToSave),
+    ...redField(w),
+    repels: w.repels.map((r) => ({ x: r.x, y: r.y, t: r.t })),
+    explored: fieldToBase64(w.explored, EXPLORE_CAP, false) ?? '',
+    raidAge: w.raidAge,
+    raidPending: w.raidPending,
+    sortieReadyAt: w.sortieReadyAt,
+    rescueTimer: w.rescueTimer,
+    selectedAntId: w.selectedAntId,
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
   };
 }
@@ -223,7 +281,22 @@ export function worldFromSave(s: SaveV1): World {
     for (const a of w.terrarium) give(a);
   }
   w.bush = s.bush ? { ...s.bush } : null;
-  w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, stock: s.redNest.stock ?? 0, trickleT: RED_TRICKLE_S } : null;
+  w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, stock: s.redNest.stock ?? 0, delivered: s.redNest.delivered ?? 0, trickleT: RED_TRICKLE_S } : null;
+  // the red ants on the map and their trails, the player's marks, what the ants have explored lately, a raid in progress
+  w.reds = (s.reds ?? []).map((r) => ({ ...r }));
+  const redBytes = s.redPheromone ? base64ToBytes(s.redPheromone) : null;
+  if (redBytes && redBytes.length === w.redPher.data.length) {
+    for (let i = 0; i < redBytes.length; i++) w.redPher.data[i] = (redBytes[i] / 255) * MAX_PHEROMONE;
+    w.redPherDirty = true; // so a trail with no red ant left to feed it still fades away
+  }
+  w.repels = (s.repels ?? []).slice(0, REPEL_MAX).map((r) => ({ x: r.x, y: r.y, t: r.t }));
+  const exBytes = s.explored ? base64ToBytes(s.explored) : null;
+  if (exBytes && exBytes.length === w.explored.length) for (let i = 0; i < exBytes.length; i++) w.explored[i] = (exBytes[i] / 255) * EXPLORE_CAP;
+  w.raidAge = s.raidAge ?? 0;
+  w.raidPending = s.raidPending ?? 0;
+  w.sortieReadyAt = Math.min(s.sortieReadyAt ?? 0, s.time + SORTIE_COOLDOWN_S);
+  w.rescueTimer = s.rescueTimer ?? 0;
+  w.selectedAntId = s.selectedAntId != null && w.ants.some((a) => a.id === s.selectedAntId) ? s.selectedAntId : null;
   // Without a living spider nobody can be stuck in a web.
   // Clamped to one full respawn from now, like the sugar clocks.
   w.spider = s.spider ? { ...s.spider, respawnT: Math.min(s.spider.respawnT, SPIDER_RESPAWN_S) } : null;
@@ -268,7 +341,28 @@ function validAnt(a: unknown, size: { w: number; h: number }): boolean {
     (o.major === undefined || o.major === true) &&
     (o.superMajor === undefined || (o.superMajor === true && o.major === true)) &&
     (o.carrySugar === undefined || o.carrySugar === true) &&
-    (o.caughtT === undefined || (isNum(o.caughtT) && o.caughtT >= 0))
+    (o.caughtT === undefined || (isNum(o.caughtT) && o.caughtT >= 0)) &&
+    (o.acidT === undefined || (isNum(o.acidT) && o.acidT >= 0)) &&
+    (o.webFreeT === undefined || (isNum(o.webFreeT) && o.webFreeT >= 0)) &&
+    (o.homeSat === undefined || o.homeSat === true) &&
+    (o.goal === undefined || validGoal(o.goal))
+  );
+}
+
+function validGoal(g: unknown): boolean {
+  if (typeof g !== 'object' || g === null) return false;
+  const o = g as Record<string, unknown>;
+  return isNum(o.x) && isNum(o.y) && isNum(o.t) && o.t >= 0;
+}
+
+function validRed(r: unknown, size: { w: number; h: number }): boolean {
+  if (typeof r !== 'object' || r === null) return false;
+  const o = r as Record<string, unknown>;
+  return (
+    isInt(o.id) && inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isNum(o.heading) &&
+    (o.spd === undefined || inRange(o.spd, 0.1, 5)) && (o.ox === undefined || isNum(o.ox)) && (o.oy === undefined || isNum(o.oy)) &&
+    (o.patrol === undefined || o.patrol === true) && (o.job === undefined || o.job === 'guard' || o.job === 'forager') &&
+    (o.carry === undefined || (isNum(o.carry) && o.carry >= 0)) && (o.tf === undefined || isNum(o.tf)) && (o.gnawT === undefined || (isNum(o.gnawT) && o.gnawT >= 0))
   );
 }
 
@@ -362,6 +456,14 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (o.bush !== undefined && !validBush(o.bush, size)) return null;
   if (o.redNest !== undefined && !validRedNest(o.redNest, size)) return null;
+  if (o.reds !== undefined && (!Array.isArray(o.reds) || o.reds.length > 3000 || !o.reds.every((r) => validRed(r, size)))) return null;
+  if (o.redPheromone !== undefined && (typeof o.redPheromone !== 'string' || !validPheromone(o.redPheromone, size))) return null;
+  if (o.repels !== undefined && (!Array.isArray(o.repels) || o.repels.length > REPEL_MAX || !o.repels.every((r) => typeof r === 'object' && r !== null && isNum(r.x) && isNum(r.y) && isNum(r.t) && r.t >= 0))) return null;
+  if (o.explored !== undefined && typeof o.explored !== 'string') return null;
+  for (const k of ['raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer'] as const) {
+    if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
+  }
+  if (o.selectedAntId !== undefined && o.selectedAntId !== null && !isInt(o.selectedAntId)) return null;
   if (typeof o.introDone !== 'boolean' || typeof o.pheromone !== 'string') return null;
   const c = o.camera as Record<string, unknown> | null | undefined;
   if (typeof c !== 'object' || c === null || !isNum(c.x) || !isNum(c.y) || !isNum(c.zoom) || c.zoom <= 0) return null;
@@ -370,6 +472,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   for (const e of [...(o.ants as { id: number }[]), ...(o.food as { id: number }[])]) {
     if (e.id >= o.nextId) return null;
   }
+  for (const r of (o.reds as { id: number }[] | undefined) ?? []) if (r.id >= (o.nextId as number)) return null;
   if (!validPheromone(o.pheromone, size)) return null;
   return x as SaveV1;
 }
