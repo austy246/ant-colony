@@ -1,4 +1,5 @@
-import { APHID_MAX, RESEARCH_IDS, MILESTONES, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import type { StoredAnt } from './collection';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -67,6 +68,8 @@ export interface SaveV1 {
   xp?: number;
   /** Optional (absent = none): the explored patches that already gave experience, as cy * 4096 + cx. */
   seen?: number[];
+  /** Optional (absent = none): the ants kept safe in the terrarium of the collection. */
+  terrarium?: StoredAnt[];
   /** Optional (absent = none): the colony-size milestones already reached (100, 200, 500). */
   milestones?: number[];
   /** Optional (absent = none): the second nest the player founded. */
@@ -150,6 +153,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     xp: w.xp,
     seen: [...w.seenCells],
     milestones: [...w.milestones],
+    terrarium: w.terrarium.map((a) => ({ ...a })),
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
@@ -180,6 +184,7 @@ export function worldFromSave(s: SaveV1): World {
   w.spawnTimer = s.spawnTimer ?? 0;
   w.xp = Math.max(0, s.xp ?? 0);
   w.seenCells = new Set((s.seen ?? []).filter((k) => Number.isInteger(k) && k >= 0));
+  w.terrarium = (s.terrarium ?? []).slice(0, TERRARIUM_MAX).map((a) => ({ ...a }));
   w.milestones = new Set((s.milestones ?? []).filter((m) => (MILESTONES as readonly number[]).includes(m)));
   w.unlocked = new Set((s.research ?? []).filter((id) => RESEARCH_IDS.has(id)));
   w.gardens = Math.max(0, Math.min(w.gardenMax, Math.floor(s.gardens ?? 0)));
@@ -253,6 +258,17 @@ function validAnt(a: unknown, size: { w: number; h: number }): boolean {
   );
 }
 
+function validStored(a: unknown): boolean {
+  if (typeof a !== 'object' || a === null) return false;
+  const o = a as Record<string, unknown>;
+  return (
+    isInt(o.id) && isNum(o.age) && o.age >= 0 &&
+    inRange(o.speedMul, TRAIT_MIN, TRAIT_MAX) && inRange(o.curiosity, TRAIT_MIN, TRAIT_MAX) && inRange(o.stubbornness, TRAIT_MIN, TRAIT_MAX) &&
+    (o.major === undefined || o.major === true) &&
+    (o.superMajor === undefined || (o.superMajor === true && o.major === true))
+  );
+}
+
 function validFood(f: unknown, size: { w: number; h: number }): boolean {
   if (typeof f !== 'object' || f === null) return false;
   const o = f as Record<string, unknown>;
@@ -319,6 +335,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
   if (o.gardens !== undefined && (!isInt(o.gardens) || o.gardens < 0 || o.gardens > GARDEN_MAX + 1)) return null;
   if (o.seen !== undefined && (!Array.isArray(o.seen) || o.seen.length > 200000 || o.seen.some((k) => !Number.isInteger(k)))) return null;
+  if (o.terrarium !== undefined && (!Array.isArray(o.terrarium) || o.terrarium.length > TERRARIUM_MAX || !o.terrarium.every(validStored))) return null;
   if (o.milestones !== undefined && (!Array.isArray(o.milestones) || o.milestones.some((m) => typeof m !== 'number'))) return null;
   if (o.xp !== undefined && (!isNum(o.xp) || o.xp < 0)) return null;
   if (o.research !== undefined && (!Array.isArray(o.research) || o.research.some((id) => typeof id !== 'string'))) return null;

@@ -622,6 +622,137 @@ body {
 .changelog li {
   margin: 3px 0;
 }
+.ac-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 3, 0.62);
+}
+.ac-window {
+  width: min(860px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 12px;
+  font-family: var(--px-font);
+  color: var(--px-ink);
+  background: var(--px-panel);
+  box-shadow:
+    0 -2px 0 0 var(--px-edge),
+    0 2px 0 0 var(--px-edge),
+    -2px 0 0 0 var(--px-edge),
+    2px 0 0 0 var(--px-edge),
+    inset 2px 2px 0 0 #44311f,
+    inset -2px -2px 0 0 #1a120b;
+}
+.ac-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.ac-title {
+  margin-right: auto;
+  font-size: 18px;
+}
+.ac-head button.on {
+  outline: 2px solid #e0c067;
+}
+.ac-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+.ac-empty {
+  grid-column: 1 / -1;
+  padding: 24px 8px;
+  text-align: center;
+  opacity: 0.75;
+}
+.ac-card {
+  box-sizing: border-box;
+  padding: 6px;
+  border: 3px solid var(--rar, #888);
+  background: #2a2016;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+}
+.ac-card:hover,
+.ac-card:focus {
+  filter: brightness(1.2);
+  outline: none;
+}
+.ac-card[data-rarity='8'],
+.ac-card[data-rarity='9'] {
+  box-shadow: 0 0 10px var(--rar);
+}
+.ac-portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 78px;
+  margin-bottom: 4px;
+  overflow: hidden;
+}
+.ac-sprite {
+  image-rendering: pixelated;
+  max-width: 100%;
+  max-height: 100%;
+}
+.ac-super {
+  filter: drop-shadow(0 0 3px #ffd84a);
+}
+.ac-name {
+  font-weight: bold;
+}
+.ac-rarity {
+  color: var(--rar);
+  font-size: 11px;
+}
+.ac-nav {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.ac-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  padding: 8px 0;
+}
+.ac-card.ac-big {
+  width: 220px;
+  cursor: default;
+  font-size: 14px;
+}
+.ac-big .ac-portrait {
+  height: 150px;
+}
+.ac-stats {
+  margin-top: 6px;
+  text-align: left;
+  font-size: 13px;
+}
+.ac-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+.ac-msg {
+  max-width: 200px;
+  color: #e8a23a;
+}
 .tutorial-count {
   font-size: 12px;
   opacity: 0.7;

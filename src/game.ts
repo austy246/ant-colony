@@ -16,6 +16,7 @@ import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
 import { handleExtinction, restoreLiveSave, showExtinct } from './ui/extinct';
+import { openAntCollection } from './ui/antCards';
 import { showChangelog } from './ui/changelog';
 import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
@@ -103,6 +104,9 @@ export async function startGame(): Promise<void> {
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
+  const antsBtn = el('button', '', 'Mravenci', panel);
+  antsBtn.type = 'button';
+  antsBtn.addEventListener('click', () => openAntCollection(ui, world));
   const newsBtn = el('button', '', 'Novinky', panel);
   newsBtn.type = 'button';
   newsBtn.addEventListener('click', () => showChangelog(ui));

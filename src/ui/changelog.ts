@@ -9,6 +9,7 @@ export const UPDATES: readonly Update[] = [
   {
     date: '15. 11. 2026',
     items: [
+      'Nové tlačítko Mravenci: sbírka karet všech mravenců kolonie s deseti vzácnostmi (od Obyčejného po Božského), řazení od nejvzácnějších, detail karty a terárium na 100 uschovaných mravenců.',
       'Milníky velikosti kolonie: 100 mravenců dá bonus zkušenosti, 200 odemkne tlačítko Výpad na červené hnízdo, 500 vytvoří superkolonii (další královny a tunel mezi hnízdy).',
       'Velcí mravenci mají vlastní, detailnější vzhled (velká hlava s očima a čelistmi).',
       'Nálet červených: mravenci vylézají z ústí hnízda jeden za druhým a hned míří k černému hnízdu.',

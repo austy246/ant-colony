@@ -238,6 +238,8 @@ export const SORTIE_MIN = 20;
 export const SORTIE_COOLDOWN_S = 120;
 export const SUPER_QUEENS = 2;
 export const SUPER_HATCH_MUL = 0.85;
+/** The terrarium of the ant collection keeps at most this many ants safe. */
+export const TERRARIUM_MAX = 100;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */
 export const GOAL_MAX_S = 600;
 
