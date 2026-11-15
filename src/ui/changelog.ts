@@ -9,7 +9,7 @@ export const UPDATES: readonly Update[] = [
   {
     date: '15. 11. 2026',
     items: [
-      'Kolo štěstí: za každých 10 narozených mravenců se nabije roztočení, které přinese jednoho mravence s větší šancí na vzácnost.',
+      'Kolo štěstí: každý desátý narozený mravenec má vzácnost vylosovanou kolem s mnohem větší šancí na lepší (žádný mravenec navíc).',
       'Válečné feromony: kde začne souboj, černí i červení mravenci nechají poplach a volní mravenci stejné barvy přibíhají bojovat; v pohledu na feromony je oranžový (černí) a fialový (červení).',
       'Hra ukládá i červené mravence, nálet v průběhu, značky zákazu, rozkazy a prozkoumaná místa.',
       'Vzácnosti mravenců mají skutečné body: každý stupeň přidá rychlosti, zvědavosti a vytrvalosti 3 %. Přibyly dvě nové vzácnosti, Kosmický a Rainbow (duhový), vyšší vzácnosti jsou mnohem řidší a major už nemá bonus ke vzácnosti. Na kartách vykukuje z rámečku hlava mravence se svítícíma očima.',

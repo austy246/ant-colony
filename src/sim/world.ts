@@ -4,7 +4,7 @@ import {
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
   BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WHEEL_EVERY, WAR_AMOUNT, WAR_R, WAR_REACH, WAR_MIN, WAR_ARRIVE, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
-import { antRarity, idWithRarity, rarityBonus, wheelRarity, type StoredAnt } from './collection';
+import { antRarity, idWithRarity, rarityBonus, wheelRarity, type CardAnt, type StoredAnt } from './collection';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
 import { larvaeChambersNeeded, pantriesNeeded } from './nestNeeds';
@@ -582,6 +582,12 @@ export class World {
    */
   spawnAnt(inNest = false): Ant {
     const rng = this.rng;
+    // every WHEEL_EVERY-th ant born is the wheel of fortune's: it is born with the rarity the wheel lands on (the id decides the rarity, so the wheel picks the id)
+    const wheelBorn = (this.births + 1) % WHEEL_EVERY === 0;
+    if (wheelBorn) {
+      const r = wheelRarity(this.terrain.seed, this.spins++);
+      this.nextId = idWithRarity(this.terrain.seed, this.nextId, r) ?? this.nextId; // the ids skipped stay unused
+    }
     const ant: Ant = {
       id: this.nextId++,
       x: NEST.x + (rng.next() - 0.5) * 4,
@@ -614,29 +620,28 @@ export class World {
     this.ants.push(ant);
     this.started = true;
     this.births++;
-    if (this.births % WHEEL_EVERY === 0) this.wheels++;
+    if (wheelBorn) this.wheelQueue.push({ id: ant.id, rarity: antRarity(this.terrain.seed, ant) });
     return ant;
   }
 
-  /** Ants born so far (every WHEEL_EVERY of them charges a spin of the wheel of fortune), spins waiting, spins used. Saved. */
+  /** Ants born so far, and wheel-born ants (the 10th, 20th... see spawnAnt). Saved. */
   births = 0;
-  wheels = 0;
   spins = 0;
+  /** The wheel-born ants whose spin has not been shown to the player yet (oldest first). Saved. */
+  wheelQueue: { id: number; rarity: number }[] = [];
+  /** Spins of the wheel of fortune waiting to be shown. */
+  get wheels(): number {
+    return this.wheelQueue.length;
+  }
   /**
-   * Spins the wheel of fortune (one charged spin): it lands on a rarity (flattened chances, see collection.ts) and one more ant of that rarity is born at the
-   * nest. Returns null when no spin is charged or the colony is full. The wheel's ants do not charge further spins.
+   * Shows the next spin of the wheel of fortune: every WHEEL_EVERY-th ant born is the wheel's (its rarity was drawn from the flattened
+   * chances of collection.ts when it was born, so it is no extra ant). Returns that ant and its rarity, or null when no spin waits.
    */
-  spinWheel(): { rarity: number; ant: Ant } | null {
-    if (this.wheels <= 0 || this.ants.length >= this.maxAnts) return null;
-    const rarity = wheelRarity(this.terrain.seed, this.spins);
-    const id = idWithRarity(this.terrain.seed, this.nextId, rarity) ?? this.nextId;
-    this.nextId = id; // ids in between stay unused (an id says what rarity the ant has)
-    const births = this.births;
-    const ant = this.spawnAnt();
-    this.births = births;
-    this.wheels = Math.max(0, this.wheels - 1);
-    this.spins++;
-    return { rarity: antRarity(this.terrain.seed, ant), ant };
+  spinWheel(): { rarity: number; ant: CardAnt } | null {
+    const q = this.wheelQueue.shift();
+    if (!q) return null;
+    const ant: CardAnt = this.ants.find((a) => a.id === q.id) ?? this.terrarium.find((a) => a.id === q.id) ?? { id: q.id, age: 0, speedMul: 1, curiosity: 1, stubbornness: 1 };
+    return { rarity: q.rarity, ant };
   }
 
   /** Secret cheat: up to `n` more wandering ants at the entrance, never beyond maxAnts. Returns how many were added. */

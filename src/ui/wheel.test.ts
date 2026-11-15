@@ -24,19 +24,19 @@ describe('wheel window', () => {
     expect(s[11].to).toBeCloseTo(Math.PI * 2, 9);
   });
 
-  it('spins, shows the card of the new ant and uses up one charged spin', () => {
+  it('spins, shows the card of the wheel-born ant and uses up one waiting spin, adding no ant', () => {
     expect(world.wheels).toBe(3);
     openWheel(root, world, { instant: true });
     expect(root.querySelector('.ac-title')?.textContent).toContain('3');
     btn('Roztočit').click();
     expect(world.wheels).toBe(2);
-    expect(world.ants).toHaveLength(31);
+    expect(world.ants).toHaveLength(30);
     expect(root.querySelector('.wheel-result .ac-card')).not.toBeNull();
-    expect(root.querySelector('.wheel-note')?.textContent).toContain(`#${world.ants[world.ants.length - 1].id}`);
+    expect(root.querySelector('.wheel-note')?.textContent).toContain(`#${world.ants[9].id}`); // the 10th ant
   });
 
   it('cannot be spun with nothing charged, and closes', () => {
-    world.wheels = 0;
+    world.wheelQueue.length = 0;
     openWheel(root, world, { instant: true });
     expect(btn('Roztočit').disabled).toBe(true);
     btn('Zavřít').click();

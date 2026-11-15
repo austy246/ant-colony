@@ -101,7 +101,7 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
   close.addEventListener('click', shut);
 
   const refresh = (): void => {
-    title.textContent = `Kolo štěstí (zbývá ${world.wheels} ${world.wheels === 1 ? 'roztočení' : 'roztočení'})`;
+    title.textContent = `Kolo štěstí (čeká ${world.wheels})`;
     spin.textContent = 'Roztočit';
     spin.disabled = spinning || world.wheels <= 0;
   };
@@ -113,7 +113,7 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     const out = world.spinWheel();
     if (!out) {
       sound.play('deny');
-      result.textContent = world.wheels > 0 ? 'Kolonie je plná, mravence nejde přidat.' : 'Žádné roztočení není nabité.';
+      result.textContent = 'Žádné roztočení není nabité.';
       return;
     }
     spinning = true;
@@ -131,7 +131,7 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
       const el = cardElement(card, true);
       const note = document.createElement('div');
       note.className = 'wheel-note';
-      note.textContent = `${RARITY_NAMES[out.rarity]}! Nový mravenec #${out.ant.id} přibyl do kolonie.`;
+      note.textContent = `${RARITY_NAMES[out.rarity]}! Kolo vylosovalo mravence #${out.ant.id}, který se právě narodil.`;
       result.replaceChildren(note, el);
       sound.play(out.rarity >= 7 ? 'milestone' : 'research');
       refresh();

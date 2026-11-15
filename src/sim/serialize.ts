@@ -75,8 +75,9 @@ export interface SaveV1 {
   redPheromone?: string;
   /** Optional (absent = 0): ants born so far, spins of the wheel of fortune waiting and already used. */
   births?: number;
-  wheels?: number;
   spins?: number;
+  /** Optional (absent = none): the wheel-born ants whose spin has not been shown yet. */
+  wheelQueue?: { id: number; rarity: number }[];
   /** Optional (absent = none): the black and the red ants' war pheromones (alarms), same coding as `pheromone`; only saved when there is any. */
   warPheromone?: string;
   redWarPheromone?: string;
@@ -228,7 +229,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0, delivered: w.redNest.delivered ?? 0 } } : {}),
     reds: w.reds.map(redToSave),
     births: w.births,
-    wheels: w.wheels,
+    wheelQueue: w.wheelQueue.map((q) => ({ ...q })),
     spins: w.spins,
     ...redField(w),
     ...warFields(w),
@@ -317,7 +318,7 @@ export function worldFromSave(s: SaveV1): World {
     else w.warT = WAR_LIFE_S;
   }
   w.births = Math.max(0, Math.floor(s.births ?? s.ants.length));
-  w.wheels = Math.max(0, Math.floor(s.wheels ?? 0));
+  w.wheelQueue = (s.wheelQueue ?? []).slice(0, 1000).map((q) => ({ id: q.id, rarity: q.rarity }));
   w.spins = Math.max(0, Math.floor(s.spins ?? 0));
   w.repels = (s.repels ?? []).slice(0, REPEL_MAX).map((r) => ({ x: r.x, y: r.y, t: r.t }));
   const exBytes = s.explored ? base64ToBytes(s.explored) : null;
@@ -493,7 +494,8 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   if (o.repels !== undefined && (!Array.isArray(o.repels) || o.repels.length > REPEL_MAX || !o.repels.every((r) => typeof r === 'object' && r !== null && isNum(r.x) && isNum(r.y) && isNum(r.t) && r.t >= 0))) return null;
   if (o.explored !== undefined && typeof o.explored !== 'string') return null;
-  for (const k of ['births', 'wheels', 'spins'] as const) {
+  if (o.wheelQueue !== undefined && (!Array.isArray(o.wheelQueue) || o.wheelQueue.length > 1000 || !o.wheelQueue.every((q) => typeof q === 'object' && q !== null && isInt(q.id) && isInt(q.rarity) && q.rarity >= 0 && q.rarity <= 11))) return null;
+  for (const k of ['births', 'spins'] as const) {
     if (o[k] !== undefined && (!isInt(o[k]) || (o[k] as number) < 0)) return null;
   }
   for (const k of ['raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer'] as const) {
