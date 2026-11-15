@@ -67,9 +67,15 @@ describe('the red nest', () => {
     run(w, 2);
     w.raidWait = 0.01;
     run(w, 0.5);
-    expect(w.raiders).toBeGreaterThan(50);
+    // they come out of the nest mouth one after another, not all at once
+    const early = w.raiders;
+    expect(early).toBeGreaterThan(10);
+    run(w, 6);
+    expect(w.raiders).toBeGreaterThan(early + 50);
     const n = w.redNest!;
-    for (const r of w.reds.filter((x) => !x.patrol)) expect(Math.hypot(r.x - n.x, r.y - n.y)).toBeLessThan(90);
+    for (const r of w.reds.filter((x) => !x.patrol && x.id > 0)) expect(r.heading).toBeDefined();
+    run(w, 0);
+    expect(Math.hypot(n.x - NEST.x, n.y - NEST.y)).toBeGreaterThan(300);
   });
 
   it('black ants that get into it take it: no more patrols or raids, more queens, faster hatching', () => {

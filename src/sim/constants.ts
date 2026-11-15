@@ -408,6 +408,9 @@ export const CAPTURED_QUEENS = 4;
 export const CAPTURED_HATCH_MUL = 0.75;
 /** Raiders leave the red nest spread over a disc of this radius (px). */
 export const RAID_SPREAD_NEST = 60;
+/** A raid that sets off from the red nest does not appear at once: its ants come out of the nest mouth, RAID_EMERGE_PER_S a second, and head straight for the black nest. */
+export const RAID_EMERGE_PER_S = 100;
+export const RAID_MOUTH_R = 5;
 /** Red ants: this share (at least one in twenty) of the patrols are guards that circle the red nest; the rest forage up to RED_FORAGE_R px away. */
 export const RED_GUARD_FRACTION = 0.075;
 export const RED_FORAGE_R = 350;

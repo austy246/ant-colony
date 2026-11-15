@@ -40,7 +40,7 @@ describe('raids of red ants', () => {
       run(w, 2); // the red nest appears (the raids set off from it)
       expect(w.redNest?.owner).toBe('red');
       w.raidWait = 0.01;
-      run(w, 0.5);
+      run(w, 6); // they come out of the nest a hundred a second
       expect(w.raidsStarted).toBe(1);
       expect(w.raiders).toBeGreaterThanOrEqual(RAID_SIZE_MIN);
       expect(w.raiders).toBeLessThanOrEqual(RAID_SIZE_MAX);
