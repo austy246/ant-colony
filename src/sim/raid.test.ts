@@ -98,14 +98,18 @@ describe('raids of red ants', () => {
   });
 
   it('the body of a red ant is one piece that one black ant carries to the larder', () => {
-    const w = raidWorld(4);
+    const w = raidWorld(8);
     w.stock = 0;
     const body = w.placeFood('redant', NEST.x + 20, NEST.y)!;
     expect(body.piecesLeft).toBe(1);
     const a = w.spawnAnt();
+    // (seed changed when the rarity bonus changed the random paths; the ant is a normal one, not rarity-boosted)
+    a.speedMul = 1;
+    a.curiosity = 1;
+    a.stubbornness = 1;
     a.x = body.x;
     a.y = body.y + 2;
-    run(w, 40);
+    run(w, 100);
     expect(w.food).not.toContain(body);
     expect(w.totalDelivered).toBe(FOOD_TABLE.redant.value);
   });

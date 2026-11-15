@@ -9,6 +9,7 @@ export const UPDATES: readonly Update[] = [
   {
     date: '15. 11. 2026',
     items: [
+      'Vzácnosti mravenců mají skutečné body: každý stupeň přidá rychlosti, zvědavosti a vytrvalosti 3 %. Přibyly dvě nové vzácnosti, Kosmický a Rainbow (duhový), vyšší vzácnosti jsou mnohem řidší a major už nemá bonus ke vzácnosti. Na kartách vykukuje z rámečku hlava mravence se svítícíma očima.',
       'Nové tlačítko Mravenci: sbírka karet všech mravenců kolonie s deseti vzácnostmi (od Obyčejného po Božského), řazení od nejvzácnějších, detail karty a terárium na 100 uschovaných mravenců.',
       'Milníky velikosti kolonie: 100 mravenců dá bonus zkušenosti, 200 odemkne tlačítko Výpad na červené hnízdo, 500 vytvoří superkolonii (další královny a tunel mezi hnízdy).',
       'Velcí mravenci mají vlastní, detailnější vzhled (velká hlava s očima a čelistmi).',

@@ -130,6 +130,7 @@ describe('World', () => {
     const f = deadFood(w, 'fly', NEST.x + 20, NEST.y)!;
     f.piecesLeft = 6; // the run below is timed for 6 trips (a fly now has 18 pieces)
     const a = w.spawnAnt();
+    a.speedMul = 1; // the run is timed for an ant of normal speed (a rarer ant is faster)
     a.state = 'toFood';
     a.targetFood = f.id;
     let deliveries = 0;

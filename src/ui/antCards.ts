@@ -3,14 +3,13 @@
  * sort by rarity, click a card for its detail and keep the ant in the terrarium (safe from everything, at most TERRARIUM_MAX) or let it out again.
  * Only for collecting: it changes nothing in the game except that a stored ant is out of the colony until it is released.
  */
-import { ANT_RGBA, antPixels, ANT_SIZE, MAJOR_ANT_SIZE } from '../render/antArt';
 import { formatTime } from '../records';
 import { antKind, antRarity, RARITY_NAMES, type CardAnt } from '../sim/collection';
 import { TERRARIUM_MAX } from '../sim/constants';
 import type { World } from '../sim/world';
 
-/** Colour of the frame of each rarity, from grey to gold. */
-export const RARITY_COLORS = ['#8a8a82', '#a89f7c', '#7fae6a', '#5aa6a0', '#5b8fd6', '#9a6fd0', '#d06fc0', '#e8a23a', '#e8583a', '#ffd84a'] as const;
+/** Colour of the frame (and of the eyes) of each rarity, from grey to gold; the cosmic one is violet and Rainbow cycles through all colours (see the style sheet). */
+export const RARITY_COLORS = ['#8a8a82', '#a89f7c', '#7fae6a', '#5aa6a0', '#5b8fd6', '#9a6fd0', '#d06fc0', '#e8a23a', '#e8583a', '#ffd84a', '#b04dff', '#ff3a3a'] as const;
 
 export const PAGE_SIZE = 24;
 
@@ -20,56 +19,63 @@ export interface Card {
   stored: boolean;
 }
 
-const spriteCache = new Map<string, HTMLCanvasElement | null>();
+/** Left half (the last column is the middle) of the ant's head seen from the front; the other half is its mirror image. */
+const HEAD_HALF = [
+  'JJ.......',
+  '.JJ......',
+  '..J......',
+  '...J.....',
+  '....BBBBB',
+  '...BBBHHH',
+  '..BBBBBHH',
+  '.BBBBBBBB',
+  '.BEEEBBBB',
+  '.BEEeBBBB',
+  '.BBEEBBBB',
+  '..BBBBSSS',
+  '...BBJBBB',
+  '....JJJ..',
+  '.....JJ..',
+  '......J..',
+];
+export const HEAD_ROWS = HEAD_HALF.map((r) => r + r.slice(0, 8).split('').reverse().join(''));
+export const HEAD_W = HEAD_ROWS[0].length;
+export const HEAD_H = HEAD_ROWS.length;
+const HEAD_COLORS: Record<string, string> = { J: '#7a5a3a', B: '#241a12', H: '#4e3d2e', S: '#3a2c20', e: '#ffffff' };
 
-/** The ant sprite (facing right, standing) as a small canvas, null where canvas is not available (tests). */
-function spriteFor(major: boolean): HTMLCanvasElement | null {
-  const key = major ? 'm' : 'w';
-  if (spriteCache.has(key)) return spriteCache.get(key) ?? null;
-  let cv: HTMLCanvasElement | null = null;
+/** The ant's head peeking out over the top edge of its card, its eyes glowing in the colour of the rarity (a bigger ant has a bigger head). */
+function peekingHead(rarity: number, scale: number): HTMLCanvasElement {
+  const cv = document.createElement('canvas');
+  cv.width = HEAD_W * scale;
+  cv.height = HEAD_H * scale;
+  cv.className = 'ac-head-art';
+  let ctx: CanvasRenderingContext2D | null = null;
   try {
-    const n = major ? MAJOR_ANT_SIZE : ANT_SIZE;
-    const c = document.createElement('canvas');
-    c.width = n;
-    c.height = n;
-    const ctx = c.getContext('2d');
-    if (ctx) {
-      const img = ctx.createImageData(n, n);
-      const px = antPixels(0, 0, false, major);
-      for (let i = 0; i < px.length; i++) {
-        const [r, g, b, a] = ANT_RGBA[px[i]];
-        img.data[i * 4] = r;
-        img.data[i * 4 + 1] = g;
-        img.data[i * 4 + 2] = b;
-        img.data[i * 4 + 3] = a;
-      }
-      ctx.putImageData(img, 0, 0);
-      cv = c;
-    }
+    ctx = cv.getContext('2d');
   } catch {
-    cv = null;
+    ctx = null;
   }
-  spriteCache.set(key, cv);
+  if (!ctx) return cv;
+  for (let y = 0; y < HEAD_H; y++) {
+    for (let x = 0; x < HEAD_W; x++) {
+      const ch = HEAD_ROWS[y][x];
+      if (ch === '.') continue;
+      ctx.fillStyle = ch === 'E' ? RARITY_COLORS[rarity] : HEAD_COLORS[ch];
+      ctx.fillRect(x * scale, y * scale, scale, scale);
+    }
+  }
   return cv;
 }
 
-function portrait(card: Card, scale: number): HTMLElement {
+function portrait(card: Card, big: boolean): HTMLElement {
   const box = document.createElement('div');
   box.className = 'ac-portrait';
-  box.style.background = `radial-gradient(circle at 50% 40%, ${RARITY_COLORS[card.rarity]}55, #2a2016 75%)`;
-  const major = card.ant.major === true;
-  const src = spriteFor(major);
-  const n = major ? MAJOR_ANT_SIZE : ANT_SIZE;
-  const cv = document.createElement('canvas');
-  cv.width = n * scale;
-  cv.height = n * scale;
-  cv.className = 'ac-sprite' + (card.ant.superMajor ? ' ac-super' : '');
-  const ctx = src ? cv.getContext('2d') : null;
-  if (ctx && src) {
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(src, 0, 0, n * scale, n * scale);
-  }
-  box.appendChild(cv);
+  box.style.background = `radial-gradient(circle at 50% 30%, ${RARITY_COLORS[card.rarity]}66, #2a2016 78%)`;
+  // a bigger ant peeks out with a bigger head
+  const base = card.ant.superMajor ? 7 : card.ant.major ? 6 : 5;
+  const head = peekingHead(card.rarity, big ? base + 2 : base);
+  if (card.ant.superMajor) head.classList.add('ac-super');
+  box.appendChild(head);
   return box;
 }
 
@@ -78,7 +84,7 @@ function cardElement(card: Card, big: boolean): HTMLElement {
   el.className = 'ac-card' + (big ? ' ac-big' : '');
   el.style.setProperty('--rar', RARITY_COLORS[card.rarity]);
   el.dataset.rarity = String(card.rarity);
-  el.appendChild(portrait(card, big ? 4 : 2));
+  el.appendChild(portrait(card, big));
   const name = document.createElement('div');
   name.className = 'ac-name';
   name.textContent = `Mravenec #${card.ant.id}`;

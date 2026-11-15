@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { antRarity, rarityBonus } from './collection';
 import {
   CURIOSITY_MAX, CURIOSITY_MIN, HATCH_INTERVAL_S, MAX_PHEROMONE, NEST, SPEED_MUL_MAX, SPEED_MUL_MIN, STEP_S,
   STUBBORNNESS_MAX, STUBBORNNESS_MIN, WORLD_H, WORLD_W,
@@ -43,21 +44,23 @@ describe('ant personalities', () => {
     const w = flatWorld(11);
     const ants = Array.from({ length: 200 }, () => w.spawnAnt());
     for (const a of ants) {
-      expect(a.speedMul).toBeGreaterThanOrEqual(SPEED_MUL_MIN);
-      expect(a.speedMul).toBeLessThanOrEqual(SPEED_MUL_MAX);
-      expect(a.curiosity).toBeGreaterThanOrEqual(CURIOSITY_MIN);
-      expect(a.curiosity).toBeLessThanOrEqual(CURIOSITY_MAX);
-      expect(a.stubbornness).toBeGreaterThanOrEqual(STUBBORNNESS_MIN);
-      expect(a.stubbornness).toBeLessThanOrEqual(STUBBORNNESS_MAX);
+      // the rarity of the ant's card multiplies all three (see collection.ts)
+      const b = rarityBonus(antRarity(w.terrain.seed, a));
+      expect(a.speedMul).toBeGreaterThanOrEqual(SPEED_MUL_MIN * b - 1e-9);
+      expect(a.speedMul).toBeLessThanOrEqual(SPEED_MUL_MAX * b + 1e-9);
+      expect(a.curiosity).toBeGreaterThanOrEqual(CURIOSITY_MIN * b - 1e-9);
+      expect(a.curiosity).toBeLessThanOrEqual(CURIOSITY_MAX * b + 1e-9);
+      expect(a.stubbornness).toBeGreaterThanOrEqual(STUBBORNNESS_MIN * b - 1e-9);
+      expect(a.stubbornness).toBeLessThanOrEqual(STUBBORNNESS_MAX * b + 1e-9);
     }
     for (const key of ['speedMul', 'curiosity', 'stubbornness'] as const) {
       expect(new Set(ants.map((a) => a[key])).size).toBeGreaterThan(150);
     }
     const mean = (k: 'speedMul' | 'curiosity' | 'stubbornness') => ants.reduce((s, a) => s + a[k], 0) / ants.length;
     expect(mean('speedMul')).toBeGreaterThan(0.97);
-    expect(mean('speedMul')).toBeLessThan(1.03);
+    expect(mean('speedMul')).toBeLessThan(1.08);
     expect(mean('curiosity')).toBeGreaterThan(1.0);
-    expect(mean('curiosity')).toBeLessThan(1.2);
+    expect(mean('curiosity')).toBeLessThan(1.25);
   });
 
   it('the ranges are the agreed ones', () => {

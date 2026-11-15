@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { antKind, antRarity, RARITY_NAMES } from './collection';
-import { TERRARIUM_MAX } from './constants';
+import { antKind, antRarity, rarityBonus, RARITY_NAMES } from './collection';
+import { CURIOSITY_MIN, RARITY_STAT_STEP, SPEED_MUL_MAX, SPEED_MUL_MIN, STUBBORNNESS_MAX, TERRARIUM_MAX } from './constants';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { World } from './world';
 
 const plain = (id: number) => ({ id });
 
-describe('ant collection: rarity and names', () => {
-  it('has ten rarities', () => {
-    expect(RARITY_NAMES).toHaveLength(10);
+describe('ant collection: rarity', () => {
+  it('has twelve rarities, the last being Rainbow', () => {
+    expect(RARITY_NAMES).toHaveLength(12);
+    expect(RARITY_NAMES[11]).toBe('Rainbow');
   });
 
   it('is the same for the same id and seed, and differs between seeds', () => {
@@ -18,31 +19,65 @@ describe('ant collection: rarity and names', () => {
     expect(a).not.toEqual(b);
   });
 
-  it('common ants are common and the top rarity is very rare', () => {
-    const n = 20000;
-    const count = new Array(10).fill(0);
+  it('common ants are common and the top rarities are very rare', () => {
+    const n = 400000;
+    const count = new Array(12).fill(0);
     for (let id = 0; id < n; id++) count[antRarity(42, plain(id))]++;
-    for (let r = 1; r < 10; r++) expect(count[r]).toBeLessThan(count[r - 1] * 1.25); // falling, with noise
-    expect(count[0] / n).toBeGreaterThan(0.25);
-    expect(count[9] / n).toBeLessThan(0.006);
-    expect(count[9]).toBeGreaterThan(0);
+    for (let r = 1; r < 8; r++) expect(count[r]).toBeLessThan(count[r - 1]); // falling
+    expect(count[0] / n).toBeGreaterThan(0.33);
+    expect((count[9] + count[10] + count[11]) / n).toBeLessThan(0.0015); // Božský and above together: well under 1 in 600
+    expect(count[11]).toBeLessThan(count[10] + 6);
+    expect(count[11] / n).toBeLessThan(0.0002);
   });
 
-  it('majors and super majors are better, and never above the top', () => {
-    let w = 0;
-    let m = 0;
-    let s = 0;
-    for (let id = 0; id < 5000; id++) {
-      w += antRarity(3, plain(id));
-      m += antRarity(3, { id, major: true });
-      s += antRarity(3, { id, major: true, superMajor: true });
-      expect(antRarity(3, { id, major: true, superMajor: true })).toBeLessThanOrEqual(9);
+  it('a major or super major has no advantage', () => {
+    for (let id = 0; id < 500; id++) {
+      expect(antRarity(3, plain(id))).toBe(antRarity(3, plain(id)));
     }
-    expect(m).toBeGreaterThan(w + 5000);
-    expect(s).toBeGreaterThan(m + 5000);
     expect(antKind({})).toBe('Dělnice');
     expect(antKind({ major: true })).toBe('Major');
     expect(antKind({ major: true, superMajor: true })).toBe('Super major');
+  });
+
+  it('every rank adds RARITY_STAT_STEP to the stats: Obyčejný none, Rainbow the most', () => {
+    expect(rarityBonus(0)).toBe(1);
+    expect(rarityBonus(11)).toBeCloseTo(1 + 11 * RARITY_STAT_STEP, 9);
+    for (let r = 1; r < 12; r++) expect(rarityBonus(r)).toBeGreaterThan(rarityBonus(r - 1));
+  });
+
+  it('a newborn ant has its stats multiplied by the bonus of its own rarity', () => {
+    const w = World.create(5, 'normal');
+    w.noSpider = true;
+    w.noRaid = true;
+    w.addAnts(300);
+    for (const a of w.ants) {
+      const b = rarityBonus(antRarity(w.terrain.seed, a));
+      expect(a.speedMul).toBeGreaterThanOrEqual(SPEED_MUL_MIN * b - 1e-9);
+      expect(a.speedMul).toBeLessThanOrEqual(SPEED_MUL_MAX * b + 1e-9);
+      expect(a.curiosity).toBeGreaterThanOrEqual(CURIOSITY_MIN * b - 1e-9);
+      expect(a.stubbornness).toBeLessThanOrEqual(STUBBORNNESS_MAX * b + 1e-9);
+    }
+    const best = Math.max(...w.ants.map((a) => antRarity(w.terrain.seed, a)));
+    expect(best).toBeGreaterThan(3);
+  });
+
+  it('an older save gets the bonus once when loaded, not again after the next save', () => {
+    const w = World.create(5, 'normal');
+    w.noSpider = true;
+    w.noRaid = true;
+    w.addAnts(60);
+    const before = w.ants.map((a) => a.speedMul);
+    const save = JSON.parse(JSON.stringify(worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } })));
+    // as an old save: no flag, so the (already bonused) speeds get the bonus again
+    delete save.raritiesApplied;
+    const once = worldFromSave(JSON.parse(JSON.stringify(save)));
+    for (let i = 0; i < before.length; i++) {
+      expect(once.ants[i].speedMul).toBeCloseTo(Math.min(3, before[i] * rarityBonus(antRarity(once.terrain.seed, once.ants[i]))), 9);
+    }
+    const resaved = JSON.parse(JSON.stringify(worldToSave(once, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } })));
+    expect(resaved.raritiesApplied).toBe(true);
+    const twice = worldFromSave(resaved);
+    for (let i = 0; i < before.length; i++) expect(twice.ants[i].speedMul).toBeCloseTo(once.ants[i].speedMul, 9);
   });
 });
 

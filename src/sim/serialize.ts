@@ -1,5 +1,5 @@
 import { APHID_MAX, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
-import type { StoredAnt } from './collection';
+import { antRarity, rarityBonus, type StoredAnt } from './collection';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -68,6 +68,8 @@ export interface SaveV1 {
   xp?: number;
   /** Optional (absent = none): the explored patches that already gave experience, as cy * 4096 + cx. */
   seen?: number[];
+  /** Optional (absent = false: an older save): the rarity bonus is already part of every ant's speed, curiosity and stubbornness. */
+  raritiesApplied?: boolean;
   /** Optional (absent = none): the ants kept safe in the terrarium of the collection. */
   terrarium?: StoredAnt[];
   /** Optional (absent = none): the colony-size milestones already reached (100, 200, 500). */
@@ -153,6 +155,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     xp: w.xp,
     seen: [...w.seenCells],
     milestones: [...w.milestones],
+    raritiesApplied: true,
     terrarium: w.terrarium.map((a) => ({ ...a })),
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
@@ -207,6 +210,17 @@ export function worldFromSave(s: SaveV1): World {
     if (ant.state === 'nest') ant.nestKind = a.nestKind ?? 'hatch';
     else delete ant.nestKind;
     w.ants.push(ant);
+  }
+  if (!s.raritiesApplied) {
+    // an older save: its ants get the rarity bonus now (once; the save then says it is in)
+    const give = (a: { id: number; speedMul: number; curiosity: number; stubbornness: number }): void => {
+      const b = rarityBonus(antRarity(w.terrain.seed, a));
+      a.speedMul = Math.min(TRAIT_MAX, a.speedMul * b);
+      a.curiosity = Math.min(TRAIT_MAX, a.curiosity * b);
+      a.stubbornness = Math.min(TRAIT_MAX, a.stubbornness * b);
+    };
+    for (const a of w.ants) give(a);
+    for (const a of w.terrarium) give(a);
   }
   w.bush = s.bush ? { ...s.bush } : null;
   w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, stock: s.redNest.stock ?? 0, trickleT: RED_TRICKLE_S } : null;

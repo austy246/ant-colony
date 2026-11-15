@@ -666,7 +666,8 @@ body {
 .ac-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-  gap: 8px;
+  gap: 38px 8px;
+  padding: 36px 4px 4px;
   overflow-y: auto;
   min-height: 120px;
 }
@@ -677,6 +678,7 @@ body {
   opacity: 0.75;
 }
 .ac-card {
+  position: relative;
   box-sizing: border-box;
   padding: 6px;
   border: 3px solid var(--rar, #888);
@@ -695,20 +697,58 @@ body {
   box-shadow: 0 0 10px var(--rar);
 }
 .ac-portrait {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 78px;
+  position: relative;
+  height: 62px;
   margin-bottom: 4px;
-  overflow: hidden;
 }
-.ac-sprite {
+/* the ant's head peeks out over the top edge of the card */
+.ac-head-art {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
   image-rendering: pixelated;
-  max-width: 100%;
-  max-height: 100%;
+  pointer-events: none;
 }
 .ac-super {
-  filter: drop-shadow(0 0 3px #ffd84a);
+  filter: drop-shadow(0 0 4px #ffd84a);
+}
+.ac-card[data-rarity='10'] {
+  box-shadow: 0 0 12px #b04dff, inset 0 0 14px #3a1466;
+  animation: ac-pulse 2.4s ease-in-out infinite;
+}
+.ac-card[data-rarity='11'] {
+  box-shadow: 0 0 14px #fff6;
+  animation: ac-rainbow 3s linear infinite;
+}
+.ac-card[data-rarity='11'] .ac-head-art {
+  animation: ac-hue 3s linear infinite;
+}
+.ac-card[data-rarity='11'] .ac-rarity {
+  animation: ac-rainbow-text 3s linear infinite;
+}
+@keyframes ac-pulse {
+  50% {
+    box-shadow: 0 0 22px #d27aff, inset 0 0 22px #5a1f9a;
+  }
+}
+@keyframes ac-rainbow {
+  0% { border-color: #ff3a3a; }
+  17% { border-color: #ffb13a; }
+  33% { border-color: #f4ee3a; }
+  50% { border-color: #3aff6a; }
+  67% { border-color: #3ac0ff; }
+  83% { border-color: #b04dff; }
+  100% { border-color: #ff3a3a; }
+}
+@keyframes ac-rainbow-text {
+  0% { color: #ff3a3a; }
+  33% { color: #f4ee3a; }
+  66% { color: #3ac0ff; }
+  100% { color: #ff3a3a; }
+}
+@keyframes ac-hue {
+  to { filter: hue-rotate(360deg); }
 }
 .ac-name {
   font-weight: bold;
@@ -736,7 +776,13 @@ body {
   font-size: 14px;
 }
 .ac-big .ac-portrait {
-  height: 150px;
+  height: 96px;
+}
+.ac-big .ac-head-art {
+  top: -48px;
+}
+.ac-detail {
+  padding-top: 56px;
 }
 .ac-stats {
   margin-top: 6px;

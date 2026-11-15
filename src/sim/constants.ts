@@ -238,6 +238,8 @@ export const SORTIE_MIN = 20;
 export const SORTIE_COOLDOWN_S = 120;
 export const SUPER_QUEENS = 2;
 export const SUPER_HATCH_MUL = 0.85;
+/** Each rarity step adds this fraction to the ant's speed, curiosity and stubbornness (Rainbow, the 12th, +33 %). */
+export const RARITY_STAT_STEP = 0.03;
 /** The terrarium of the ant collection keeps at most this many ants safe. */
 export const TERRARIUM_MAX = 100;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */
