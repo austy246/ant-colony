@@ -5,7 +5,7 @@
  */
 import { ANT_RGBA, antPixels, ANT_SIZE, MAJOR_ANT_SIZE } from '../render/antArt';
 import { formatTime } from '../records';
-import { antKind, antName, antRarity, RARITY_NAMES, type CardAnt } from '../sim/collection';
+import { antKind, antRarity, RARITY_NAMES, type CardAnt } from '../sim/collection';
 import { TERRARIUM_MAX } from '../sim/constants';
 import type { World } from '../sim/world';
 
@@ -17,7 +17,6 @@ export const PAGE_SIZE = 24;
 export interface Card {
   ant: CardAnt;
   rarity: number;
-  name: string;
   stored: boolean;
 }
 
@@ -82,7 +81,7 @@ function cardElement(card: Card, big: boolean): HTMLElement {
   el.appendChild(portrait(card, big ? 4 : 2));
   const name = document.createElement('div');
   name.className = 'ac-name';
-  name.textContent = card.name;
+  name.textContent = `Mravenec #${card.ant.id}`;
   const rar = document.createElement('div');
   rar.className = 'ac-rarity';
   rar.textContent = `${RARITY_NAMES[card.rarity]} · ${antKind(card.ant)}`;
@@ -92,7 +91,6 @@ function cardElement(card: Card, big: boolean): HTMLElement {
     stats.className = 'ac-stats';
     const pct = (v: number): string => `${Math.round(v * 100)} %`;
     for (const [k, v] of [
-      ['Číslo', `#${card.ant.id}`],
       ['Věk', formatTime(card.ant.age)],
       ['Rychlost', pct(card.ant.speedMul)],
       ['Zvědavost', pct(card.ant.curiosity)],
@@ -111,7 +109,7 @@ function cardElement(card: Card, big: boolean): HTMLElement {
 export function cardsOf(world: World, stored: boolean, byRarity: boolean): Card[] {
   const seed = world.terrain.seed;
   const list: CardAnt[] = stored ? world.terrarium : world.ants;
-  const cards = list.map((ant) => ({ ant, rarity: antRarity(seed, ant), name: antName(seed, ant.id), stored }));
+  const cards = list.map((ant) => ({ ant, rarity: antRarity(seed, ant), stored }));
   cards.sort((a, b) => (byRarity && a.rarity !== b.rarity ? b.rarity - a.rarity : a.ant.id - b.ant.id));
   return cards;
 }

@@ -1,24 +1,13 @@
 /**
- * The ant collection ("Mravenci"): every ant has a card with a name and one of ten rarities. It is only for collecting and has
- * no effect on the game: name and rarity are worked out from the ant's id and the world's seed (the same after a reload), nothing is saved
- * for them and no random numbers of the simulation are used.
+ * The ant collection ("Mravenci"): every ant has a card with one of ten rarities. It is only for collecting and has
+ * no effect on the game: the rarity is worked out from the ant's id and the world's seed (the same after a reload), nothing is saved
+ * for it and no random numbers of the simulation are used.
  */
 
 export const RARITY_NAMES = ['Obyčejný', 'Běžný', 'Neobvyklý', 'Zajímavý', 'Vzácný', 'Výjimečný', 'Epický', 'Legendární', 'Mýtický', 'Božský'] as const;
 
 /** Chance (in thousandths) of each rarity for an ordinary worker; sums to 1000. */
 const RARITY_WEIGHTS = [300, 230, 160, 110, 80, 55, 35, 20, 8, 2];
-
-const FIRST = [
-  'Anežka', 'Barbora', 'Čeněk', 'Dalibor', 'Eliška', 'Filip', 'Gustav', 'Hana', 'Ivo', 'Jarmila', 'Karel', 'Lenka', 'Matěj', 'Nora', 'Ondřej', 'Pavla',
-  'Quido', 'Radek', 'Štěpán', 'Tereza', 'Ulrich', 'Vendula', 'Viktor', 'Xenie', 'Yvona', 'Zdeněk', 'Adam', 'Bětka', 'Cyril', 'Dana', 'Emil', 'Fanda',
-  'Gita', 'Honza', 'Irena', 'Jakub', 'Klára', 'Libor', 'Mája', 'Naďa',
-];
-const EPITHET = [
-  'Rychlonohý', 'Zvědavý', 'Statečný', 'Věčný hladovec', 'Tichý', 'Nosič', 'Průzkumník', 'Hlídač', 'Snílek', 'Ostrá čelist', 'Šikovný', 'Zlatý čich',
-  'Silák', 'Poutník', 'Šplhal', 'Prašivý', 'Dobrosrdečný', 'Žvanil', 'Opatrný', 'Odvážný', 'Spáč', 'Cukrář', 'Stopař', 'Skromný', 'Hrbáč', 'Černý blesk',
-  'Vytrvalec', 'Kapitán', 'Nenasyta', 'Hrabal', 'Šprt', 'Svéhlavý',
-];
 
 /** What the collection needs to know about an ant (living ants and stored ones both fit). */
 export interface CardAnt {
@@ -55,12 +44,6 @@ export function antRarity(seed: number, ant: Pick<CardAnt, 'id' | 'major' | 'sup
     }
   }
   return Math.min(RARITY_NAMES.length - 1, r + (ant.superMajor ? 4 : ant.major ? 2 : 0));
-}
-
-/** The ant's name, from its id and the seed ("Honza Zlatý čich"). */
-export function antName(seed: number, id: number): string {
-  const h = hash(seed | 0, id + 7919);
-  return `${FIRST[h % FIRST.length]} ${EPITHET[Math.floor(h / FIRST.length) % EPITHET.length]}`;
 }
 
 export function antKind(ant: Pick<CardAnt, 'major' | 'superMajor'>): string {

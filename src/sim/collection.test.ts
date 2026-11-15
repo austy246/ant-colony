@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { antKind, antName, antRarity, RARITY_NAMES } from './collection';
+import { antKind, antRarity, RARITY_NAMES } from './collection';
 import { TERRARIUM_MAX } from './constants';
 import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { World } from './world';
@@ -16,7 +16,6 @@ describe('ant collection: rarity and names', () => {
     const a = Array.from({ length: 200 }, (_, i) => antRarity(1, plain(i)));
     const b = Array.from({ length: 200 }, (_, i) => antRarity(2, plain(i)));
     expect(a).not.toEqual(b);
-    expect(antName(1, 5)).toBe(antName(1, 5));
   });
 
   it('common ants are common and the top rarity is very rare', () => {
