@@ -223,6 +223,7 @@ export async function startGame(): Promise<void> {
     milestones: world.milestones.size,
   });
   let lastSnap = takeSnapshot();
+  let lastWheels = world.wheels;
 
   // --- saving ---
   let saving = false;
@@ -375,6 +376,8 @@ export async function startGame(): Promise<void> {
     sound.setRain(world.raining);
     const cur = takeSnapshot();
     for (const s of soundsFor(lastSnap, cur)) sound.play(s);
+    if (world.wheels > lastWheels) showToast('Kolo štěstí je nabité! Otevři ho tlačítkem vlevo nahoře.');
+    lastWheels = world.wheels;
     if (cur.milestones > lastSnap.milestones) showToast(MILESTONE_TEXT[Math.max(...world.milestones)] ?? '');
     lastSnap = cur;
     if (world.extinct && !resetting) {

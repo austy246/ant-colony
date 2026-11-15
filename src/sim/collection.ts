@@ -3,7 +3,7 @@
  * after a reload; no random numbers of the simulation are used). A better rarity makes a better ant: the world multiplies its speed, curiosity
  * and stubbornness by rarityBonus() once, when the ant is born (or, for an older save, when it is first loaded).
  */
-import { RARITY_STAT_STEP } from './constants';
+import { RARITY_STAT_STEP, WHEEL_LUCK } from './constants';
 
 export const RARITY_NAMES = ['Obyčejný', 'Běžný', 'Neobvyklý', 'Zajímavý', 'Vzácný', 'Výjimečný', 'Epický', 'Legendární', 'Mýtický', 'Božský', 'Kosmický', 'Rainbow'] as const;
 
@@ -45,6 +45,31 @@ export function antRarity(seed: number, ant: { id: number }): number {
     }
   }
   return r;
+}
+
+/** The wheel of fortune: the chance of each rarity (summing to 1), the ordinary chances flattened by the power WHEEL_LUCK. */
+export function wheelChances(): number[] {
+  const w = RARITY_WEIGHTS.map((x) => Math.pow(x, WHEEL_LUCK));
+  const sum = w.reduce((a, b) => a + b, 0);
+  return w.map((x) => x / sum);
+}
+
+/** The rarity the n-th spin of the wheel lands on (from the seed and n alone: no random numbers of the simulation). */
+export function wheelRarity(seed: number, n: number): number {
+  const u = (hash(seed | 0, 0x5eed + n * 31) % 1000000) / 1000000;
+  const chances = wheelChances();
+  let acc = 0;
+  for (let i = 0; i < chances.length; i++) {
+    acc += chances[i];
+    if (u < acc) return i;
+  }
+  return chances.length - 1;
+}
+
+/** The first id from `from` on (looking at most `limit` ids ahead) whose ant would have `rarity`; null if there is none that far. */
+export function idWithRarity(seed: number, from: number, rarity: number, limit = 400000): number | null {
+  for (let id = from; id < from + limit; id++) if (antRarity(seed, { id }) === rarity) return id;
+  return null;
 }
 
 /** The factor a rarity gives to speed, curiosity and stubbornness: 1 for Obyčejný, +RARITY_STAT_STEP per rank. */

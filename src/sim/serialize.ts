@@ -73,6 +73,10 @@ export interface SaveV1 {
   reds?: SavedRed[];
   /** Optional (absent = none): the red ants' own pheromone, same coding as `pheromone` (only saved when there is any). */
   redPheromone?: string;
+  /** Optional (absent = 0): ants born so far, spins of the wheel of fortune waiting and already used. */
+  births?: number;
+  wheels?: number;
+  spins?: number;
   /** Optional (absent = none): the black and the red ants' war pheromones (alarms), same coding as `pheromone`; only saved when there is any. */
   warPheromone?: string;
   redWarPheromone?: string;
@@ -223,6 +227,9 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     ...(w.bush ? { bush: { ...w.bush } } : {}),
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0, delivered: w.redNest.delivered ?? 0 } } : {}),
     reds: w.reds.map(redToSave),
+    births: w.births,
+    wheels: w.wheels,
+    spins: w.spins,
     ...redField(w),
     ...warFields(w),
     repels: w.repels.map((r) => ({ x: r.x, y: r.y, t: r.t })),
@@ -309,6 +316,9 @@ export function worldFromSave(s: SaveV1): World {
     if (red) w.redWarT = WAR_LIFE_S;
     else w.warT = WAR_LIFE_S;
   }
+  w.births = Math.max(0, Math.floor(s.births ?? s.ants.length));
+  w.wheels = Math.max(0, Math.floor(s.wheels ?? 0));
+  w.spins = Math.max(0, Math.floor(s.spins ?? 0));
   w.repels = (s.repels ?? []).slice(0, REPEL_MAX).map((r) => ({ x: r.x, y: r.y, t: r.t }));
   const exBytes = s.explored ? base64ToBytes(s.explored) : null;
   if (exBytes && exBytes.length === w.explored.length) for (let i = 0; i < exBytes.length; i++) w.explored[i] = (exBytes[i] / 255) * EXPLORE_CAP;
@@ -483,6 +493,9 @@ export function validateSave(x: unknown): SaveV1 | null {
   }
   if (o.repels !== undefined && (!Array.isArray(o.repels) || o.repels.length > REPEL_MAX || !o.repels.every((r) => typeof r === 'object' && r !== null && isNum(r.x) && isNum(r.y) && isNum(r.t) && r.t >= 0))) return null;
   if (o.explored !== undefined && typeof o.explored !== 'string') return null;
+  for (const k of ['births', 'wheels', 'spins'] as const) {
+    if (o[k] !== undefined && (!isInt(o[k]) || (o[k] as number) < 0)) return null;
+  }
   for (const k of ['raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer'] as const) {
     if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
   }

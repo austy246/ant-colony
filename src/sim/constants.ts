@@ -251,6 +251,12 @@ export const WAR_REACH = 40;
 export const WAR_MIN = 0.08;
 export const WAR_ARRIVE = 1;
 export const WAR_LIFE_S = 90;
+/**
+ * The wheel of fortune: every WHEEL_EVERY ants born charge one spin, which brings one more ant. Its rarity is drawn from the ordinary chances
+ * flattened by the power WHEEL_LUCK (< 1: the rare ones are far likelier than for an ant born the usual way, the poor ones less so).
+ */
+export const WHEEL_EVERY = 10;
+export const WHEEL_LUCK = 0.55;
 /** The terrarium of the ant collection keeps at most this many ants safe. */
 export const TERRARIUM_MAX = 100;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */

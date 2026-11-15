@@ -79,7 +79,7 @@ function portrait(card: Card, big: boolean): HTMLElement {
   return box;
 }
 
-function cardElement(card: Card, big: boolean): HTMLElement {
+export function cardElement(card: Card, big: boolean): HTMLElement {
   const el = document.createElement('div');
   el.className = 'ac-card' + (big ? ' ac-big' : '');
   el.style.setProperty('--rar', RARITY_COLORS[card.rarity]);

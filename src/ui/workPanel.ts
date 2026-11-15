@@ -1,6 +1,7 @@
 import { GUARD_FRACTION_MAX, HATCH_FOCUSES, type HatchFocus } from '../sim/constants';
 import { sound } from '../audio/sound';
 import { openResearchTree } from './researchTree';
+import { openWheel } from './wheel';
 import { formatTime, noteBest } from '../records';
 import type { World } from '../sim/world';
 
@@ -54,6 +55,13 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
     else sound.play('deny');
   });
   box.appendChild(sortie);
+  // every WHEEL_EVERY ants born charge a spin of the wheel of fortune
+  const wheelBtn = document.createElement('button');
+  wheelBtn.type = 'button';
+  wheelBtn.className = 'wheel-btn';
+  wheelBtn.hidden = true;
+  wheelBtn.addEventListener('click', () => openWheel(document.getElementById('ui') ?? root, world));
+  box.appendChild(wheelBtn);
   const info = document.createElement('div');
   info.className = 'work-info';
   box.appendChild(info);
@@ -67,6 +75,12 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
       if (sortie.textContent !== label) sortie.textContent = label;
       const ok = world.canSortie;
       if (sortie.disabled === ok) sortie.disabled = !ok;
+    }
+    const spins = world.wheels;
+    if (wheelBtn.hidden === spins > 0) wheelBtn.hidden = spins <= 0;
+    if (spins > 0) {
+      const label = `Kolo štěstí (${spins})`;
+      if (wheelBtn.textContent !== label) wheelBtn.textContent = label;
     }
     const xpText = `Výzkum (${Math.floor(world.xp)} zk.)`;
     if (treeBtn.textContent !== xpText) treeBtn.textContent = xpText;
