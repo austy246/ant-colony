@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { soundsFor, type Snapshot } from './events';
 import { Sound } from './sound';
 
-const base: Snapshot = { deliveries: 0, antsKilled: 0, redKilled: 0, sprays: 0, ants: 10, queens: 1, raids: 0, warning: false, season: 0, extinct: false };
+const base: Snapshot = { deliveries: 0, antsKilled: 0, redKilled: 0, sprays: 0, ants: 10, queens: 1, raids: 0, warning: false, season: 0, extinct: false, milestones: 0 };
 
 describe('soundsFor', () => {
   it('is silent when nothing changed', () => {

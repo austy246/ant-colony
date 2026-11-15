@@ -1,5 +1,5 @@
 import type { FoodKind } from '../sim/food';
-import { ANT_CENTER, ANT_DIRS, ANT_FRAMES, ANT_RGBA, ANT_SIZE, antPixels } from './antArt';
+import { ANT_CENTER, ANT_DIRS, ANT_FRAMES, ANT_RGBA, ANT_SIZE, antPixels, MAJOR_ANT_CENTER, MAJOR_ANT_SIZE } from './antArt';
 import { FINE } from './fine';
 import { preySprite, queenSprite, type Sprite } from './preyArt';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
@@ -30,22 +30,24 @@ function blit(c: Ctx2D, spr: Sprite, x: number, y: number): void {
  */
 export class AntSprites {
   private cache: CanvasLike[] | null = null;
+  private majorCache: CanvasLike[] | null = null;
 
   constructor(
     private make: CanvasFactory,
     private palette: readonly (readonly [number, number, number, number])[] = ANT_RGBA,
   ) {}
 
-  private build(): CanvasLike[] {
+  private build(major: boolean): CanvasLike[] {
+    const size = major ? MAJOR_ANT_SIZE : ANT_SIZE;
     const out: CanvasLike[] = [];
     for (const carrying of [false, true]) {
       for (let f = 0; f < ANT_FRAMES; f++) {
         for (let k = 0; k < ANT_DIRS; k++) {
-          const cv = this.make(ANT_SIZE, ANT_SIZE);
+          const cv = this.make(size, size);
           const ctx = cv.getContext('2d');
           if (ctx) {
-            const img = ctx.createImageData(ANT_SIZE, ANT_SIZE);
-            const px = antPixels(k, f, carrying);
+            const img = ctx.createImageData(size, size);
+            const px = antPixels(k, f, carrying, major);
             for (let i = 0; i < px.length; i++) {
               const [r, g, b, a] = this.palette[px[i]];
               img.data[i * 4] = r;
@@ -62,22 +64,27 @@ export class AntSprites {
     return out;
   }
 
-  get(dir: number, frame: number, carrying: boolean): CanvasLike {
-    this.cache ??= this.build();
-    return this.cache[((carrying ? ANT_FRAMES : 0) + frame) * ANT_DIRS + dir];
+  /** The sprite of a worker, or (major) of the larger soldier; the soldiers' set is built the first time one is asked for. */
+  get(dir: number, frame: number, carrying: boolean, major = false): CanvasLike {
+    const set = major ? (this.majorCache ??= this.build(true)) : (this.cache ??= this.build(false));
+    return set[((carrying ? ANT_FRAMES : 0) + frame) * ANT_DIRS + dir];
   }
 }
 
-/** A major (big-headed soldier) is drawn this many times larger than a worker, same sprite. */
-export const MAJOR_SCALE = 1.6;
+/** A super major is its major sprite drawn this many times larger (a whole number, so the pixels stay square). */
+export const SUPER_MAJOR_SCALE = 2;
 
-/** Draws one pre-rendered ant with a single drawImage at the (snapped) world position, smoothing off; `scale` enlarges it around its centre. */
-export function drawAnt(c: Ctx2D, sprites: AntSprites, x: number, y: number, dir: number, frame: number, carrying: boolean, scale = 1): void {
+/**
+ * Draws one pre-rendered ant with a single drawImage at the (snapped) world position, smoothing off; `scale` enlarges it around its centre,
+ * `major` picks the larger soldier art instead of the worker's.
+ */
+export function drawAnt(c: Ctx2D, sprites: AntSprites, x: number, y: number, dir: number, frame: number, carrying: boolean, scale = 1, major = false): void {
   if (c.imageSmoothingEnabled) c.imageSmoothingEnabled = false;
-  const size = (ANT_SIZE / FINE) * scale;
-  // the centre pixel (ANT_CENTER) keeps its place whatever the scale
-  const off = ((ANT_CENTER + 0.5) * scale - 0.5) / FINE;
-  c.drawImage(sprites.get(dir, frame, carrying) as unknown as CanvasImageSource, snap(x) - off, snap(y) - off, size, size);
+  const side = major ? MAJOR_ANT_SIZE : ANT_SIZE;
+  const size = (side / FINE) * scale;
+  // the centre pixel keeps its place whatever the scale
+  const off = (((major ? MAJOR_ANT_CENTER : ANT_CENTER) + 0.5) * scale - 0.5) / FINE;
+  c.drawImage(sprites.get(dir, frame, carrying, major) as unknown as CanvasImageSource, snap(x) - off, snap(y) - off, size, size);
 }
 
 const clamp01 = (p: number): number => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)) : 0);

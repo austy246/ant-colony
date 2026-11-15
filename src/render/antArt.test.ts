@@ -9,6 +9,8 @@ import {
   C_CRUMB,
   C_LEG,
   C_SHADOW,
+  MAJOR_ANT_CENTER,
+  MAJOR_ANT_SIZE,
 } from './antArt';
 
 const N = ANT_SIZE;
@@ -232,5 +234,35 @@ describe('ant sprite pixels', () => {
     expect(hash(antPixels(5, 2, true))).toBe(hash(antPixels(5, 2, true)));
     expect(hash(antPixels(5, 2, true))).not.toBe(hash(antPixels(5, 2, false)));
     expect(hash(antPixels(0, 0, false))).not.toBe(hash(antPixels(4, 0, false)));
+  });
+});
+
+describe('major ant art', () => {
+  const M = MAJOR_ANT_SIZE;
+  const count = (p: Uint8Array): number => p.reduce((n, v) => n + (solid(v) ? 1 : 0), 0);
+  it('is its own larger sprite: every variant has M x M pixels and more solid pixels than the worker', () => {
+    for (const [k, f, carrying] of ALL) {
+      const m = antPixels(k, f, carrying, true);
+      expect(m.length).toBe(M * M);
+      expect(count(m)).toBeGreaterThan(count(antPixels(k, f, carrying)) * 1.8);
+    }
+  });
+  it('keeps clear of the edge of its sprite, so nothing is cut off at any angle', () => {
+    for (const [k, f, carrying] of ALL) {
+      const m = antPixels(k, f, carrying, true);
+      for (let i = 0; i < M; i++) for (const e of [0, M - 1]) expect(solid(m[e * M + i]) || solid(m[i * M + e])).toBe(false);
+    }
+  });
+  it('has the head, thorax and abdomen as one connected body facing right, jaws included', () => {
+    const m = antPixels(0, 0, false, true);
+    const c = MAJOR_ANT_CENTER;
+    for (let dx = -10; dx <= 8; dx++) expect(solid(m[c * M + c + dx])).toBe(true);
+    // mandibles reach beyond the head
+    expect(solid(m[c * M + c + 11])).toBe(true);
+  });
+  it('left-facing views mirror the right-facing ones', () => {
+    const a = antPixels(3, 1, true, true);
+    const b = antPixels(5, 1, true, true);
+    for (let y = 0; y < M; y++) for (let x = 0; x < M; x++) expect(b[y * M + (M - 1 - x)]).toBe(a[y * M + x]);
   });
 });

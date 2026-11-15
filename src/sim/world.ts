@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_SPREAD_NEST, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
 import { updateEnvironment } from './environment';
@@ -322,6 +322,37 @@ export class World {
     delete a.lostH;
     return true;
   }
+  /** Colony-size milestones already reached (see MILESTONES); each paid out once. Saved. */
+  milestones = new Set<number>();
+  /** Time (sim seconds) from which the next Výpad may be launched. Transient. */
+  sortieReadyAt = 0;
+  /** A Výpad can be launched: the milestone is reached, the red nest stands and the last sortie is long enough ago. */
+  get canSortie(): boolean {
+    return this.mode === 'normal' && this.milestones.has(MILESTONES[1]) && this.redNest?.owner === 'red' && this.time >= this.sortieReadyAt;
+  }
+  /**
+   * The Výpad: the idle ants nearest to the red nest (not guards, not carrying, not fighting) set off for it, SORTIE_FRACTION of the
+   * colony but at least SORTIE_MIN. They fight the patrols on the way and, when four of them stand at the nest, take it. Returns how many went.
+   */
+  launchSortie(): number {
+    const rn = this.redNest;
+    if (!this.canSortie || !rn) return 0;
+    const pool = this.ants.filter((a) => a.state !== 'nest' && a.role !== 'guard' && a.carry === 0 && a.carryLeaf === undefined && a.duelT === undefined && a.caughtT === undefined && !a.goal);
+    pool.sort((p, q) => Math.hypot(p.x - rn.x, p.y - rn.y) - Math.hypot(q.x - rn.x, q.y - rn.y));
+    const want = Math.max(SORTIE_MIN, Math.floor(this.ants.length * SORTIE_FRACTION));
+    let n = 0;
+    for (const a of pool.slice(0, want)) if (this.sendAnt(a.id, rn.x, rn.y)) n++;
+    if (n > 0) this.sortieReadyAt = this.time + SORTIE_COOLDOWN_S;
+    return n;
+  }
+  /** Pays out the milestones the colony has just reached (once each). */
+  private updateMilestones(): void {
+    for (const m of MILESTONES) {
+      if (this.milestones.has(m) || this.ants.length < m) continue;
+      this.milestones.add(m);
+      if (m === MILESTONES[0]) this.xp += MILESTONE_XP;
+    }
+  }
   /** The second nest the player founded (null = none). Foragers deliver to the nearer of it and NEST. */
   satellite: { x: number; y: number } | null = null;
   /** Test hook: pins the season (0..3) and switches the rain off, so long runs see a steady environment. */
@@ -420,12 +451,12 @@ export class World {
 
   /** Number of queens: one, plus one per FOOD_PER_QUEEN delivered in total, at most MAX_QUEENS. */
   get queens(): number {
-    return Math.min(MAX_QUEENS, 1 + Math.floor(this.totalDelivered / FOOD_PER_QUEEN)) + (this.redNest?.owner === 'black' ? CAPTURED_QUEENS : 0);
+    return Math.min(MAX_QUEENS, 1 + Math.floor(this.totalDelivered / FOOD_PER_QUEEN)) + (this.redNest?.owner === 'black' ? CAPTURED_QUEENS : 0) + (this.milestones.has(MILESTONES[2]) ? SUPER_QUEENS : 0);
   }
 
   /** Seconds between two hatches: each queen lays on her own HATCH_INTERVAL_S cycle. */
   get hatchInterval(): number {
-    return (HATCH_INTERVAL_S / this.queens) * (this.redNest?.owner === 'black' ? CAPTURED_HATCH_MUL : 1) * Math.pow(RESEARCH_HATCH_MUL, this.researchLevel('n'));
+    return (HATCH_INTERVAL_S / this.queens) * (this.redNest?.owner === 'black' ? CAPTURED_HATCH_MUL : 1) * (this.milestones.has(MILESTONES[2]) && this.satellite ? SUPER_HATCH_MUL : 1) * Math.pow(RESEARCH_HATCH_MUL, this.researchLevel('n'));
   }
 
   /** Progress of the current hatching cycle in [0, 1] (the cycle is `hatchInterval * hatchMul` long). */
@@ -696,6 +727,7 @@ export class World {
     this.updateSpider();
     this.pher.step((this.raining ? STEP_S * RAIN_EVAP_MUL : STEP_S) / (this.has('g5') ? RESEARCH_TRAIL_LIFE_MUL : 1));
     this.xp += XP_PER_S * STEP_S;
+    this.updateMilestones();
     if (this.gardens > 0) this.stock += this.gardens * GARDEN_RATE * (this.has('n4') ? RESEARCH_GARDEN_MUL : 1) * (this.season === 3 ? GARDEN_WINTER_MUL : 1) * STEP_S;
     for (let i = this.repels.length - 1; i >= 0; i--) {
       this.repels[i].t -= STEP_S;
@@ -1251,8 +1283,8 @@ export class World {
   private sepNext = new Int32Array(0);
   /**
    * Black ants on the surface keep apart (as the red ants do): any two closer than BLACK_SEP px push each other away, a single ant
-   * by at most BLACK_SEP_SPEED px/s. Ants that stand still (gnawing, caught in the web, fighting) push the others but are not pushed
-   * themselves, and nobody is pushed onto a stone. Ants at the very same spot part along a fixed direction of their own (no random draw).
+   * by at most BLACK_SEP_SPEED px/s. Ants that stand still (caught in the web, fighting) push the others but are not pushed
+   * themselves, gnawing ants only half as much, and nobody is pushed onto a stone. Ants at the very same spot part along a fixed direction of their own (no random draw).
    */
   private separateAnts(): void {
     const ants = this.ants;
@@ -1277,7 +1309,7 @@ export class World {
     const sep2 = BLACK_SEP * BLACK_SEP;
     for (let i = 0; i < n; i++) {
       const a = ants[i];
-      if (a.state === 'nest' || a.state === 'gnaw' || a.caughtT !== undefined || a.duelT !== undefined) continue;
+      if (a.state === 'nest' || a.caughtT !== undefined || a.duelT !== undefined) continue;
       const gx = Math.floor(a.x / BLACK_SEP) + 1;
       const gy = Math.floor(a.y / BLACK_SEP) + 1;
       let px = 0;
@@ -1308,7 +1340,8 @@ export class World {
       }
       if (px === 0 && py === 0) continue;
       const pl = Math.hypot(px, py);
-      const f = (pl > 1 ? 1 / pl : 1) * step; // push at most BLACK_SEP_SPEED
+      // an ant gnawing at food is pushed gently, so a ring of them forms round it instead of a heap, but it stays within reach
+      const f = (pl > 1 ? 1 / pl : 1) * step * (a.state === 'gnaw' ? 0.5 : 1); // push at most BLACK_SEP_SPEED
       const nx = Math.max(0.5, Math.min(t.w - 0.5, a.x + px * f));
       const ny = Math.max(0.5, Math.min(t.h - 0.5, a.y + py * f));
       if (t.surface[Math.floor(ny) * t.w + Math.floor(nx)] === Surface.Stone) continue;

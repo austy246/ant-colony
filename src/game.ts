@@ -186,6 +186,21 @@ export async function startGame(): Promise<void> {
     },
     true,
   );
+  // a short notice in the middle of the top edge when the colony reaches a size milestone
+  const MILESTONE_TEXT: Record<number, string> = {
+    100: '100 mravenců! Kolonie dostává bonus zkušenosti.',
+    200: '200 mravenců! Odemčen Výpad: pošle část kolonie na červené hnízdo.',
+    500: '500 mravenců! Superkolonie: další královny a se druhým hnízdem i rychlejší líhnutí.',
+  };
+  let toastEl: HTMLDivElement | null = null;
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  const showToast = (text: string): void => {
+    toastEl ??= el('div', 'toast', '', ui);
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl?.classList.remove('show'), 7000);
+  };
   const takeSnapshot = (): Snapshot => ({
     deliveries: world.deliveryCount,
     antsKilled: world.antsKilled,
@@ -197,6 +212,7 @@ export async function startGame(): Promise<void> {
     warning: world.raidWarning !== null,
     season: world.season,
     extinct: world.extinct,
+    milestones: world.milestones.size,
   });
   let lastSnap = takeSnapshot();
 
@@ -351,6 +367,7 @@ export async function startGame(): Promise<void> {
     sound.setRain(world.raining);
     const cur = takeSnapshot();
     for (const s of soundsFor(lastSnap, cur)) sound.play(s);
+    if (cur.milestones > lastSnap.milestones) showToast(MILESTONE_TEXT[Math.max(...world.milestones)] ?? '');
     lastSnap = cur;
     if (world.extinct && !resetting) {
       resetting = true; // stops autosave

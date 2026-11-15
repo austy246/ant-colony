@@ -89,8 +89,10 @@ export const CALLOW_RGBA: readonly (readonly [number, number, number, number])[]
   [10, 6, 3, 97],
 ];
 
-const N = ANT_SIZE;
-const C = ANT_CENTER;
+
+/** Side of one major (big-headed soldier) sprite in fine pixels, and its centre pixel. Majors are drawn in their own, larger art. */
+export const MAJOR_ANT_SIZE = 31;
+export const MAJOR_ANT_CENTER = 15;
 
 /** Sector (0..15) for a heading in radians (0 = right, positive = down on screen). */
 export function antDirection(heading: number): number {
@@ -99,7 +101,7 @@ export function antDirection(heading: number): number {
   return ((k % ANT_DIRS) + ANT_DIRS) % ANT_DIRS;
 }
 
-// ---- right-facing model -------------------------------------------------------------------------------------------
+// ---- right-facing models ------------------------------------------------------------------------------------------
 
 type Pt = readonly [number, number];
 interface Px {
@@ -108,7 +110,19 @@ interface Px {
   c: number;
 }
 
-/** Solid parts: bulbous abdomen, slim thorax, small head. */
+/** Everything that differs between a worker and a major: the size of the grid and the shapes drawn on it. */
+interface Spec {
+  n: number;
+  c: number;
+  body(): Px[];
+  crumb(): Px[];
+  legs(frame: number): Pt[][];
+  antennae(frame: number): Pt[][];
+  /** Thin parts at the front of the head (the major's mandibles). */
+  jaws(): Pt[][];
+}
+
+/** Solid parts of a worker: bulbous abdomen, slim thorax, small head. */
 function bodyModel(): Px[] {
   const out: Px[] = [];
   const put = (dx: number, dy: number, c = C_BODY): void => void out.push({ dx, dy, c });
@@ -168,12 +182,101 @@ function antennaLines(frame: number): Pt[][] {
   ]);
 }
 
+const WORKER: Spec = { n: ANT_SIZE, c: ANT_CENTER, body: bodyModel, crumb: crumbModel, legs: legLines, antennae: antennaLines, jaws: () => [] };
+
+// The major: a big square head with eyes and open mandibles, a heavy thorax and a long striped abdomen on thick legs (about 20 fine px long).
+
+/** Fills the ellipse (cx, cy, rx, ry) with whatever `pick` returns for each pixel (0 = leave empty). */
+function ellipse(out: Px[], cx: number, cy: number, rx: number, ry: number, pick: (dx: number, dy: number) => number): void {
+  for (let dx = Math.floor(cx - rx); dx <= Math.ceil(cx + rx); dx++) {
+    for (let dy = Math.floor(cy - ry); dy <= Math.ceil(cy + ry); dy++) {
+      if (((dx - cx) / rx) ** 2 + ((dy - cy) / ry) ** 2 > 1) continue;
+      const c = pick(dx, dy);
+      if (c !== 0) out.push({ dx, dy, c });
+    }
+  }
+}
+
+function majorBody(): Px[] {
+  const out: Px[] = [];
+  // abdomen: a segmented egg shape, a sheen along the upper side, a shaded lower side and tip
+  ellipse(out, -7.5, 0, 4.2, 3.2, (dx, dy) => {
+    if (dx === -8 || dx === -5) return dy <= -2 ? C_HIGH : C_SHADE; // the segment bands
+    if (dy === -2 && dx >= -10 && dx <= -6) return C_HIGH;
+    if (dy >= 2 || dx <= -11) return C_SHADE;
+    return C_BODY;
+  });
+  // thorax: heavy, with a ridge of light along the back
+  ellipse(out, -0.5, 0, 3.2, 2.4, (dx, dy) => {
+    if (dy === -1 && dx >= -2 && dx <= 1) return C_HIGH;
+    if (dy === 0 && (dx === -1 || dx === 0)) return C_HIGH;
+    return dy >= 2 ? C_SHADE : C_BODY;
+  });
+  // head: big and rounded, a bright eye on each side and a glint on the crown
+  ellipse(out, 5, 0, 3.6, 3.4, (dx, dy) => {
+    if (dx === 6 && (dy === -2 || dy === 2)) return C_HIGH; // eyes
+    if (dy === -1 && dx >= 3 && dx <= 5) return C_HIGH;
+    return dx >= 8 || dy >= 3 ? C_SHADE : C_BODY;
+  });
+  return out;
+}
+
+function majorCrumb(): Px[] {
+  const out: Px[] = [];
+  for (let dx = 11; dx <= 13; dx++) for (let dy = -2; dy <= 2; dy++) out.push({ dx, dy, c: C_CRUMB });
+  return out;
+}
+
+const MAJOR_ATTACH = [1, -1, -3];
+const MAJOR_KNEE = [2, 0, -2];
+const MAJOR_FOOT = [5, 0, -5];
+const MAJOR_SWING_A = [2, 0, -2, 0];
+const MAJOR_SWING_B = [-2, 0, 2, 0];
+
+function majorLegs(frame: number): Pt[][] {
+  const out: Pt[][] = [];
+  for (let pair = 0; pair < 3; pair++) {
+    for (const side of [-1, 1]) {
+      const a = MAJOR_ATTACH[pair];
+      const swing = IN_TRIPOD_A(pair, side) ? MAJOR_SWING_A[frame] : MAJOR_SWING_B[frame];
+      out.push([
+        [a, 2 * side],
+        [a + MAJOR_KNEE[pair], 5 * side],
+        [a + MAJOR_FOOT[pair] + swing, 7 * side],
+      ]);
+    }
+  }
+  return out;
+}
+
+function majorAntennae(frame: number): Pt[][] {
+  const mid: Pt = frame === 3 ? [10, 4] : [10, 5];
+  const tip: Pt = frame === 1 ? [12, 6] : [12, 5];
+  return [-1, 1].map((s) => [
+    [7, 3 * s],
+    [mid[0], mid[1] * s],
+    [tip[0], tip[1] * s],
+  ]);
+}
+
+/** Two curved jaws that meet at the front of the head. */
+function majorJaws(): Pt[][] {
+  return [-1, 1].map((s) => [
+    [8, 2 * s],
+    [10, 2 * s],
+    [11, 0],
+  ]);
+}
+
+const MAJOR: Spec = { n: MAJOR_ANT_SIZE, c: MAJOR_ANT_CENTER, body: majorBody, crumb: majorCrumb, legs: majorLegs, antennae: majorAntennae, jaws: majorJaws };
+
 // ---- rotation -------------------------------------------------------------------------------------------------------
 
 /** Round half away from zero, so the rotation is symmetric about the centre pixel. */
 const rnd = (v: number): number => (v < 0 ? -Math.round(-v) : Math.round(v));
 
-function line(g: Uint8Array, x0: number, y0: number, x1: number, y1: number, c: number): void {
+function line(s: Spec, g: Uint8Array, x0: number, y0: number, x1: number, y1: number, c: number): void {
+  const N = s.n;
   const dx = Math.abs(x1 - x0);
   const dy = Math.abs(y1 - y0);
   const sx = x0 < x1 ? 1 : -1;
@@ -195,25 +298,21 @@ function line(g: Uint8Array, x0: number, y0: number, x1: number, y1: number, c: 
 }
 
 /** Thin parts: rotate every vertex to the nearest pixel and join consecutive vertices, so legs never break up. */
-function strokes(g: Uint8Array, lines: readonly (readonly Pt[])[], cos: number, sin: number, c: number): void {
+function strokes(s: Spec, g: Uint8Array, lines: readonly (readonly Pt[])[], cos: number, sin: number, c: number): void {
+  const C = s.c;
   for (const l of lines) {
     for (let i = 0; i + 1 < l.length; i++) {
       const [ax, ay] = l[i];
       const [bx, by] = l[i + 1];
-      line(
-        g,
-        C + rnd(ax * cos - ay * sin),
-        C + rnd(ax * sin + ay * cos),
-        C + rnd(bx * cos - by * sin),
-        C + rnd(bx * sin + by * cos),
-        c,
-      );
+      line(s, g, C + rnd(ax * cos - ay * sin), C + rnd(ax * sin + ay * cos), C + rnd(bx * cos - by * sin), C + rnd(bx * sin + by * cos), c);
     }
   }
 }
 
 /** Solid parts: for every destination pixel look up the model pixel under its centre (leaves no holes). */
-function solids(g: Uint8Array, model: readonly Px[], cos: number, sin: number): void {
+function solids(s: Spec, g: Uint8Array, model: readonly Px[], cos: number, sin: number): void {
+  const N = s.n;
+  const C = s.c;
   const m = new Map<number, number>();
   for (const p of model) m.set((p.dy + C) * N + p.dx + C, p.c);
   for (let y = 0; y < N; y++) {
@@ -232,7 +331,7 @@ const solid = (v: number): boolean => v !== 0 && v !== C_SHADOW;
 const isBody = (v: number): boolean => v >= C_BODY && v <= C_SHADE;
 
 /** Fills one-pixel holes in the body (pockets with three body neighbours; gaps between legs stay open) and drops stray pixels, so the ant reads as one solid shape at every angle. */
-function tidy(g: Uint8Array, hole: number): void {
+function tidy(N: number, g: Uint8Array, hole: number): void {
   for (let pass = 0; pass < 6; pass++) {
     const fill: number[] = [];
     for (let y = 1; y < N - 1; y++) {
@@ -259,29 +358,31 @@ function tidy(g: Uint8Array, hole: number): void {
   }
 }
 
-function build(dir: number, frame: number, carrying: boolean): Uint8Array {
+function build(s: Spec, dir: number, frame: number, carrying: boolean): Uint8Array {
+  const N = s.n;
   const a = (dir * 2 * Math.PI) / ANT_DIRS;
   // exact values at the quarter turns, so those are pure integer rotations
   const cos = dir % 4 === 0 ? [1, 0, -1, 0][dir / 4] : Math.cos(a);
   const sin = dir % 4 === 0 ? [0, 1, 0, -1][dir / 4] : Math.sin(a);
   // 1. the solid body on its own (so its mass never depends on the gait)
   const body = new Uint8Array(N * N);
-  solids(body, bodyModel(), cos, sin);
-  tidy(body, C_BODY);
+  solids(s, body, s.body(), cos, sin);
+  tidy(N, body, C_BODY);
   const g = new Uint8Array(N * N);
   // 2. soft drop shadow: the body silhouette two fine pixels lower (everything else is painted over it)
   for (let y = 0; y < N - 2; y++) for (let x = 0; x < N; x++) if (body[y * N + x] !== 0) g[(y + 2) * N + x] = C_SHADOW;
-  // 3. legs, then the body over them, then the antennae and the crumb
-  strokes(g, legLines(frame), cos, sin, C_LEG);
+  // 3. legs, then the body over them, then the antennae, the jaws and the crumb
+  strokes(s, g, s.legs(frame), cos, sin, C_LEG);
   for (let i = 0; i < g.length; i++) if (body[i] !== 0) g[i] = body[i];
-  strokes(g, antennaLines(frame), cos, sin, C_LEG);
+  strokes(s, g, s.antennae(frame), cos, sin, C_LEG);
+  strokes(s, g, s.jaws(), cos, sin, C_SHADE);
   for (let i = 0; i < g.length; i++) if (body[i] !== 0) g[i] = body[i];
-  if (carrying) solids(g, crumbModel(), cos, sin);
-  tidy(g, C_BODY);
+  if (carrying) solids(s, g, s.crumb(), cos, sin);
+  tidy(N, g, C_BODY);
   return g;
 }
 
-function mirror(src: Uint8Array): Uint8Array {
+function mirror(N: number, src: Uint8Array): Uint8Array {
   const out = new Uint8Array(N * N);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) out[y * N + (N - 1 - x)] = src[y * N + x];
   return out;
@@ -290,15 +391,16 @@ function mirror(src: Uint8Array): Uint8Array {
 const cache = new Map<number, Uint8Array>();
 
 /**
- * Palette indices (row-major, ANT_SIZE x ANT_SIZE) of one variant. Directions facing left are exact mirror images of
- * the right-facing ones (dir k mirrors dir 8 - k). The returned array is shared: do not modify it.
+ * Palette indices (row-major, ANT_SIZE x ANT_SIZE; MAJOR_ANT_SIZE squared for a major) of one variant. Directions facing left
+ * are exact mirror images of the right-facing ones (dir k mirrors dir 8 - k). The returned array is shared: do not modify it.
  */
-export function antPixels(dir: number, frame: number, carrying: boolean): Uint8Array {
+export function antPixels(dir: number, frame: number, carrying: boolean, major = false): Uint8Array {
   const d = ((dir % ANT_DIRS) + ANT_DIRS) % ANT_DIRS;
-  const key = (carrying ? 1 : 0) * 1000 + frame * 100 + d;
+  const key = (major ? 10000 : 0) + (carrying ? 1 : 0) * 1000 + frame * 100 + d;
   let p = cache.get(key);
   if (!p) {
-    p = d >= 5 && d <= 11 ? mirror(antPixels(8 - d, frame, carrying)) : build(d, frame, carrying);
+    const s = major ? MAJOR : WORKER;
+    p = d >= 5 && d <= 11 ? mirror(s.n, antPixels(8 - d, frame, carrying, major)) : build(s, d, frame, carrying);
     cache.set(key, p);
   }
   return p;

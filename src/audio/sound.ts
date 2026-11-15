@@ -5,7 +5,7 @@
  */
 
 export type SoundName =
-  | 'click' | 'tick' | 'deny' | 'place' | 'remove' | 'sugar' | 'lure' | 'repel' | 'found' | 'garden' | 'research' | 'select' | 'send'
+  | 'click' | 'tick' | 'deny' | 'place' | 'remove' | 'sugar' | 'lure' | 'repel' | 'found' | 'garden' | 'research' | 'milestone' | 'select' | 'send'
   | 'deliver' | 'hatch' | 'fight' | 'redkill' | 'spray' | 'queen' | 'warning' | 'raid' | 'season' | 'extinct';
 
 const KEY = 'ant-colony-sound';
@@ -297,6 +297,7 @@ export class Sound {
         case 'found': [262, 330, 392, 523].forEach((f, i) => this.tone(f, 0.7, 'sine', 0.09, i * 0.07)); break;
         case 'garden': this.tone(200, 0.3, 'triangle', 0.12, 0, 330); this.tone(330, 0.25, 'sine', 0.06, 0.1, 440); break;
         case 'research': [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.28, 'triangle', 0.09, i * 0.08)); break;
+        case 'milestone': [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.9, 'sine', 0.1, i * 0.12)); this.tone(196, 1.6, 'triangle', 0.08); break;
         case 'select': this.tone(740 * j, 0.07, 'sine', 0.08, 0, 880); break;
         case 'send': this.tone(520 * j, 0.1, 'sine', 0.08, 0, 640); break;
         case 'deliver': this.tone(900 * j, 0.08, 'sine', 0.035); break;

@@ -13,6 +13,8 @@ export interface Snapshot {
   warning: boolean;
   season: number;
   extinct: boolean;
+  /** How many colony-size milestones are reached. */
+  milestones: number;
 }
 
 /** Which sounds the change from `prev` to `cur` calls for (each at most once; the sound system also rate-limits them). */
@@ -28,5 +30,6 @@ export function soundsFor(prev: Snapshot, cur: Snapshot): SoundName[] {
   else if (cur.warning && !prev.warning) out.push('warning');
   if (cur.season !== prev.season) out.push('season');
   if (cur.extinct && !prev.extinct) out.push('extinct');
+  if (cur.milestones > prev.milestones) out.push('milestone');
   return out;
 }

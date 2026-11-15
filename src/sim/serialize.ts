@@ -1,4 +1,4 @@
-import { APHID_MAX, RESEARCH_IDS, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, RESEARCH_IDS, MILESTONES, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { Bush } from './aphids';
@@ -67,6 +67,8 @@ export interface SaveV1 {
   xp?: number;
   /** Optional (absent = none): the explored patches that already gave experience, as cy * 4096 + cx. */
   seen?: number[];
+  /** Optional (absent = none): the colony-size milestones already reached (100, 200, 500). */
+  milestones?: number[];
   /** Optional (absent = none): the second nest the player founded. */
   satellite?: { x: number; y: number };
   /** Optional (absent / -1 = not drawn yet): seconds until the next red ant raid, so a reload does not restart the wait. */
@@ -147,6 +149,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     research: [...w.unlocked],
     xp: w.xp,
     seen: [...w.seenCells],
+    milestones: [...w.milestones],
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
@@ -177,6 +180,7 @@ export function worldFromSave(s: SaveV1): World {
   w.spawnTimer = s.spawnTimer ?? 0;
   w.xp = Math.max(0, s.xp ?? 0);
   w.seenCells = new Set((s.seen ?? []).filter((k) => Number.isInteger(k) && k >= 0));
+  w.milestones = new Set((s.milestones ?? []).filter((m) => (MILESTONES as readonly number[]).includes(m)));
   w.unlocked = new Set((s.research ?? []).filter((id) => RESEARCH_IDS.has(id)));
   w.gardens = Math.max(0, Math.min(w.gardenMax, Math.floor(s.gardens ?? 0)));
   w.satellite = s.satellite ? { x: s.satellite.x, y: s.satellite.y } : null;
@@ -315,6 +319,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.hatchFocus !== undefined && !(HATCH_FOCUSES as readonly string[]).includes(o.hatchFocus as string)) return null;
   if (o.gardens !== undefined && (!isInt(o.gardens) || o.gardens < 0 || o.gardens > GARDEN_MAX + 1)) return null;
   if (o.seen !== undefined && (!Array.isArray(o.seen) || o.seen.length > 200000 || o.seen.some((k) => !Number.isInteger(k)))) return null;
+  if (o.milestones !== undefined && (!Array.isArray(o.milestones) || o.milestones.some((m) => typeof m !== 'number'))) return null;
   if (o.xp !== undefined && (!isNum(o.xp) || o.xp < 0)) return null;
   if (o.research !== undefined && (!Array.isArray(o.research) || o.research.some((id) => typeof id !== 'string'))) return null;
   const size0 = terrainSize((o.mapStep as number | undefined) ?? 0);

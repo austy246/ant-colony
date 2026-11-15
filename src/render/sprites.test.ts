@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FoodKind } from '../sim/food';
 import { FINE } from './fine';
 import { ANT_SIZE } from './antArt';
-import { AntSprites, drawAnt, drawFood, drawQueen, MAJOR_SCALE, type Ctx2D } from './sprites';
+import { AntSprites, drawAnt, drawFood, drawQueen, SUPER_MAJOR_SCALE, type Ctx2D } from './sprites';
 import type { CanvasLike } from './terrainRender';
 
 const makeCanvas = (w: number, h: number): CanvasLike => createCanvas(w, h) as unknown as CanvasLike;
@@ -175,13 +175,13 @@ describe('worker ant (fine grid)', () => {
       drawImage: (_i: unknown, ...a: number[]) => calls.push(a),
     } as unknown as Ctx2D;
     drawAnt(fake, sprites, 20, 10, 0, 0, false);
-    drawAnt(fake, sprites, 20, 10, 0, 0, false, MAJOR_SCALE);
+    drawAnt(fake, sprites, 20, 10, 0, 0, false, SUPER_MAJOR_SCALE);
     const [x1, y1, w1, h1] = calls[0];
     const [x2, y2, w2, h2] = calls[1];
-    expect(MAJOR_SCALE).toBe(1.6);
+    expect(SUPER_MAJOR_SCALE).toBe(2);
     expect(w1).toBe(ANT_SIZE / FINE);
-    expect(w2).toBeCloseTo((ANT_SIZE / FINE) * MAJOR_SCALE);
-    expect(h2).toBeCloseTo((ANT_SIZE / FINE) * MAJOR_SCALE);
+    expect(w2).toBeCloseTo((ANT_SIZE / FINE) * SUPER_MAJOR_SCALE);
+    expect(h2).toBeCloseTo((ANT_SIZE / FINE) * SUPER_MAJOR_SCALE);
     // the centre stays on the same point
     expect(x2 + w2 / 2).toBeCloseTo(x1 + w1 / 2);
     expect(y2 + h2 / 2).toBeCloseTo(y1 + h1 / 2);

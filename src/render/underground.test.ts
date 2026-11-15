@@ -1,8 +1,7 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { World, type Ant } from '../sim/world';
-import { ANT_SIZE } from './antArt';
-import { MAJOR_SCALE } from './sprites';
+import { ANT_SIZE, MAJOR_ANT_SIZE } from './antArt';
 import { nestAntPose } from './nestChoreo';
 import { DIG_S, MAX_DRAWN_NEST_ANTS, MAX_STANDERS, nestHud, UndergroundView } from './underground';
 import type { CanvasLike } from './terrainRender';
@@ -277,7 +276,7 @@ describe('UndergroundView nest ants', () => {
           if (!ctx.__wrapped) {
             ctx.__wrapped = true;
             ctx.drawImage = (img: { width: number }, ...a: number[]) => {
-              if (img.width === ANT_SIZE) seen.push(a.length >= 4 ? a[2] : img.width);
+              if (img.width === ANT_SIZE || img.width === MAJOR_ANT_SIZE) seen.push(a.length >= 4 ? a[2] : img.width);
               return orig(img, ...a);
             };
           }
@@ -297,7 +296,7 @@ describe('UndergroundView nest ants', () => {
     const major = widths(true);
     expect(normal.length).toBeGreaterThan(0);
     expect(Math.max(...normal)).toBe(ANT_SIZE);
-    expect(Math.max(...major)).toBe(Math.round(ANT_SIZE * MAJOR_SCALE));
+    expect(Math.max(...major)).toBe(MAJOR_ANT_SIZE);
   });
 
   it('ants on the surface are not drawn underground', () => {

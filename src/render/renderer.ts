@@ -2,7 +2,7 @@ import type { Terrain } from '../sim/terrain';
 import { isAlive } from '../sim/food';
 import type { Ant, World } from '../sim/world';
 import type { Camera } from '../ui/camera';
-import { SPIDER_WEB_R } from '../sim/constants';
+import { NEST, SPIDER_WEB_R } from '../sim/constants';
 import { bodyPos } from '../sim/spider';
 import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
@@ -13,7 +13,7 @@ import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
 import { drawSquirt } from './squirt';
 import { ACID_RED_RGBA, ACID_RGBA, RED_RGBA, SELECTED_RGBA } from './antArt';
-import { AntSprites, drawAnt, drawQueen, MAJOR_SCALE } from './sprites';
+import { AntSprites, drawAnt, drawQueen, SUPER_MAJOR_SCALE } from './sprites';
 import { extendTerrainCanvas, isGrowthOf, renderTerrain, terrainStep, type CanvasFactory, type CanvasLike } from './terrainRender';
 import {
   buildHomeGlowCanvas,
@@ -156,7 +156,23 @@ export class Renderer {
       const redNest = this.world.redNest;
       if (redNest) drawRedNest(c, redNest, this.world.time);
       const sat = this.world.satellite;
-      if (sat) drawRedNest(c, { x: sat.x, y: sat.y, owner: 'black', trickleT: 0 }, this.world.time);
+      if (sat) {
+        // the super colony's tunnel: a line of dark mounds of earth between the two nests
+        if (this.world.milestones.has(500)) {
+          const len = Math.hypot(sat.x - NEST.x, sat.y - NEST.y);
+          const steps = Math.floor(len / 6);
+          for (let i = 1; i < steps; i++) {
+            const f = i / steps;
+            const px = NEST.x + (sat.x - NEST.x) * f;
+            const py = NEST.y + (sat.y - NEST.y) * f;
+            c.fillStyle = 'rgba(70,52,36,.75)';
+            c.fillRect(px - 1.5, py - 1, 3, 2);
+            c.fillStyle = '#14100c';
+            c.fillRect(px - 0.5, py - 0.5, 1, 1);
+          }
+        }
+        drawRedNest(c, { x: sat.x, y: sat.y, owner: 'black', trickleT: 0 }, this.world.time);
+      }
       const bush = this.world.bush;
       if (bush) drawBush(c, bush, this.world.time, (this.bushSprite ??= new BushSprite(this.make)));
       this.drawFoodLayer(c);
@@ -190,7 +206,7 @@ export class Renderer {
           : a.id === this.world.selectedAntId
             ? (this.selectedSprites ??= new AntSprites(this.make, SELECTED_RGBA))
             : sprites;
-        drawAnt(c, spr, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? MAJOR_SCALE * 2 : a.major ? MAJOR_SCALE : 1);
+        drawAnt(c, spr, a.x, a.y, antDirection(a.heading), frameFor(st.phase, ANT_FRAMES), a.carry > 0 || a.carryLeaf !== undefined, a.superMajor ? SUPER_MAJOR_SCALE : 1, a.major === true);
       }
       for (const a of ants) if (a.sprayT !== undefined) drawSquirt(c, a);
       const reds = this.world.reds;

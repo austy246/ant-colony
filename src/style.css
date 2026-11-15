@@ -376,6 +376,31 @@ body {
 }
 
 /* Division of labour: the guard slider, a block inside the HUD (hidden with it). */
+.work-panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(520px, 90vw);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(36, 26, 18, 0.92);
+  border: 1px solid #c9a24a;
+  color: #f3e6c4;
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+  z-index: 40;
+}
+.toast.show {
+  opacity: 1;
+}
 .work-panel {
   margin-top: 6px;
   font-size: 14px;

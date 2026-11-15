@@ -13,7 +13,7 @@
 import { FOOD_PER_ANT, FOOD_PER_QUEEN, LARVAE_PER_CHAMBER, MAX_QUEENS, PANTRY_CAPACITY } from '../sim/constants';
 import { chamberFills } from '../sim/nestNeeds';
 import type { World } from '../sim/world';
-import { ANT_CENTER, ANT_SIZE, CALLOW_RGBA } from './antArt';
+import { ANT_CENTER, CALLOW_RGBA, MAJOR_ANT_CENTER } from './antArt';
 import {
   colonyTint, drawText, floorY, larvaRaster, larvaSlots, LARVA_FRAMES, LARVA_GROW, LARVA_SIZE, LARVA_VARIANTS, MAX_CRUMBS,
   paintChamberInterior, paintChamberRim, paintCrumbs, paintEggPile, paintFlyRemains, paintGarden, paintTunnelInteriors, paintTunnelRims,
@@ -25,7 +25,7 @@ import {
   insideChamber, MAX_SHOWN_LARVAE, nestLayout, NEST_H, NEST_W, smoothToward, type Chamber, type NestLayout, type Pt, type Tunnel,
 } from './nestLayout';
 import { queenSprite } from './preyArt';
-import { AntSprites, MAJOR_SCALE, type Ctx2D } from './sprites';
+import { AntSprites, type Ctx2D } from './sprites';
 import type { CanvasFactory, CanvasLike } from './terrainRender';
 
 const defaultMake: CanvasFactory = (w, h) => {
@@ -697,15 +697,11 @@ export class UndergroundView {
       const sprites = p.callow ? this.callowSprites : this.antSprites;
       const x = Math.round(p.x);
       const y = Math.round(p.y);
-      const img = sprites.get(p.dir16, p.frame, p.carrying === 'crumb') as unknown as CanvasImageSource;
-      if (this.majors[this.order[k]]) {
-        // a major: the same sprite MAJOR_SCALE times larger (whole fine pixels), centred on the same point
-        const size = Math.round(ANT_SIZE * MAJOR_SCALE);
-        const off = Math.round((ANT_CENTER + 0.5) * MAJOR_SCALE - 0.5);
-        c.drawImage(img, x - off, y - off, size, size);
-      } else {
-        c.drawImage(img, x - 12, y - 12);
-      }
+      // a major has its own, larger sprite (centre pixel 15 instead of 12)
+      const major = this.majors[this.order[k]];
+      const img = sprites.get(p.dir16, p.frame, p.carrying === 'crumb', major) as unknown as CanvasImageSource;
+      const off = major ? MAJOR_ANT_CENTER : ANT_CENTER;
+      c.drawImage(img, x - off, y - off);
       if (p.carrying === 'egg') this.drawCarriedEgg(c, p, x, y);
     }
   }

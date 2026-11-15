@@ -226,6 +226,18 @@ export const SATELLITE_MIN_ANTS = 60;
 export const SATELLITE_COST = 30;
 export const SATELLITE_MIN_DIST = 120;
 export const SATELLITE_RED_GAP = 80;
+/**
+ * Colony-size milestones, each paid out once: MILESTONES[0] ants give MILESTONE_XP experience; MILESTONES[1] unlocks the Výpad (a sortie of
+ * the nearest idle ants against the red nest: SORTIE_FRACTION of the colony, at least SORTIE_MIN, once per SORTIE_COOLDOWN_S);
+ * MILESTONES[2] makes a super colony: SUPER_QUEENS more queens, and with a second nest the two are joined by a tunnel and hatch SUPER_HATCH_MUL times as long.
+ */
+export const MILESTONES = [100, 200, 500] as const;
+export const MILESTONE_XP = 8;
+export const SORTIE_FRACTION = 0.25;
+export const SORTIE_MIN = 20;
+export const SORTIE_COOLDOWN_S = 120;
+export const SUPER_QUEENS = 2;
+export const SUPER_HATCH_MUL = 0.85;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */
 export const GOAL_MAX_S = 600;
 

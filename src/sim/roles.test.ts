@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BLACK_SEP, ACID_S, APHID_HONEY_S, SPIDER_ESCAPE_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
+import { MILESTONE_XP, SORTIE_COOLDOWN_S, SORTIE_MIN, SUPER_QUEENS, SUPER_HATCH_MUL, BLACK_SEP, ACID_S, APHID_HONEY_S, SPIDER_ESCAPE_S, SATELLITE_COST, GUARD_FRACTION, GUARD_R_MIN, GUARD_R_STEP, NEST, RAID_MIN_ANTS, RED_FOOD_PER_ANT, RED_NEST_MIN_ANTS, RED_START_STOCK, RED_TRICKLE_S, STEP_S } from './constants';
 import type { RedAnt } from './raid';
 import { Surface } from './terrain';
-import { worldFromSave, worldToSave } from './serialize';
+import { validateSave, worldFromSave, worldToSave } from './serialize';
 import { World } from './world';
 
 vi.setConfig({ testTimeout: 120_000 }); // big colonies with hundreds of red ants: slow when the whole suite runs at once
@@ -850,5 +850,67 @@ describe('research prices', () => {
     const big = delivered(1000);
     expect(small).toBeGreaterThan(0);
     expect(big).toBeLessThan(small * 0.3);
+  });
+});
+
+describe('colony-size milestones (100, 200, 500 ants)', () => {
+  it('100 ants pay out experience once', () => {
+    const w = colony(3, 99);
+    run(w, 1);
+    expect(w.milestones.size).toBe(0);
+    const before = w.xp;
+    w.addAnts(1);
+    run(w, 1);
+    expect(w.milestones.has(100)).toBe(true);
+    expect(w.xp - before).toBeGreaterThan(MILESTONE_XP - 0.5);
+    const after = w.xp;
+    run(w, 1);
+    expect(w.xp - after).toBeLessThan(MILESTONE_XP / 2); // not paid again
+  });
+
+  it('200 ants unlock the sortie: the nearest idle ants set off for the red nest, then it must cool down', () => {
+    const w = colony(4, 150);
+    w.redNest = { x: 500, y: 300, owner: 'red', stock: 0, delivered: 0, trickleT: 1e9 };
+    run(w, 1);
+    expect(w.canSortie).toBe(false); // milestone not reached
+    w.addAnts(60);
+    run(w, 1);
+    expect(w.canSortie).toBe(true);
+    const n = w.launchSortie();
+    expect(n).toBeGreaterThanOrEqual(SORTIE_MIN);
+    expect(w.ants.filter((a) => a.goal !== undefined)).toHaveLength(n);
+    expect(w.launchSortie()).toBe(0); // cooling down
+    run(w, SORTIE_COOLDOWN_S + 1);
+    expect(w.canSortie).toBe(true);
+  });
+
+  it('there is no sortie without a red nest', () => {
+    const w = colony(5, 210);
+    run(w, 1);
+    expect(w.milestones.has(200)).toBe(true);
+    expect(w.canSortie).toBe(false);
+    expect(w.launchSortie()).toBe(0);
+  });
+
+  it('500 ants make a super colony: more queens, and with a second nest the hatching is faster', () => {
+    const w = colony(6, 499);
+    run(w, 1);
+    const q = w.queens;
+    const hi = w.hatchInterval;
+    w.addAnts(1);
+    run(w, 1);
+    expect(w.queens).toBe(q + SUPER_QUEENS);
+    expect(w.hatchInterval).toBeLessThan(hi);
+    w.satellite = { x: 300, y: 100 };
+    expect(w.hatchInterval).toBeCloseTo((hi * (q / (q + SUPER_QUEENS)) * SUPER_HATCH_MUL), 5);
+  });
+
+  it('are saved, and a bad list in a save is refused', () => {
+    const w = colony(7, 210);
+    run(w, 1);
+    const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
+    expect(save.milestones).toEqual([100, 200]);
+    expect([...worldFromSave(JSON.parse(JSON.stringify(save))).milestones]).toEqual([100, 200]);
+    expect(validateSave({ ...JSON.parse(JSON.stringify(save)), milestones: ['x'] })).toBeNull();
   });
 });
