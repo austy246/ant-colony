@@ -256,7 +256,7 @@ export const WAR_LIFE_S = 90;
  * flattened by the power WHEEL_LUCK (< 1: the rare ones are far likelier than for an ant born the usual way, the poor ones less so).
  */
 export const WHEEL_EVERY = 10;
-export const WHEEL_LUCK = 0.55;
+export const WHEEL_LUCK = 0.3;
 /** The terrarium of the ant collection keeps at most this many ants safe. */
 export const TERRARIUM_MAX = 100;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */

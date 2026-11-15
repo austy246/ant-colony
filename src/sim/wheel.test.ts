@@ -19,8 +19,9 @@ describe('wheel of fortune', () => {
     expect(c).toHaveLength(12);
     expect(c.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
     for (let i = 1; i < c.length; i++) expect(c[i]).toBeLessThan(c[i - 1]);
-    expect(c[11]).toBeGreaterThan(5 / 100000 * 20); // Rainbow: at least 20 times likelier than for a normally born ant
-    expect(c[9] + c[10] + c[11]).toBeGreaterThan(0.005);
+    expect(c[11]).toBeGreaterThan(5 / 100000 * 200); // Rainbow: at least 200 times likelier than for a normally born ant
+    expect(c[9] + c[10] + c[11]).toBeGreaterThan(0.04);
+    expect(c[0]).toBeLessThan(0.25); // an Obyčejný ant is no longer the usual result
   });
 
   it('wheelRarity follows those chances, and is the same for the same seed and spin', () => {
