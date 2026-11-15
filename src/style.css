@@ -599,6 +599,29 @@ body {
     inset 2px 2px 0 0 #44311f,
     inset -2px -2px 0 0 #1a120b;
 }
+.changelog {
+  top: 8%;
+  width: min(520px, calc(100vw - 28px));
+}
+.changelog-body {
+  max-height: 58vh;
+  overflow-y: auto;
+  margin: 8px 0 10px;
+  padding-right: 6px;
+  font-size: 14px;
+}
+.changelog-date {
+  margin-top: 8px;
+  font-weight: bold;
+  color: var(--px-accent, #e0c067);
+}
+.changelog ul {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+}
+.changelog li {
+  margin: 3px 0;
+}
 .tutorial-count {
   font-size: 12px;
   opacity: 0.7;

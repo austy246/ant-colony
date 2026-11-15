@@ -16,6 +16,7 @@ import { World, type GameMode } from './sim/world';
 import { Camera, easeCameraTo, type CameraPose } from './ui/camera';
 import { Input, type Tool } from './ui/input';
 import { handleExtinction, restoreLiveSave, showExtinct } from './ui/extinct';
+import { showChangelog } from './ui/changelog';
 import { showModeSelect } from './ui/modeSelect';
 import { buildToolbar } from './ui/toolbar';
 import { createViewController } from './ui/viewController';
@@ -102,6 +103,9 @@ export async function startGame(): Promise<void> {
   const panel = el('div', 'panel', '', ui);
   const newGameBtn = el('button', '', 'Nová hra', panel);
   newGameBtn.type = 'button';
+  const newsBtn = el('button', '', 'Novinky', panel);
+  newsBtn.type = 'button';
+  newsBtn.addEventListener('click', () => showChangelog(ui));
   // music and effects can be switched off (remembered)
   for (const [label, get, set] of [
     ['Hudba', () => sound.musicOn, (on: boolean) => sound.setMusic(on)],
