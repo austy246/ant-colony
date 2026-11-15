@@ -33,6 +33,10 @@ export const TRAIL_RGB = [127, 209, 255] as const;
 /** The red ants' trail in the pheromone view. */
 export const RED_TRAIL_RGB = [255, 106, 80] as const;
 
+/** The black and the red ants' war pheromones (alarms where fights are) in the pheromone view: orange and violet. */
+export const WAR_TRAIL_RGB = [255, 150, 40] as const;
+export const RED_WAR_TRAIL_RGB = [196, 84, 255] as const;
+
 /** Soft orange radial glow around the nest, w x h (the map size), built from homeGlow. */
 export function buildHomeGlowCanvas(make: CanvasFactory, w: number, h: number): CanvasLike {
   const canvas = make(w, h);

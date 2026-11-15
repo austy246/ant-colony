@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WAR_AMOUNT, WAR_R, WAR_REACH, WAR_MIN, WAR_ARRIVE, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { antRarity, rarityBonus, type StoredAnt } from './collection';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
@@ -226,6 +226,11 @@ export class World {
   bush: Bush | null = null;
   /** The red ants' own pheromone: red foragers carrying food home lay it, red foragers follow it. */
   redPher: PheromoneField;
+  /** War pheromones (alarms laid where duels start): the black ants' and the red ants' own. warT / redWarT = seconds left until they are wiped (0 = nothing laid). */
+  warPher: PheromoneField;
+  redWarPher: PheromoneField;
+  warT = 0;
+  redWarT = 0;
   /** The red ants' nest (null until the colony has RAID_MIN_ANTS ants). Saved (position and owner). */
   redNest: RedNest | null = null;
   /** Red raiders on the map (transient: not saved, a raid in progress ends with a reload). */
@@ -452,6 +457,8 @@ export class World {
     this.terrain = terrain;
     this.pher = pher;
     this.redPher = new PheromoneField(terrain.w, terrain.h);
+    this.warPher = new PheromoneField(terrain.w, terrain.h);
+    this.redWarPher = new PheromoneField(terrain.w, terrain.h);
     this.rng = rng;
     this.exploreW = Math.ceil(terrain.w / EXPLORE_CELL);
     this.exploreH = Math.ceil(terrain.h / EXPLORE_CELL);
@@ -720,6 +727,8 @@ export class World {
       this.terrain = extendTerrain(this.terrain, next);
       this.pher = this.pher.grown(this.terrain.w, this.terrain.h);
       this.redPher = this.redPher.grown(this.terrain.w, this.terrain.h);
+      this.warPher = this.warPher.grown(this.terrain.w, this.terrain.h);
+      this.redWarPher = this.redWarPher.grown(this.terrain.w, this.terrain.h);
       const ow = this.exploreW;
       const oh = this.exploreH;
       const old = this.explored;
@@ -786,6 +795,17 @@ export class World {
     } else if (this.redPherDirty) {
       this.redPher.data.fill(0);
       this.redPherDirty = false;
+    }
+    // the war pheromones fade (every 4th substep, in one go) and are wiped once their time is up
+    if (this.warT > 0) {
+      this.warT -= STEP_S;
+      if (this.substepNo % 4 === 0) this.warPher.step(STEP_S * 2);
+      if (this.warT <= 0) this.warPher.data.fill(0);
+    }
+    if (this.redWarT > 0) {
+      this.redWarT -= STEP_S;
+      if (this.substepNo % 4 === 0) this.redWarPher.step(STEP_S * 2);
+      if (this.redWarT <= 0) this.redWarPher.data.fill(0);
     }
     this.time += STEP_S;
     this.updateNurses();
@@ -1581,6 +1601,7 @@ export class World {
       this.markExplored(ant.x, ant.y);
       const red = this.reds.length > 0 ? this.sensedRed(ant) : null;
       const rn = this.redNest?.owner === 'red' ? this.redNest : null;
+      let alarm: number | null = null;
       if (red && ant.sprayCd === undefined && red.acidT === undefined && this.has('c1')) {
         // researched: a black ant with a red one ahead squirts acid on it, like the red ants do
         const d = Math.hypot(red.x - ant.x, red.y - ant.y);
@@ -1605,6 +1626,12 @@ export class World {
         delete ant.strayT;
         delete ant.strayH;
 
+      } else if (this.warT > 0 && (alarm = this.warHeading(this.warPher, ant.x, ant.y)) !== null) {
+        // the black ants' alarm: a fight is on nearby, go and help
+        desired = alarm;
+        pherWeight = 0;
+        delete ant.strayT;
+        delete ant.strayH;
       } else if (rn && Math.hypot(rn.x - ant.x, rn.y - ant.y) <= RED_NEST_SENSE) {
         // the red nest is near: smell it and go there (four of them at once take it)
         desired = Math.atan2(rn.y - ant.y, rn.x - ant.x);
@@ -1790,6 +1817,8 @@ export class World {
         r.fightT = DUEL_S;
         foe.duelT = DUEL_S;
         this.duels.set(r.id, foe);
+        this.callToArms(this.warPher, foe.x, foe.y, false); // both sides lay an alarm where the fight is
+        this.callToArms(this.redWarPher, r.x, r.y, true);
         continue;
       }
       if (r.gnawT !== undefined) {
@@ -1804,7 +1833,11 @@ export class World {
       // guards circle the red nest, foragers look for food; raiders make for their own rally point near the black nest
       const base = r.patrol && this.redNest ? this.redNest : NEST;
       const job = !foe && r.patrol && this.redNest ? r.job : undefined;
-      if (job === 'guard') {
+      // a free patrol red ant (not carrying food) smells its own side's alarm and goes to the fight
+      const alarm = !foe && r.patrol && !r.carry && this.redWarT > 0 ? this.warHeading(this.redWarPher, r.x, r.y) : null;
+      if (alarm !== null) {
+        r.heading = alarm + (rng.next() - 0.5) * 0.3;
+      } else if (job === 'guard') {
         r.heading = this.orbitHeading(r.x, r.y, this.redNest!.x, this.redNest!.y, r.id) + (rng.next() - 0.5) * 0.3;
       } else if (job === 'forager') {
         r.heading = this.forageHeading(r, this.redNest!);
@@ -1812,7 +1845,7 @@ export class World {
       const tx = foe ? foe.x : Math.max(5, Math.min(this.terrain.w - 5, base.x + (r.ox ?? 0)));
       const ty = foe ? foe.y : Math.max(5, Math.min(this.terrain.h - 5, base.y + (r.oy ?? 0)));
       const away = Math.hypot(tx - r.x, ty - r.y);
-      if (job) {
+      if (job || alarm !== null) {
         // its heading was set above
       } else if (!foe && away <= 6) {
         r.heading += (rng.next() - 0.5) * 1.5; // at its rally point: mill about and wait for ants to come
@@ -1870,6 +1903,34 @@ export class World {
       if (list) list.push(r);
       else this.redGrid.set(key, [r]);
     }
+  }
+
+  /** Lays an alarm of the war pheromone at (x, y): WAR_AMOUNT in every cell within WAR_R px, and keeps it for WAR_LIFE_S seconds. */
+  private callToArms(field: PheromoneField, x: number, y: number, red: boolean): void {
+    for (let dy = -WAR_R; dy <= WAR_R; dy++) {
+      for (let dx = -WAR_R; dx <= WAR_R; dx++) if (dx * dx + dy * dy <= WAR_R * WAR_R) field.deposit(x + dx, y + dy, WAR_AMOUNT);
+    }
+    if (red) this.redWarT = WAR_LIFE_S;
+    else this.warT = WAR_LIFE_S;
+  }
+
+  /** The way to the strongest alarm within about WAR_REACH px (eight ways, three distances each), or null: no alarm here, or already in the thick of it. */
+  private warHeading(f: PheromoneField, x: number, y: number): number | null {
+    if (f.sampleMax(x, y, 2) > WAR_ARRIVE) return null;
+    let best = 0;
+    let bestA = 0;
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      const c = Math.cos(a);
+      const s = Math.sin(a);
+      let sum = 0;
+      for (const d of [WAR_REACH * 0.25, WAR_REACH * 0.6, WAR_REACH]) sum += f.sampleMax(x + c * d, y + s * d, 2);
+      if (sum > best) {
+        best = sum;
+        bestA = a;
+      }
+    }
+    return best > WAR_MIN ? bestA : null;
   }
 
   /** The red ant a wandering black ant is after: looked up every 4th substep (staggered by ant id) and remembered in between. */

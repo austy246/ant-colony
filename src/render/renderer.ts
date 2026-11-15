@@ -22,6 +22,8 @@ import {
   PHEROMONE_DARK,
   TERRAIN_DARK,
   RED_TRAIL_RGB,
+  RED_WAR_TRAIL_RGB,
+  WAR_TRAIL_RGB,
   TRAIL_RGB,
 } from './views';
 
@@ -355,19 +357,29 @@ export class Renderer {
       this.trailImage ??= tc.createImageData(w, h);
       const buf = this.trailImage.data;
       const redData = this.world.redPher.w === w && this.world.redPher.h === h && this.world.reds.length > 0 ? this.world.redPher.data : null;
+      const sameSize = (f: { w: number; h: number }): boolean => f.w === w && f.h === h;
+      const warData = this.world.warT > 0 && sameSize(this.world.warPher) ? this.world.warPher.data : null;
+      const redWarData = this.world.redWarT > 0 && sameSize(this.world.redWarPher) ? this.world.redWarPher.data : null;
       buf.fill(0);
       for (let y = y0; y <= y1; y++) {
         const row = y * w;
         for (let x = x0; x <= x1; x++) {
           const a = pheromoneAlpha(data[row + x]);
           const ra = redData ? pheromoneAlpha(redData[row + x]) : 0;
-          if (a === 0 && ra === 0) continue;
+          const wa = warData ? pheromoneAlpha(warData[row + x]) : 0;
+          const rwa = redWarData ? pheromoneAlpha(redWarData[row + x]) : 0;
+          if (a === 0 && ra === 0 && wa === 0 && rwa === 0) continue;
           const o = (row + x) * 4;
-          const red = ra > a; // the red ants' trail is drawn in red where it is the stronger one
-          buf[o] = red ? RED_TRAIL_RGB[0] : TRAIL_RGB[0];
-          buf[o + 1] = red ? RED_TRAIL_RGB[1] : TRAIL_RGB[1];
-          buf[o + 2] = red ? RED_TRAIL_RGB[2] : TRAIL_RGB[2];
-          buf[o + 3] = Math.round((red ? ra : a) * 255);
+          // the strongest of the four is drawn: food trail (blue), red food trail (red), black war (orange), red war (violet)
+          let rgb: readonly [number, number, number] = TRAIL_RGB;
+          let v = a;
+          if (ra > v) { rgb = RED_TRAIL_RGB; v = ra; }
+          if (wa > v) { rgb = WAR_TRAIL_RGB; v = wa; }
+          if (rwa > v) { rgb = RED_WAR_TRAIL_RGB; v = rwa; }
+          buf[o] = rgb[0];
+          buf[o + 1] = rgb[1];
+          buf[o + 2] = rgb[2];
+          buf[o + 3] = Math.round(v * 255);
         }
       }
       tc.putImageData(this.trailImage, 0, 0);

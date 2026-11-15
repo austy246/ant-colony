@@ -240,6 +240,17 @@ export const SUPER_QUEENS = 2;
 export const SUPER_HATCH_MUL = 0.85;
 /** Each rarity step adds this fraction to the ant's speed, curiosity and stubbornness (Rainbow, the 12th, +33 %). */
 export const RARITY_STAT_STEP = 0.03;
+/**
+ * War pheromones: where a duel starts both sides lay an alarm (WAR_AMOUNT in every cell within WAR_R px); its own side's free ants within about
+ * WAR_REACH px smell it and come to fight, and it fades after WAR_LIFE_S seconds (the black and the red ants each have their own).
+ * An ant that stands in the thick of it (more than WAR_ARRIVE) has arrived and carries on as before.
+ */
+export const WAR_AMOUNT = 1.5;
+export const WAR_R = 5;
+export const WAR_REACH = 40;
+export const WAR_MIN = 0.08;
+export const WAR_ARRIVE = 1;
+export const WAR_LIFE_S = 90;
 /** The terrarium of the ant collection keeps at most this many ants safe. */
 export const TERRARIUM_MAX = 100;
 /** A selected ant sent somewhere gives up after this many seconds (it may be stuck). */

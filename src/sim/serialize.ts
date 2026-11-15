@@ -1,4 +1,4 @@
-import { APHID_MAX, EXPLORE_CAP, REPEL_MAX, SORTIE_COOLDOWN_S, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, WAR_LIFE_S, EXPLORE_CAP, REPEL_MAX, SORTIE_COOLDOWN_S, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { antRarity, rarityBonus, type StoredAnt } from './collection';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
@@ -73,6 +73,9 @@ export interface SaveV1 {
   reds?: SavedRed[];
   /** Optional (absent = none): the red ants' own pheromone, same coding as `pheromone` (only saved when there is any). */
   redPheromone?: string;
+  /** Optional (absent = none): the black and the red ants' war pheromones (alarms), same coding as `pheromone`; only saved when there is any. */
+  warPheromone?: string;
+  redWarPheromone?: string;
   /** Optional (absent = none): the player's no-entry marks (position, seconds left). */
   repels?: { x: number; y: number; t: number }[];
   /** Optional (absent = empty): the explored grid (what the ants walked over lately), one byte per cell. */
@@ -163,6 +166,15 @@ function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+function warFields(w: World): { warPheromone?: string; redWarPheromone?: string } {
+  const o: { warPheromone?: string; redWarPheromone?: string } = {};
+  const a = w.warT > 0 ? fieldToBase64(w.warPher.data, MAX_PHEROMONE, true) : null;
+  const b = w.redWarT > 0 ? fieldToBase64(w.redWarPher.data, MAX_PHEROMONE, true) : null;
+  if (a !== null) o.warPheromone = a;
+  if (b !== null) o.redWarPheromone = b;
+  return o;
+}
+
 function redField(w: World): { redPheromone?: string } {
   const r = fieldToBase64(w.redPher.data, MAX_PHEROMONE, true);
   return r === null ? {} : { redPheromone: r };
@@ -212,6 +224,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0, delivered: w.redNest.delivered ?? 0 } } : {}),
     reds: w.reds.map(redToSave),
     ...redField(w),
+    ...warFields(w),
     repels: w.repels.map((r) => ({ x: r.x, y: r.y, t: r.t })),
     explored: fieldToBase64(w.explored, EXPLORE_CAP, false) ?? '',
     raidAge: w.raidAge,
@@ -288,6 +301,13 @@ export function worldFromSave(s: SaveV1): World {
   if (redBytes && redBytes.length === w.redPher.data.length) {
     for (let i = 0; i < redBytes.length; i++) w.redPher.data[i] = (redBytes[i] / 255) * MAX_PHEROMONE;
     w.redPherDirty = true; // so a trail with no red ant left to feed it still fades away
+  }
+  for (const [b64, f, red] of [[s.warPheromone, w.warPher, false], [s.redWarPheromone, w.redWarPher, true]] as const) {
+    const bytes2 = b64 ? base64ToBytes(b64) : null;
+    if (!bytes2 || bytes2.length !== f.data.length) continue;
+    for (let i = 0; i < bytes2.length; i++) f.data[i] = (bytes2[i] / 255) * MAX_PHEROMONE;
+    if (red) w.redWarT = WAR_LIFE_S;
+    else w.warT = WAR_LIFE_S;
   }
   w.repels = (s.repels ?? []).slice(0, REPEL_MAX).map((r) => ({ x: r.x, y: r.y, t: r.t }));
   const exBytes = s.explored ? base64ToBytes(s.explored) : null;
@@ -458,6 +478,9 @@ export function validateSave(x: unknown): SaveV1 | null {
   if (o.redNest !== undefined && !validRedNest(o.redNest, size)) return null;
   if (o.reds !== undefined && (!Array.isArray(o.reds) || o.reds.length > 3000 || !o.reds.every((r) => validRed(r, size)))) return null;
   if (o.redPheromone !== undefined && (typeof o.redPheromone !== 'string' || !validPheromone(o.redPheromone, size))) return null;
+  for (const k of ['warPheromone', 'redWarPheromone'] as const) {
+    if (o[k] !== undefined && (typeof o[k] !== 'string' || !validPheromone(o[k] as string, size))) return null;
+  }
   if (o.repels !== undefined && (!Array.isArray(o.repels) || o.repels.length > REPEL_MAX || !o.repels.every((r) => typeof r === 'object' && r !== null && isNum(r.x) && isNum(r.y) && isNum(r.t) && r.t >= 0))) return null;
   if (o.explored !== undefined && typeof o.explored !== 'string') return null;
   for (const k of ['raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer'] as const) {
