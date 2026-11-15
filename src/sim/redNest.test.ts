@@ -78,6 +78,7 @@ describe('the red nest', () => {
     const n = w.redNest!;
     const queens = w.queens;
     const interval = w.hatchInterval;
+    w.reds = w.reds.filter((r) => !r.patrol); // the defenders are dead
     for (let i = 0; i < CAPTURE_ANTS; i++) {
       const a = w.ants[i];
       a.state = 'wander';
@@ -95,6 +96,35 @@ describe('the red nest', () => {
     expect(w.raiders).toBe(0);
     run(w, RED_TRICKLE_S * 3);
     expect(w.reds.filter((r) => r.patrol)).toHaveLength(0);
+  });
+
+  it('the nest stays red while its defenders live; it is taken once 95 % of them are dead', () => {
+    const w = bigWorld(4);
+    run(w, RED_TRICKLE_S * 3);
+    const n = w.redNest!;
+    const patrols = w.reds.filter((r) => r.patrol);
+    expect(patrols.length).toBeGreaterThan(100);
+    for (let i = 0; i < CAPTURE_ANTS; i++) {
+      const a = w.ants[i];
+      a.state = 'wander';
+      a.x = n.x + (i - 1.5);
+      a.y = n.y;
+    }
+    run(w, 0.2);
+    expect(n.owner).toBe('red'); // four ants stand there, but the red ants are all alive
+    expect(w.reds.filter((r) => r.patrol).length).toBeGreaterThan(100);
+    // kill all but a tenth, still not enough
+    w.reds = w.reds.filter((r) => !r.patrol || r.id % 10 === 0);
+    for (const a of w.ants.slice(0, CAPTURE_ANTS)) { a.x = n.x; a.y = n.y; a.state = 'wander'; }
+    run(w, 0.2);
+    expect(n.owner).toBe('red');
+    // all but 3 % dead
+    const keep = Math.floor(patrols.length * 0.03);
+    let k = 0;
+    w.reds = w.reds.filter((r) => !r.patrol || k++ < keep);
+    for (const a of w.ants.slice(0, CAPTURE_ANTS)) { a.x = n.x; a.y = n.y; a.state = 'wander'; }
+    run(w, 0.2);
+    expect(n.owner).toBe('black');
   });
 
   it('fewer than CAPTURE_ANTS ants do not take it', () => {

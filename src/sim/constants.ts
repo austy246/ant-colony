@@ -401,6 +401,8 @@ export const RED_NEST_SENSE = 90;
 /** The red nest is taken when CAPTURE_ANTS black ants (on the surface) are within CAPTURE_R px of it at once. */
 export const CAPTURE_ANTS = 4;
 export const CAPTURE_R = 18;
+/** ... but only once the nest's red patrol ants are (nearly) all dead: at most this fraction of the most it ever had may be left. */
+export const CAPTURE_MAX_LEFT = 0.05;
 /** A taken nest adds CAPTURED_QUEENS queens, and the queens hatch ants CAPTURED_HATCH_MUL times as long per cycle (< 1: faster). */
 export const CAPTURED_QUEENS = 4;
 export const CAPTURED_HATCH_MUL = 0.75;
