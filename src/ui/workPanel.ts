@@ -46,15 +46,6 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   treeBtn.textContent = 'Výzkum (0 zk.)';
   treeBtn.addEventListener('click', () => openResearchTree(document.getElementById('ui') ?? root, world));
   box.appendChild(treeBtn);
-  // unlocked by the 200-ant milestone: sends the idle ants nearest to the red nest against it
-  const sortie = document.createElement('button');
-  sortie.type = 'button';
-  sortie.hidden = true;
-  sortie.addEventListener('click', () => {
-    if (world.launchSortie() > 0) sound.play('send');
-    else sound.play('deny');
-  });
-  box.appendChild(sortie);
   // every WHEEL_EVERY ants born charge a spin of the wheel of fortune
   const wheelBtn = document.createElement('button');
   wheelBtn.type = 'button';
@@ -67,15 +58,6 @@ export function buildWorkPanel(root: HTMLElement, world: World): () => void {
   box.appendChild(info);
   root.appendChild(box);
   return () => {
-    const has = world.milestones.has(200);
-    if (sortie.hidden === has) sortie.hidden = !has;
-    if (has) {
-      const wait = Math.ceil(world.sortieReadyAt - world.time);
-      const label = world.redNest?.owner !== 'red' ? 'Výpad (žádný cíl)' : wait > 0 ? `Výpad (${wait} s)` : 'Výpad';
-      if (sortie.textContent !== label) sortie.textContent = label;
-      const ok = world.canSortie;
-      if (sortie.disabled === ok) sortie.disabled = !ok;
-    }
     const spins = world.wheels;
     if (wheelBtn.hidden === spins > 0) wheelBtn.hidden = spins <= 0;
     if (spins > 0) {

@@ -53,7 +53,7 @@ export const SUGAR_BOOST_MUL = 1.5;
 export const SPAWN_MIN_S = 12;
 export const SPAWN_MAX_S = 30;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
-export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew' | 'redant' | 'blackant'>, number> = {
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew' | 'redant' | 'blackant' | 'honey'>, number> = {
   berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
@@ -227,15 +227,11 @@ export const SATELLITE_COST = 30;
 export const SATELLITE_MIN_DIST = 120;
 export const SATELLITE_RED_GAP = 80;
 /**
- * Colony-size milestones, each paid out once: MILESTONES[0] ants give MILESTONE_XP experience; MILESTONES[1] unlocks the Výpad (a sortie of
- * the nearest idle ants against the red nest: SORTIE_FRACTION of the colony, at least SORTIE_MIN, once per SORTIE_COOLDOWN_S);
+ * Colony-size milestones, each paid out once: MILESTONES[0] ants give MILESTONE_XP experience; MILESTONES[1] lets a bee hive appear (HIVE_MIN_ANTS);
  * MILESTONES[2] makes a super colony: SUPER_QUEENS more queens, and with a second nest the two are joined by a tunnel and hatch SUPER_HATCH_MUL times as long.
  */
 export const MILESTONES = [100, 200, 500] as const;
 export const MILESTONE_XP = 8;
-export const SORTIE_FRACTION = 0.25;
-export const SORTIE_MIN = 20;
-export const SORTIE_COOLDOWN_S = 120;
 export const SUPER_QUEENS = 2;
 export const SUPER_HATCH_MUL = 0.85;
 /** Each rarity step adds this fraction to the ant's speed, curiosity and stubbornness (Rainbow, the 12th, +33 %). */
@@ -444,6 +440,28 @@ export const RED_FORAGE_R = 350;
 export const RED_FOOD_SENSE = 60;
 /** A red forager sees a dead black ant as this much nearer than it is, so it picks it before other food. */
 export const RED_CORPSE_PREF = 0.5;
+/**
+ * The bee hive: from HIVE_MIN_ANTS ants (normal mode) a wild hive appears at least HIVE_NEST_GAP px from the nest, with HIVE_START_HONEY pieces of
+ * honey (at most HIVE_MAX_HONEY, one more every HIVE_HONEY_S seconds except in winter). HIVE_BEES guard bees circle it within HIVE_GUARD_R px; they
+ * fly at an ant that comes within HIVE_CHASE_R px of the hive and, once closer than HIVE_STING_R, sting it (every HIVE_STING_S seconds, the ant dies with
+ * chance HIVE_STING_P). In winter and in the rain they stay inside.
+ */
+export const HIVE_MIN_ANTS = 200;
+export const HIVE_NEST_GAP = 240;
+export const HIVE_EDGE_GAP = 130;
+export const HIVE_BUSH_GAP = 160;
+export const HIVE_BEES = 10;
+export const HIVE_START_HONEY = 30;
+export const HIVE_MAX_HONEY = 60;
+export const HIVE_HONEY_S = 15;
+export const HIVE_GUARD_R = 24;
+export const HIVE_CHASE_R = 45;
+export const HIVE_STING_R = 4;
+export const HIVE_STING_S = 2;
+export const HIVE_STING_P = 0.8;
+export const HIVE_BEE_SPEED = 45;
+/** The honey pile lies this many px in front of the hive's base (its entrance). */
+export const HIVE_HONEY_DY = 5;
 /** The body of a black ant rots away after this many seconds, and at most BLACK_CORPSE_MAX lie about at once (the oldest go first). */
 export const BLACK_CORPSE_S = 120;
 export const BLACK_CORPSE_MAX = 80;

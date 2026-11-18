@@ -68,7 +68,6 @@ describe('everything that matters is saved with the game', () => {
     expect(w.sendAnt(a.id, 400, 200)).toBe(true);
     run(w, 5);
     a.acidT = 3; // (set last: it would wear off while the world runs)
-    w.sortieReadyAt = w.time + 50;
     w.rescueTimer = 4;
     const ex = w.explored.reduce((s, v) => s + v, 0);
     expect(ex).toBeGreaterThan(0);
@@ -79,7 +78,6 @@ describe('everything that matters is saved with the game', () => {
     const a2 = b.ants.find((x) => x.id === a.id)!;
     expect(a2.goal?.x).toBe(a.goal?.x);
     expect(a2.acidT).toBeCloseTo(a.acidT!, 6);
-    expect(b.sortieReadyAt).toBeCloseTo(w.sortieReadyAt, 6);
     expect(b.rescueTimer).toBe(4);
     const ex2 = b.explored.reduce((s, v) => s + v, 0);
     expect(ex2).toBeGreaterThan(ex * 0.9);
@@ -94,7 +92,7 @@ describe('everything that matters is saved with the game', () => {
     const save = JSON.parse(JSON.stringify(worldToSave(w, EXTRA)));
     save.selectedAntId = 99999;
     expect(worldFromSave(save).selectedAntId).toBeNull();
-    for (const k of ['reds', 'redPheromone', 'repels', 'explored', 'raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer', 'selectedAntId']) delete save[k];
+    for (const k of ['reds', 'redPheromone', 'repels', 'explored', 'raidAge', 'raidPending', 'rescueTimer', 'selectedAntId']) delete save[k];
     expect(validateSave(save)).not.toBeNull();
     const old = worldFromSave(save);
     expect(old.reds).toHaveLength(0);

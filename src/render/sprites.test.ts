@@ -59,7 +59,7 @@ function anyPainted(d: Uint8ClampedArray): number {
   return n / (CELL * CELL);
 }
 
-const KINDS: FoodKind[] = ['beetle', 'caterpillar', 'fly', 'carrion', 'berry', 'mushroom', 'sugar', 'leaf', 'honeydew', 'redant', 'blackant'];
+const KINDS: FoodKind[] = ['beetle', 'caterpillar', 'fly', 'carrion', 'berry', 'mushroom', 'sugar', 'leaf', 'honeydew', 'redant', 'blackant', 'honey'];
 
 describe('worker ant (fine grid)', () => {
   const sprites = new AntSprites(makeCanvas);
@@ -216,6 +216,7 @@ describe('prey sprites (fine grid)', () => {
     honeydew: [1, 100000],
     redant: [1, 100000],
     blackant: [1, 100000],
+    honey: [1, 100000],
   };
 
   it.each(KINDS)('%s paints a plausible number of opaque pixels', (kind) => {

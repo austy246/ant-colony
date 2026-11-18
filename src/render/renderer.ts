@@ -8,6 +8,8 @@ import { ANT_FRAMES, antDirection } from './antArt';
 import { BEETLE_FRAMES, BEETLE_STRIDE_ART_PX, CATERPILLAR_FRAMES, CATERPILLAR_STRIDE_ART_PX } from './preyAnim';
 import { drawPreyItem, drawPuff, isFleeing, isHopping, isLiving, PreySprites } from './preySprites';
 import { BushSprite, drawBush } from './bushArt';
+import { drawBees, drawHive } from './hiveArt';
+import { beesSleep } from '../sim/hive';
 import { drawRedNest } from './redNestArt';
 import { drawSpider, drawWeb } from './spiderArt';
 import { advanceStride, frameFor, type StrideState } from './stride';
@@ -177,6 +179,8 @@ export class Renderer {
       }
       const bush = this.world.bush;
       if (bush) drawBush(c, bush, this.world.time, (this.bushSprite ??= new BushSprite(this.make)));
+      const hive = this.world.hive;
+      if (hive) drawHive(c, hive);
       this.drawFoodLayer(c);
       const q = this.queen;
       if (q?.visible) drawQueen(c, q.x, q.y, q.digProgress);
@@ -228,6 +232,7 @@ export class Renderer {
           if (kills > 0) this.puffIfKilled(st.x, st.y);
         }
       }
+      if (this.world.hive) drawBees(c, this.world.bees, this.world.time, beesSleep(this.world.season, this.world.raining));
       this.drawPuffs(c);
     }
     this.lastKilled = this.world.antsKilled;

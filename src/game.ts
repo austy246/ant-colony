@@ -197,7 +197,7 @@ export async function startGame(): Promise<void> {
   // a short notice in the middle of the top edge when the colony reaches a size milestone
   const MILESTONE_TEXT: Record<number, string> = {
     100: '100 mravenců! Kolonie dostává bonus zkušenosti.',
-    200: '200 mravenců! Odemčen Výpad: pošle část kolonie na červené hnízdo.',
+    200: '200 mravenců! V okolí se může objevit včelí hnízdo: med je lákavý, ale včely bodají.',
     500: '500 mravenců! Superkolonie: další královny a se druhým hnízdem i rychlejší líhnutí.',
   };
   let toastEl: HTMLDivElement | null = null;
@@ -224,6 +224,7 @@ export async function startGame(): Promise<void> {
   });
   let lastSnap = takeSnapshot();
   let lastWheels = world.wheels;
+  let hadHive = world.hive !== null;
 
   // --- saving ---
   let saving = false;
@@ -378,6 +379,8 @@ export async function startGame(): Promise<void> {
     for (const s of soundsFor(lastSnap, cur)) sound.play(s);
     if (world.wheels > lastWheels) showToast('Kolo štěstí je nabité! Otevři ho tlačítkem vlevo nahoře.');
     lastWheels = world.wheels;
+    if (world.hive && !hadHive) showToast('Včelí hnízdo! Med je lákavý, ale včely bodají: v zimě a za deště zůstávají uvnitř.');
+    hadHive = world.hive !== null;
     if (cur.milestones > lastSnap.milestones) showToast(MILESTONE_TEXT[Math.max(...world.milestones)] ?? '');
     lastSnap = cur;
     if (world.extinct && !resetting) {

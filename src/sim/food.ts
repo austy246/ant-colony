@@ -1,7 +1,7 @@
 import { NEST } from './constants';
 import { Surface, type Terrain } from './terrain';
 
-export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar' | 'leaf' | 'honeydew' | 'redant' | 'blackant';
+export type FoodKind = 'beetle' | 'caterpillar' | 'fly' | 'carrion' | 'berry' | 'mushroom' | 'sugar' | 'leaf' | 'honeydew' | 'redant' | 'blackant' | 'honey';
 
 /** Every source is FOOD_SIZE_MUL times larger than the base size, so it lasts longer and food does not keep popping up. */
 const FOOD_SIZE_MUL = 6;
@@ -22,6 +22,8 @@ export const FOOD_TABLE: Record<FoodKind, { pieces: number; value: number }> = {
   redant: { pieces: 1, value: 2 },
   /** The body of a black ant killed in a duel: the red ants gnaw it up piece by piece and carry it home (the black ants leave their dead alone). */
   blackant: { pieces: 3, value: 1 },
+  /** The honey of the wild bee hive: a big pile, rich pieces (the bees guard it). */
+  honey: { pieces: 30, value: 2 },
 };
 
 /** Kinds that exist as living creatures until they die. */

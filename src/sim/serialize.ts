@@ -1,9 +1,10 @@
-import { APHID_MAX, WAR_LIFE_S, EXPLORE_CAP, REPEL_MAX, SORTIE_COOLDOWN_S, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
+import { APHID_MAX, WAR_LIFE_S, EXPLORE_CAP, REPEL_MAX, RESEARCH_IDS, MILESTONES, TERRARIUM_MAX, GARDEN_MAX, HATCH_FOCUSES, type HatchFocus, GUARD_FRACTION, GUARD_FRACTION_MAX, RED_TRICKLE_S, FOOD_PER_ANT, MAX_MAP_STEP, MAX_PHEROMONE, SPIDER_RESPAWN_S, STEP_S, SUGAR_BOOST_S, SUGAR_COOLDOWN_S } from './constants';
 import { antRarity, rarityBonus, type StoredAnt } from './collection';
 import { FOOD_TABLE, type FoodItem } from './food';
 import type { Spider } from './spider';
 import type { RedAnt } from './raid';
 import type { Bush } from './aphids';
+import type { Hive } from './hive';
 import { terrainSize } from './terrain';
 import { World, type Ant, type AntRole, type GameMode } from './world';
 
@@ -85,10 +86,9 @@ export interface SaveV1 {
   repels?: { x: number; y: number; t: number }[];
   /** Optional (absent = empty): the explored grid (what the ants walked over lately), one byte per cell. */
   explored?: string;
-  /** Optional: seconds since the raid in progress started, raiders still to come out of the red nest, and when the next Výpad may be launched. */
+  /** Optional: seconds since the raid in progress started, and raiders still to come out of the red nest. */
   raidAge?: number;
   raidPending?: number;
-  sortieReadyAt?: number;
   /** Optional: seconds the colony has been empty and out of food (the rescue clock), and the ant the player has selected. */
   rescueTimer?: number;
   selectedAntId?: number | null;
@@ -106,6 +106,8 @@ export interface SaveV1 {
   spider?: Spider;
   /** Optional (absent = no bush yet): the aphids bush (normal mode). */
   bush?: Bush;
+  /** Optional (absent = no hive yet): the wild bee hive (normal mode). */
+  hive?: Hive;
   /** Optional (absent = none yet): the red ants' nest (normal mode) and who holds it. */
   redNest?: { x: number; y: number; owner: 'red' | 'black'; stock?: number; delivered?: number };
 }
@@ -253,6 +255,7 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     ...(w.satellite ? { satellite: { x: w.satellite.x, y: w.satellite.y } } : {}),
     raidWait: w.raidWait,
     ...(w.bush ? { bush: { ...w.bush } } : {}),
+    ...(w.hive ? { hive: { ...w.hive } } : {}),
     ...(w.redNest ? { redNest: { x: w.redNest.x, y: w.redNest.y, owner: w.redNest.owner, stock: w.redNest.stock ?? 0, delivered: w.redNest.delivered ?? 0 } } : {}),
     reds: w.reds.map(redToSave),
     births: w.births,
@@ -264,7 +267,6 @@ export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV
     explored: fieldToBase64(w.explored, EXPLORE_CAP, false) ?? '',
     raidAge: w.raidAge,
     raidPending: w.raidPending,
-    sortieReadyAt: w.sortieReadyAt,
     rescueTimer: w.rescueTimer,
     selectedAntId: w.selectedAntId,
     ...(w.spider ? { spider: { x: w.spider.x, y: w.spider.y, alive: w.spider.alive, eatT: w.spider.eatT, respawnT: w.spider.respawnT, corner: w.spider.corner } } : {}),
@@ -330,6 +332,7 @@ export function worldFromSave(s: SaveV1): World {
     for (const a of w.terrarium) give(a);
   }
   w.bush = s.bush ? { ...s.bush } : null;
+  w.hive = s.hive ? { ...s.hive } : null;
   w.redNest = s.redNest ? { x: s.redNest.x, y: s.redNest.y, owner: s.redNest.owner, stock: s.redNest.stock ?? 0, delivered: s.redNest.delivered ?? 0, trickleT: RED_TRICKLE_S } : null;
   // the red ants on the map and their trails, the player's marks, what the ants have explored lately, a raid in progress
   w.reds = (s.reds ?? []).map((r) => ({ ...r }));
@@ -353,7 +356,6 @@ export function worldFromSave(s: SaveV1): World {
   if (exBytes && exBytes.length === w.explored.length) for (let i = 0; i < exBytes.length; i++) w.explored[i] = (exBytes[i] / 255) * EXPLORE_CAP;
   w.raidAge = s.raidAge ?? 0;
   w.raidPending = s.raidPending ?? 0;
-  w.sortieReadyAt = Math.min(s.sortieReadyAt ?? 0, s.time + SORTIE_COOLDOWN_S);
   w.rescueTimer = s.rescueTimer ?? 0;
   w.selectedAntId = s.selectedAntId != null && w.ants.some((a) => a.id === s.selectedAntId) ? s.selectedAntId : null;
   // Without a living spider nobody can be stuck in a web.
@@ -466,6 +468,12 @@ function validBush(b: unknown, size: { w: number; h: number }): boolean {
   return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isInt(o.aphids) && o.aphids >= 1 && o.aphids <= APHID_MAX && isNum(o.dropT) && o.dropT >= 0;
 }
 
+function validHive(b: unknown, size: { w: number; h: number }): boolean {
+  if (typeof b !== 'object' || b === null) return false;
+  const o = b as Record<string, unknown>;
+  return inRange(o.x, 0, size.w) && inRange(o.y, 0, size.h) && isNum(o.honeyT) && o.honeyT >= 0;
+}
+
 function validRedNest(n: unknown, size: { w: number; h: number }): boolean {
   if (typeof n !== 'object' || n === null) return false;
   const o = n as Record<string, unknown>;
@@ -514,6 +522,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   const size = terrainSize((o.mapStep as number | undefined) ?? 0);
   if (o.spider !== undefined && !validSpider(o.spider, size)) return null;
   if (o.bush !== undefined && !validBush(o.bush, size)) return null;
+  if (o.hive !== undefined && !validHive(o.hive, size)) return null;
   if (o.redNest !== undefined && !validRedNest(o.redNest, size)) return null;
   if (o.reds !== undefined && (!Array.isArray(o.reds) || o.reds.length > 3000 || !o.reds.every((r) => validRed(r, size)))) return null;
   if (o.redPheromone !== undefined && (typeof o.redPheromone !== 'string' || !validPheromone(o.redPheromone, size))) return null;
@@ -526,7 +535,7 @@ export function validateSave(x: unknown): SaveV1 | null {
   for (const k of ['births', 'spins'] as const) {
     if (o[k] !== undefined && (!isInt(o[k]) || (o[k] as number) < 0)) return null;
   }
-  for (const k of ['raidAge', 'raidPending', 'sortieReadyAt', 'rescueTimer'] as const) {
+  for (const k of ['raidAge', 'raidPending', 'rescueTimer'] as const) {
     if (o[k] !== undefined && (!isNum(o[k]) || (o[k] as number) < 0)) return null;
   }
   if (o.selectedAntId !== undefined && o.selectedAntId !== null && !isInt(o.selectedAntId)) return null;

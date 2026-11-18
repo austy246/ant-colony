@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WHEEL_EVERY, WAR_AMOUNT, WAR_TAIL, WAR_R, WAR_TRAIL_LEN, WAR_SNIFF, WAR_MIN, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_CORPSE_PREF, BLACK_CORPSE_S, BLACK_CORPSE_MAX, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WHEEL_EVERY, WAR_AMOUNT, WAR_TAIL, WAR_R, WAR_TRAIL_LEN, WAR_SNIFF, WAR_MIN, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_CORPSE_PREF, BLACK_CORPSE_S, BLACK_CORPSE_MAX, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, HIVE_MIN_ANTS, HIVE_NEST_GAP, HIVE_EDGE_GAP, HIVE_BUSH_GAP, HIVE_BEES, HIVE_START_HONEY, HIVE_MAX_HONEY, HIVE_HONEY_S, HIVE_GUARD_R, HIVE_CHASE_R, HIVE_STING_R, HIVE_STING_S, HIVE_STING_P, HIVE_BEE_SPEED, HIVE_HONEY_DY, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { antRarity, idWithRarity, rarityBonus, wheelRarity, type CardAnt, type StoredAnt } from './collection';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
@@ -12,6 +12,7 @@ import { PheromoneField } from './pheromone';
 import { Rng } from './rng';
 import type { RedAnt, RedNest } from './raid';
 import { dropSpot, type Bush } from './aphids';
+import { beesSleep, type Bee, type Hive } from './hive';
 import { bodyPos, inWeb, spiderCorner, spiderCornerIndex, type Spider } from './spider';
 import { extendTerrain, generateTerrain, speedAt, Surface, type Terrain } from './terrain';
 
@@ -224,6 +225,14 @@ export class World {
   spider: Spider | null = null;
   /** Normal mode: the bush with aphids (null until the colony has BUSH_MIN_ANTS ants). Saved. */
   bush: Bush | null = null;
+  /** Normal mode: the wild bee hive (null until the colony has HIVE_MIN_ANTS ants). Saved. */
+  hive: Hive | null = null;
+  /** Tests: no bee hive appears (its bees would sting ants and spoil exact counts). */
+  noHive = false;
+  /** The guard bees of the hive (transient: made again from the hive after a load). */
+  bees: Bee[] = [];
+  /** The ants close to the hive, looked up every 4th substep for the bees (transient). */
+  private hiveTargets: Ant[] = [];
   /** The red ants' own pheromone: red foragers carrying food home lay it, red foragers follow it. */
   redPher: PheromoneField;
   /** War pheromones (alarms laid where duels start): the black ants' and the red ants' own. warT / redWarT = seconds left until they are wiped (0 = nothing laid). */
@@ -371,27 +380,6 @@ export class World {
   }
   /** Colony-size milestones already reached (see MILESTONES); each paid out once. Saved. */
   milestones = new Set<number>();
-  /** Time (sim seconds) from which the next Výpad may be launched. Transient. */
-  sortieReadyAt = 0;
-  /** A Výpad can be launched: the milestone is reached, the red nest stands and the last sortie is long enough ago. */
-  get canSortie(): boolean {
-    return this.mode === 'normal' && this.milestones.has(MILESTONES[1]) && this.redNest?.owner === 'red' && this.time >= this.sortieReadyAt;
-  }
-  /**
-   * The Výpad: the idle ants nearest to the red nest (not guards, not carrying, not fighting) set off for it, SORTIE_FRACTION of the
-   * colony but at least SORTIE_MIN. They fight the patrols on the way and, when four of them stand at the nest, take it. Returns how many went.
-   */
-  launchSortie(): number {
-    const rn = this.redNest;
-    if (!this.canSortie || !rn) return 0;
-    const pool = this.ants.filter((a) => a.state !== 'nest' && a.role !== 'guard' && a.carry === 0 && a.carryLeaf === undefined && a.duelT === undefined && a.caughtT === undefined && !a.goal);
-    pool.sort((p, q) => Math.hypot(p.x - rn.x, p.y - rn.y) - Math.hypot(q.x - rn.x, q.y - rn.y));
-    const want = Math.max(SORTIE_MIN, Math.floor(this.ants.length * SORTIE_FRACTION));
-    let n = 0;
-    for (const a of pool.slice(0, want)) if (this.sendAnt(a.id, rn.x, rn.y)) n++;
-    if (n > 0) this.sortieReadyAt = this.time + SORTIE_COOLDOWN_S;
-    return n;
-  }
   /** Pays out the milestones the colony has just reached (once each). */
   private updateMilestones(): void {
     for (const m of MILESTONES) {
@@ -805,6 +793,7 @@ export class World {
       if (wanted > this.mapStep) this.growMapTo(this.mapStep + 1);
       updateEnvironment(this);
       this.updateBush();
+      this.updateHive();
       this.updateRedNest();
     }
     this.rotCorpses();
@@ -2220,7 +2209,7 @@ export class World {
       let best: FoodItem | null = null;
       let bestD = RED_FOOD_SENSE;
       for (const f of this.food) {
-        if (f.piecesLeft <= 0 || f.kind === 'leaf' || f.kind === 'honeydew' || f.kind === 'redant' || f.stuck) continue;
+        if (f.piecesLeft <= 0 || f.kind === 'leaf' || f.kind === 'honeydew' || f.kind === 'redant' || f.kind === 'honey' || f.stuck) continue;
         const d = Math.hypot(f.x - r.x, f.y - r.y) * (f.kind === 'blackant' ? RED_CORPSE_PREF : 1); // a dead black ant is the red ants' favourite meal
         if (d < bestD) {
           bestD = d;
@@ -2309,6 +2298,98 @@ export class World {
       if (f.kind !== 'blackant') continue;
       f.rotT = (f.rotT ?? BLACK_CORPSE_S) - STEP_S * 16;
       if (f.rotT <= 0 || ++n > BLACK_CORPSE_MAX) this.food.splice(i, 1); // from the newest back: the oldest are over the limit
+    }
+  }
+
+  /**
+   * Normal mode: from HIVE_MIN_ANTS ants a wild bee hive appears far from the nest, with a pile of honey that grows slowly (not in winter).
+   * Its guard bees sting the ants that come near, unless it is winter or raining (then they stay inside and the honey is free).
+   */
+  private updateHive(): void {
+    if (!this.hive) {
+      if (this.noHive || this.ants.length < HIVE_MIN_ANTS || this.substepNo % 16 !== 0) return;
+      // a few candidate places per try: the first that is far enough from the nest, the bush and the red nest, and not in the spider's web
+      let spot: { x: number; y: number } | null = null;
+      for (let k = 0; k < 8 && !spot; k++) {
+        const sx = HIVE_EDGE_GAP + this.rng.next() * Math.max(0, this.terrain.w - 2 * HIVE_EDGE_GAP);
+        const sy = HIVE_EDGE_GAP + this.rng.next() * Math.max(0, this.terrain.h - 2 * HIVE_EDGE_GAP);
+        const found = resolvePlacement(this.terrain, sx, sy);
+        const ok =
+          found !== null &&
+          !inWeb(this.spider, found.x, found.y) &&
+          Math.hypot(found.x - NEST.x, found.y - NEST.y) >= HIVE_NEST_GAP &&
+          (!this.bush || Math.hypot(found.x - this.bush.x, found.y - this.bush.y) >= HIVE_BUSH_GAP) &&
+          (!this.redNest || Math.hypot(found.x - this.redNest.x, found.y - this.redNest.y) >= HIVE_BUSH_GAP);
+        if (ok) spot = found;
+      }
+      if (!spot) return;
+      this.hive = { x: spot.x, y: spot.y, honeyT: 0 };
+      this.food.push({ id: this.nextId++, kind: 'honey', x: spot.x, y: spot.y + HIVE_HONEY_DY, piecesLeft: HIVE_START_HONEY });
+      return;
+    }
+    const h = this.hive;
+    // the honey pile grows (a new one is made when the ants have carried it all off)
+    if (this.season !== 3) {
+      h.honeyT += STEP_S;
+      if (h.honeyT >= HIVE_HONEY_S) {
+        h.honeyT = 0;
+        const pile = this.food.find((f) => f.kind === 'honey');
+        if (!pile) this.food.push({ id: this.nextId++, kind: 'honey', x: h.x, y: h.y + HIVE_HONEY_DY, piecesLeft: 1 });
+        else if (pile.piecesLeft < HIVE_MAX_HONEY) pile.piecesLeft += 1;
+      }
+    }
+    while (this.bees.length < HIVE_BEES) {
+      const id = this.bees.length;
+      this.bees.push({ id, x: h.x, y: h.y, heading: id * 2.399, stingCd: 0 });
+    }
+    if (beesSleep(this.season, this.raining)) {
+      // inside the hive: a few bees sit in its mouth
+      for (const b of this.bees) {
+        b.x = h.x + ((b.id % 5) - 2) * 1.2;
+        b.y = h.y - 4.5 + Math.floor(b.id / 5) * 2;
+        b.stingCd = 0;
+      }
+      return;
+    }
+    if (this.substepNo % 4 === 0) {
+      this.hiveTargets = this.ants.filter((a) => a.state !== 'nest' && Math.hypot(a.x - h.x, a.y - h.y) <= HIVE_CHASE_R);
+    }
+    for (const b of this.bees) {
+      if (b.stingCd > 0) b.stingCd -= STEP_S;
+      let target: Ant | null = null;
+      let best = Infinity;
+      for (const a of this.hiveTargets) {
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < best) {
+          best = d;
+          target = a;
+        }
+      }
+      let speed = HIVE_BEE_SPEED;
+      if (target) {
+        b.heading = Math.atan2(target.y - b.y, target.x - b.x);
+        speed *= 1.5;
+        if (best <= HIVE_STING_R && b.stingCd <= 0) {
+          b.stingCd = HIVE_STING_S;
+          const i = this.ants.indexOf(target);
+          if (i >= 0 && this.rng.next() < HIVE_STING_P) {
+            this.ants.splice(i, 1);
+            this.antsKilled++;
+            this.food.push({ id: this.nextId++, kind: 'blackant', x: target.x, y: target.y, piecesLeft: FOOD_TABLE.blackant.pieces });
+            this.hiveTargets = this.hiveTargets.filter((a) => a !== target);
+          }
+        }
+      } else {
+        // circles the hive, drifting in and out
+        const d = Math.hypot(b.x - h.x, b.y - h.y) || 1;
+        const th = Math.atan2(b.y - h.y, b.x - h.x);
+        const dir = b.id % 2 === 0 ? 1 : -1;
+        const want = 10 + (b.id % 4) * (HIVE_GUARD_R / 4);
+        const k = (want - d) / 8;
+        b.heading = Math.atan2(Math.cos(th) * dir + Math.sin(th) * k, -Math.sin(th) * dir + Math.cos(th) * k) + 0.5 * Math.sin(this.time * 2.1 + b.id * 1.9);
+      }
+      b.x = Math.max(0.5, Math.min(this.terrain.w - 0.5, b.x + Math.cos(b.heading) * speed * STEP_S));
+      b.y = Math.max(0.5, Math.min(this.terrain.h - 0.5, b.y + Math.sin(b.heading) * speed * STEP_S));
     }
   }
 

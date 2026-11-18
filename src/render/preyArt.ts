@@ -406,6 +406,19 @@ function buildHoneydew(): Sprite {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// A heap of honeycomb: golden hexagonal pieces with a drop of honey on top.
+// ---------------------------------------------------------------------------------------------------------------------
+function buildHoney(): Sprite {
+  const R = newR();
+  R.ell(2, 5, 10, 3.5, SH);
+  R.dome(0, 1, 9, 6, ['#7a4a0c', '#a8700f', '#d19a1c', '#eebb34', '#ffd95a']);
+  for (const [x, y] of [[-4, 0], [0, -2], [4, 0], [-2, 3], [2, 3]] as const) R.px(x, y, '#8a5a10');
+  R.px(-3, -3, '#fff1b0');
+  R.px(-2, -3, '#fff1b0');
+  return toSprite(R);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Dead red ant: a small red-brown body lying on its side with curled legs.
 // ---------------------------------------------------------------------------------------------------------------------
 function buildRedAnt(): Sprite {
@@ -453,6 +466,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   honeydew: buildHoneydew,
   redant: buildRedAnt,
   blackant: buildBlackAnt,
+  honey: buildHoney,
 };
 
 const cache = new Map<FoodKind, Sprite>();

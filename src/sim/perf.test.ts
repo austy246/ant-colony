@@ -23,6 +23,7 @@ describe('large colony', () => {
     const w = World.create(3, 'normal');
     w.noRaid = true;
     w.noSpider = true; // a spider eating an ant would make the exact counts below flaky
+    w.noHive = true; // so would the bees of the hive
     for (let i = 0; i < 299; i++) w.spawnAnt();
     w.stock = 1e6;
     let guard = 0;
