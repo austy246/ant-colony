@@ -423,6 +423,24 @@ function buildRedAnt(): Sprite {
   return toSprite(R);
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Dead black ant: a dark body lying on its side with curled legs (the same pose as the red one, black).
+// ---------------------------------------------------------------------------------------------------------------------
+function buildBlackAnt(): Sprite {
+  const R = newR();
+  R.ell(2, 3, 8, 3, SH);
+  for (const [x, k] of [[-3, -1], [0, 0], [3, 1]] as const) {
+    R.line(x, -2, x + k, -5, '#0e0a07');
+    R.line(x, 2, x - k, 5, '#0e0a07');
+  }
+  R.ell(-5, 0, 2.6, 2.2, '#241a12');
+  R.ell(0, 0, 3, 2.4, '#1a1410');
+  R.ell(6, 0, 3.6, 2.8, '#2e2218');
+  R.px(-1, -1, '#4e3d2e');
+  R.px(-6, -1, '#9a9382');
+  return toSprite(R);
+}
+
 const BUILDERS: Record<FoodKind, () => Sprite> = {
   beetle: buildBeetle,
   caterpillar: buildCaterpillar,
@@ -434,6 +452,7 @@ const BUILDERS: Record<FoodKind, () => Sprite> = {
   leaf: buildLeaf,
   honeydew: buildHoneydew,
   redant: buildRedAnt,
+  blackant: buildBlackAnt,
 };
 
 const cache = new Map<FoodKind, Sprite>();

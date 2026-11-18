@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
 import { World } from '../sim/world';
-import { openWheel, sliceAngles } from './wheel';
+import { buildStrip, openWheel, STRIP_LEN, WIN_INDEX } from './wheel';
 
 let root: HTMLElement;
 let world: World;
@@ -17,11 +17,22 @@ beforeEach(() => {
 const btn = (t: string): HTMLButtonElement => Array.from(root.querySelectorAll('.wheel-window button')).find((b) => b.textContent === t) as HTMLButtonElement;
 
 describe('wheel window', () => {
-  it('its slices fill the whole circle', () => {
-    const s = sliceAngles();
-    expect(s).toHaveLength(12);
-    expect(s[0].from).toBe(0);
-    expect(s[11].to).toBeCloseTo(Math.PI * 2, 9);
+  it('the row of cards has the drawn rarity at the winning place', () => {
+    for (let r = 0; r < 12; r++) {
+      const row = buildStrip(r, () => 0.5);
+      expect(row).toHaveLength(STRIP_LEN);
+      expect(row[WIN_INDEX]).toBe(r);
+    }
+  });
+
+  it('shows the ants side by side and the drawn one sits at the winning place', () => {
+    openWheel(root, world, { instant: true });
+    expect(root.querySelectorAll('.wheel-strip .ac-card')).toHaveLength(STRIP_LEN);
+    btn('Roztočit').click();
+    const cards = root.querySelectorAll<HTMLElement>('.wheel-strip .ac-card');
+    expect(cards).toHaveLength(STRIP_LEN);
+    const shown = root.querySelector<HTMLElement>('.wheel-result .ac-card')!;
+    expect(cards[WIN_INDEX].dataset.rarity).toBe(shown.dataset.rarity);
   });
 
   it('spins, shows the card of the wheel-born ant and uses up one waiting spin, adding no ant', () => {

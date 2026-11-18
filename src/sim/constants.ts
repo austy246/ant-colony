@@ -53,7 +53,7 @@ export const SUGAR_BOOST_MUL = 1.5;
 export const SPAWN_MIN_S = 12;
 export const SPAWN_MAX_S = 30;
 /** Relative chance of each kind to be the next spontaneous appearance (sugar is never spawned). */
-export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew' | 'redant'>, number> = {
+export const SPAWN_WEIGHTS: Record<Exclude<FoodKind, 'sugar' | 'honeydew' | 'redant' | 'blackant'>, number> = {
   berry: 3, mushroom: 2, carrion: 1, fly: 2, caterpillar: 2, beetle: 1, leaf: 2,
 };
 /** Spontaneous appearances stop while there are at least BASE + PER_STEP * mapStep food items on the map. */
@@ -437,6 +437,8 @@ export const RED_GUARD_FRACTION = 0.075;
 export const RED_FORAGE_R = 350;
 /** A red forager notices food this far away (px); the food it brings home feeds the nest (new red ants cost RED_FOOD_PER_ANT each). */
 export const RED_FOOD_SENSE = 60;
+/** A red forager sees a dead black ant as this much nearer than it is, so it picks it before other food. */
+export const RED_CORPSE_PREF = 0.5;
 export const RED_START_STOCK = 100;
 /** Every new red ant costs this much food from the red nest's stock (while it has none, no new red ants come out). */
 export const RED_FOOD_PER_ANT = 1;

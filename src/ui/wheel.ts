@@ -1,64 +1,45 @@
 /**
- * The wheel of fortune: every WHEEL_EVERY ants born charge one spin. The window shows a wheel whose slices are the chances of the
- * twelve rarities (flattened in favour of the rare ones); "Roztočit" spins it, it slows down on the rarity drawn and the new ant's card appears.
+ * The wheel of fortune: every WHEEL_EVERY ants born charge one spin. The window shows a row of ant cards side by side; "Roztočit" slides the row
+ * past a marker, it slows down and stops on the rarity drawn, and the new ant's card appears below.
  */
-import { RARITY_NAMES, wheelChances } from '../sim/collection';
+import { RARITY_NAMES, wheelChances, type CardAnt } from '../sim/collection';
 import type { World } from '../sim/world';
-import { cardElement, RARITY_COLORS, type Card } from './antCards';
+import { cardElement, type Card } from './antCards';
 import { sound } from '../audio/sound';
 
 export const SPIN_MS = 4200;
+export const STRIP_LEN = 56;
+export const WIN_INDEX = 46;
+const CARD_W = 96;
+const GAP = 8;
+const PITCH = CARD_W + GAP;
+const VIEW_W = 480;
 
-/** Angles (radians, 0 = pointing up, clockwise) of the start and end of each slice. */
-export function sliceAngles(): { from: number; to: number }[] {
-  let a = 0;
-  return wheelChances().map((c) => {
-    const o = { from: a, to: a + c * Math.PI * 2 };
-    a = o.to;
-    return o;
-  });
+/** One random rarity drawn from the wheel's chances (for the cards that only fill the row; `rand` gives [0, 1)). */
+function randomRarity(rand: () => number): number {
+  const chances = wheelChances();
+  const u = rand();
+  let acc = 0;
+  for (let i = 0; i < chances.length; i++) {
+    acc += chances[i];
+    if (u < acc) return i;
+  }
+  return chances.length - 1;
 }
 
-function drawWheel(cv: HTMLCanvasElement, rotation: number): void {
-  let ctx: CanvasRenderingContext2D | null = null;
-  try {
-    ctx = cv.getContext('2d');
-  } catch {
-    ctx = null;
-  }
-  if (!ctx) return;
-  const r = cv.width / 2;
-  ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.save();
-  ctx.translate(r, r);
-  ctx.rotate(rotation);
-  sliceAngles().forEach((s, i) => {
-    ctx!.beginPath();
-    ctx!.moveTo(0, 0);
-    ctx!.arc(0, 0, r - 8, s.from - Math.PI / 2, s.to - Math.PI / 2);
-    ctx!.closePath();
-    ctx!.fillStyle = RARITY_COLORS[i];
-    ctx!.fill();
-    ctx!.strokeStyle = '#1a120b';
-    ctx!.lineWidth = 2;
-    ctx!.stroke();
-  });
-  ctx.beginPath();
-  ctx.arc(0, 0, 14, 0, Math.PI * 2);
-  ctx.fillStyle = '#2a2016';
-  ctx.fill();
-  ctx.restore();
-  // the pointer at the top
-  ctx.beginPath();
-  ctx.moveTo(r - 12, 0);
-  ctx.lineTo(r + 12, 0);
-  ctx.lineTo(r, 26);
-  ctx.closePath();
-  ctx.fillStyle = '#f3e6c4';
-  ctx.fill();
-  ctx.strokeStyle = '#1a120b';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+/** The rarities of the cards in the row: random fillers, the drawn rarity at WIN_INDEX. */
+export function buildStrip(winRarity: number, rand: () => number = Math.random): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < STRIP_LEN; i++) out.push(i === WIN_INDEX ? winRarity : randomRarity(rand));
+  return out;
+}
+
+const FILLER: CardAnt = { id: 0, age: 0, speedMul: 1, curiosity: 1, stubbornness: 1 };
+
+function stripCard(rarity: number): HTMLElement {
+  const el = cardElement({ ant: FILLER, rarity, stored: false }, false);
+  el.classList.add('wheel-item');
+  return el;
 }
 
 /** Opens the wheel of fortune over `root`; returns a function that closes it (a second call while open does nothing). */
@@ -76,10 +57,13 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
 
   const title = document.createElement('div');
   title.className = 'ac-title';
-  const cv = document.createElement('canvas');
-  cv.width = 300;
-  cv.height = 300;
-  cv.className = 'wheel-canvas';
+  const viewport = document.createElement('div');
+  viewport.className = 'wheel-viewport';
+  const track = document.createElement('div');
+  track.className = 'wheel-strip';
+  const marker = document.createElement('div');
+  marker.className = 'wheel-marker';
+  viewport.append(track, marker);
   const result = document.createElement('div');
   result.className = 'wheel-result';
   const buttons = document.createElement('div');
@@ -90,7 +74,7 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
   close.type = 'button';
   close.textContent = 'Zavřít';
   buttons.append(spin, close);
-  win.append(title, cv, result, buttons);
+  win.append(title, viewport, result, buttons);
 
   let spinning = false;
   let raf = 0;
@@ -106,7 +90,16 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     spin.disabled = spinning || world.wheels <= 0;
   };
   refresh();
-  drawWheel(cv, 0);
+
+  /** Offset of the row that puts the middle of card `i` under the marker. */
+  const centre = (i: number): number => (viewport.clientWidth || VIEW_W) / 2 - (i * PITCH + CARD_W / 2);
+  const fill = (rarities: number[]): void => track.replaceChildren(...rarities.map(stripCard));
+  const place = (x: number): void => {
+    track.style.transform = `translateX(${x}px)`;
+  };
+  let shown = buildStrip(randomRarity(Math.random));
+  fill(shown);
+  place(centre(WIN_INDEX));
 
   spin.addEventListener('click', () => {
     if (spinning) return;
@@ -120,12 +113,17 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     result.replaceChildren();
     refresh();
     sound.play('click');
-    // the slice of the drawn rarity ends under the pointer at the top: its middle at angle 0
-    const s = sliceAngles()[out.rarity];
-    const mid = (s.from + s.to) / 2;
-    const target = Math.PI * 2 * 5 - mid;
+    // a new row starts with the card now under the marker and ends with the drawn rarity under it
+    const row = buildStrip(out.rarity);
+    row[0] = shown[WIN_INDEX];
+    shown = row;
+    fill(row);
+    // land somewhere inside the winning card, not always on its exact middle
+    const target = centre(WIN_INDEX) + (Math.random() - 0.5) * (CARD_W - 20);
+    const from = centre(0);
+    place(from);
     const finish = (): void => {
-      drawWheel(cv, target);
+      place(target);
       spinning = false;
       const card: Card = { ant: out.ant, rarity: out.rarity, stored: false };
       const el = cardElement(card, true);
@@ -143,8 +141,8 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     const t0 = performance.now();
     const step = (now: number): void => {
       const k = Math.min(1, (now - t0) / SPIN_MS);
-      const ease = 1 - Math.pow(1 - k, 3);
-      drawWheel(cv, target * ease);
+      const ease = 1 - Math.pow(1 - k, 4);
+      place(from + (target - from) * ease);
       if (k < 1) raf = requestAnimationFrame(step);
       else finish();
     };
