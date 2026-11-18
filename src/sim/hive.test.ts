@@ -10,6 +10,7 @@ function colony(seed: number, ants: number): World {
   const w = World.create(seed, 'normal');
   w.noSpider = true;
   w.noRaid = true;
+  w.noGuards = true; // every ant is a free forager
   w.spawnTimer = 1e9;
   w.stock = 300;
   w.terrain.surface.fill(Surface.Ground);
@@ -98,14 +99,22 @@ describe('the bee hive', () => {
     const pile = w.food.find((f) => f.kind === 'honey')!;
     const delivered = w.totalDelivered;
     for (let i = 0; i < 10; i++) {
-      w.ants[i].x = h.x + (i % 5) * 2;
-      w.ants[i].y = h.y + 12;
+      const a = w.ants[i];
+      a.x = h.x + (i % 5) * 2;
+      a.y = h.y + 12;
+      a.state = 'wander';
+      a.role = 'forager';
+      a.carry = 0;
+      delete a.goal;
     }
     run(w, 60);
     expect(pile.piecesLeft).toBeLessThan(HIVE_START_HONEY);
     expect(w.totalDelivered).toBeGreaterThan(delivered);
     // in summer the pile grows by a piece every HIVE_HONEY_S seconds, at most HIVE_MAX_HONEY
     const g = withHive(5, 1);
+    g.ants.length = 1; // nobody takes the honey meanwhile
+    g.ants[0].x = NEST.x;
+    g.ants[0].y = NEST.y;
     const gp = g.food.find((f) => f.kind === 'honey')!;
     const was = gp.piecesLeft;
     run(g, HIVE_HONEY_S * 3 + 1);

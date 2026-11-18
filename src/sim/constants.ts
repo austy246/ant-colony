@@ -227,7 +227,7 @@ export const SATELLITE_COST = 30;
 export const SATELLITE_MIN_DIST = 120;
 export const SATELLITE_RED_GAP = 80;
 /**
- * Colony-size milestones, each paid out once: MILESTONES[0] ants give MILESTONE_XP experience; MILESTONES[1] lets a bee hive appear (HIVE_MIN_ANTS);
+ * Colony-size milestones, each paid out once: MILESTONES[0] ants give MILESTONE_XP experience; MILESTONES[1] is only a mark (a notice);
  * MILESTONES[2] makes a super colony: SUPER_QUEENS more queens, and with a second nest the two are joined by a tunnel and hatch SUPER_HATCH_MUL times as long.
  */
 export const MILESTONES = [100, 200, 500] as const;
@@ -446,7 +446,7 @@ export const RED_CORPSE_PREF = 0.5;
  * fly at an ant that comes within HIVE_CHASE_R px of the hive and, once closer than HIVE_STING_R, sting it (every HIVE_STING_S seconds, the ant dies with
  * chance HIVE_STING_P). In winter and in the rain they stay inside.
  */
-export const HIVE_MIN_ANTS = 200;
+export const HIVE_MIN_ANTS = 500;
 export const HIVE_NEST_GAP = 240;
 export const HIVE_EDGE_GAP = 130;
 export const HIVE_BUSH_GAP = 160;

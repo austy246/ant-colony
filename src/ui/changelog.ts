@@ -9,8 +9,8 @@ export const UPDATES: readonly Update[] = [
   {
     date: '18. 11. 2026',
     items: [
-      'Nové: včelí hnízdo. Od 200 mravenců se daleko od hnízda objeví divoký úl s hromadou medu (bohaté jídlo, po čase dorůstá). Hlídkující včely bodají mravence, kteří se přiblíží; v zimě a za deště zůstávají uvnitř a med jde odnést bez rizika. Mrtví mravenci zůstanou pro červené.',
-      'Tlačítko Výpad je pryč; milník 200 mravenců místo něj přivolá včelí hnízdo.',
+      'Nové: včelí hnízdo. Od 500 mravenců se daleko od hnízda objeví divoký úl s hromadou medu (bohaté jídlo, po čase dorůstá). Hlídkující včely bodají mravence, kteří se přiblíží; v zimě a za deště zůstávají uvnitř a med jde odnést bez rizika. Mrtví mravenci zůstanou pro červené.',
+      'Tlačítko Výpad je pryč.',
       'Kolo štěstí je řada karet mravenců vedle sebe, která se posouvá a zpomalí na vylosovaném; tlačítko Roztočit vše použije všechna nabitá roztočení najednou.',
       'Černí mravenci zabití v souboji nechávají mrtvolu, kterou červení sežerou (po dvou minutách zetlí, nejvýš 80 najednou).',
       'Válečné feromony jsou tenká cestička od souboje k hnízdu, ne chuchvalec: mravenci po ní přibíhají v řadě a netlačí se na jednom místě.',

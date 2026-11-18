@@ -197,8 +197,8 @@ export async function startGame(): Promise<void> {
   // a short notice in the middle of the top edge when the colony reaches a size milestone
   const MILESTONE_TEXT: Record<number, string> = {
     100: '100 mravenců! Kolonie dostává bonus zkušenosti.',
-    200: '200 mravenců! V okolí se může objevit včelí hnízdo: med je lákavý, ale včely bodají.',
-    500: '500 mravenců! Superkolonie: další královny a se druhým hnízdem i rychlejší líhnutí.',
+    200: '200 mravenců! Kolonie roste.',
+    500: '500 mravenců! Superkolonie: další královny a se druhým hnízdem i rychlejší líhnutí. V okolí se může objevit včelí hnízdo.',
   };
   let toastEl: HTMLDivElement | null = null;
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
