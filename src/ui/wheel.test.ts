@@ -46,6 +46,16 @@ describe('wheel window', () => {
     expect(root.querySelector('.wheel-note')?.textContent).toContain(`#${world.ants[9].id}`); // the 10th ant
   });
 
+  it('spins everything waiting at once and shows all the ants drawn', () => {
+    expect(world.wheels).toBe(3);
+    openWheel(root, world, { instant: true });
+    btn('Roztočit vše (3)').click();
+    expect(world.wheels).toBe(0);
+    expect(world.ants).toHaveLength(30);
+    expect(root.querySelectorAll('.wheel-grid .ac-card')).toHaveLength(3);
+    expect(btn('Roztočit vše (0)').disabled).toBe(true);
+  });
+
   it('cannot be spun with nothing charged, and closes', () => {
     world.wheelQueue.length = 0;
     openWheel(root, world, { instant: true });

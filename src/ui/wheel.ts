@@ -4,7 +4,7 @@
  */
 import { RARITY_NAMES, wheelChances, type CardAnt } from '../sim/collection';
 import type { World } from '../sim/world';
-import { cardElement, type Card } from './antCards';
+import { cardElement } from './antCards';
 import { sound } from '../audio/sound';
 
 export const SPIN_MS = 4200;
@@ -70,10 +70,12 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
   buttons.className = 'tutorial-buttons';
   const spin = document.createElement('button');
   spin.type = 'button';
+  const spinAll = document.createElement('button');
+  spinAll.type = 'button';
   const close = document.createElement('button');
   close.type = 'button';
   close.textContent = 'Zavřít';
-  buttons.append(spin, close);
+  buttons.append(spin, spinAll, close);
   win.append(title, viewport, result, buttons);
 
   let spinning = false;
@@ -88,6 +90,8 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     title.textContent = `Kolo štěstí (čeká ${world.wheels})`;
     spin.textContent = 'Roztočit';
     spin.disabled = spinning || world.wheels <= 0;
+    spinAll.textContent = `Roztočit vše (${world.wheels})`;
+    spinAll.disabled = spinning || world.wheels <= 1;
   };
   refresh();
 
@@ -101,20 +105,16 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
   fill(shown);
   place(centre(WIN_INDEX));
 
-  spin.addEventListener('click', () => {
-    if (spinning) return;
-    const out = world.spinWheel();
-    if (!out) {
-      sound.play('deny');
-      result.textContent = 'Žádné roztočení není nabité.';
-      return;
-    }
+  type Spun = { rarity: number; ant: CardAnt };
+  /** Slides the row to the rarest of `outs` and then shows every ant that was drawn (one big card, or a grid of small ones). */
+  const play = (outs: Spun[]): void => {
     spinning = true;
     result.replaceChildren();
     refresh();
     sound.play('click');
-    // a new row starts with the card now under the marker and ends with the drawn rarity under it
-    const row = buildStrip(out.rarity);
+    const best = outs.reduce((a, o) => (o.rarity > a.rarity ? o : a), outs[0]);
+    // a new row starts with the card now under the marker and ends with the best rarity under it
+    const row = buildStrip(best.rarity);
     row[0] = shown[WIN_INDEX];
     shown = row;
     fill(row);
@@ -125,13 +125,20 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
     const finish = (): void => {
       place(target);
       spinning = false;
-      const card: Card = { ant: out.ant, rarity: out.rarity, stored: false };
-      const el = cardElement(card, true);
       const note = document.createElement('div');
       note.className = 'wheel-note';
-      note.textContent = `${RARITY_NAMES[out.rarity]}! Kolo vylosovalo mravence #${out.ant.id}, který se právě narodil.`;
-      result.replaceChildren(note, el);
-      sound.play(out.rarity >= 7 ? 'milestone' : 'research');
+      if (outs.length === 1) {
+        note.textContent = `${RARITY_NAMES[best.rarity]}! Kolo vylosovalo mravence #${best.ant.id}, který se právě narodil.`;
+        result.replaceChildren(note, cardElement({ ant: best.ant, rarity: best.rarity, stored: false }, true));
+      } else {
+        note.textContent = `Kolo vylosovalo ${outs.length} mravenců, nejvzácnější: ${RARITY_NAMES[best.rarity]} (#${best.ant.id}).`;
+        const grid = document.createElement('div');
+        grid.className = 'wheel-grid';
+        const sorted = [...outs].sort((a, b) => b.rarity - a.rarity || a.ant.id - b.ant.id);
+        for (const o of sorted) grid.appendChild(cardElement({ ant: o.ant, rarity: o.rarity, stored: false }, false));
+        result.replaceChildren(note, grid);
+      }
+      sound.play(best.rarity >= 7 ? 'milestone' : 'research');
       refresh();
     };
     if (opts.instant) {
@@ -147,6 +154,20 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
       else finish();
     };
     raf = requestAnimationFrame(step);
-  });
+  };
+
+  const spinSome = (all: boolean): void => {
+    if (spinning) return;
+    const outs: Spun[] = [];
+    for (let o = world.spinWheel(); o; o = all ? world.spinWheel() : null) outs.push(o);
+    if (outs.length === 0) {
+      sound.play('deny');
+      result.textContent = 'Žádné roztočení není nabité.';
+      return;
+    }
+    play(outs);
+  };
+  spin.addEventListener('click', () => spinSome(false));
+  spinAll.addEventListener('click', () => spinSome(true));
   return shut;
 }

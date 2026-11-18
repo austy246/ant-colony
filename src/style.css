@@ -851,6 +851,19 @@ body {
   padding-top: 48px;
   min-height: 24px;
 }
+.wheel-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 38px 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 34px 4px 4px;
+}
+.wheel-grid .ac-card {
+  width: 96px;
+  cursor: default;
+}
 .wheel-note {
   color: #ffd84a;
   font-size: 15px;
