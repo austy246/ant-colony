@@ -7,6 +7,16 @@ export interface Update {
 
 export const UPDATES: readonly Update[] = [
   {
+    date: '18. 11. 2026',
+    items: [
+      'Kolo štěstí je řada karet mravenců vedle sebe, která se posouvá a zpomalí na vylosovaném; tlačítko Roztočit vše použije všechna nabitá roztočení najednou.',
+      'Černí mravenci zabití v souboji nechávají mrtvolu, kterou červení sežerou (po dvou minutách zetlí, nejvýš 80 najednou).',
+      'Válečné feromony jsou tenká cestička od souboje k hnízdu, ne chuchvalec: mravenci po ní přibíhají v řadě a netlačí se na jednom místě.',
+      'Houbové zahrady se odemykají ve výzkumu (uzel Houbové zahrady v rameni Hnízdo); kdo je už má vykopané, zůstávají odemčené.',
+      'Rychlejší ukládání hry (zhruba desetkrát) a z karet zmizel řádek s číslem mravence.',
+    ],
+  },
+  {
     date: '15. 11. 2026',
     items: [
       'Kolo štěstí: každý desátý narozený mravenec má vzácnost vylosovanou kolem s mnohem větší šancí na lepší (žádný mravenec navíc).',

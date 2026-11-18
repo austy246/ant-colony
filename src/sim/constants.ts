@@ -241,15 +241,18 @@ export const SUPER_HATCH_MUL = 0.85;
 /** Each rarity step adds this fraction to the ant's speed, curiosity and stubbornness (Rainbow, the 12th, +33 %). */
 export const RARITY_STAT_STEP = 0.03;
 /**
- * War pheromones: where a duel starts both sides lay an alarm (WAR_AMOUNT in every cell within WAR_R px); its own side's free ants within about
- * WAR_REACH px smell it and come to fight, and it fades after WAR_LIFE_S seconds (the black and the red ants each have their own).
- * An ant that stands in the thick of it (more than WAR_ARRIVE) has arrived and carries on as before.
+ * War pheromones: where a duel starts both sides lay an alarm TRAIL, a thin line of WAR_TRAIL_LEN px from the fight toward their own nest
+ * (WAR_AMOUNT at the fight, thinning out to WAR_TAIL at the far end), and a small spot of WAR_R px at the fight itself. A free ant of that side
+ * that comes within WAR_SNIFF px of the trail smells it and follows it uphill to the fight (so the help arrives in a line, along the way,
+ * not as a crowd drawn in from all sides); it carries on as before once the trail stops rising. The trail fades; it is wiped after WAR_LIFE_S
+ * seconds (the black and the red ants each have their own).
  */
 export const WAR_AMOUNT = 1.5;
-export const WAR_R = 5;
-export const WAR_REACH = 40;
+export const WAR_TAIL = 0.15;
+export const WAR_R = 2;
+export const WAR_TRAIL_LEN = 80;
+export const WAR_SNIFF = 10;
 export const WAR_MIN = 0.08;
-export const WAR_ARRIVE = 1;
 export const WAR_LIFE_S = 90;
 /**
  * The wheel of fortune: every WHEEL_EVERY ants born charge one spin, which brings one more ant. Its rarity is drawn from the ordinary chances
@@ -275,7 +278,8 @@ export const GARDEN_WINTER_MUL = 2;
  *   gather: g1-g3 smell (food noticed 25 % further per level), g4 stronger trail, g5 longer-lasting trail
  *   haul:   h1-h3 carry (carriers 8 % faster per level; level 2: workers take two pieces; level 3: majors one more), h4 all ants faster, h5 longer sugar boost
  *   war:    w1-w3 fight (+5 % duel win chance per level), w4 more majors, w5 red ants noticed from further away
- *   nest:   n1-n3 faster hatching (8 % each), n4 mushroom gardens (+50 % food, a fourth garden), n5 winter coat (no winter slowdown)
+ *   nest:   n1-n3 faster hatching (8 % each), n4 gardener (gardens +50 % food, a fourth garden), n5 winter coat (no winter slowdown),
+ *           n6 mushroom gardens (unlocks digging them; a node of its own next to the nest, bought before n4 can do anything)
  *   chem:   c1 black ants squirt acid on red ants (like the red ones do), c2 it lasts longer, c3 shorter wait, c4 slows more, c5 weakens more in a duel
  *   wild:   p1 scouts (every tenth ant roams three times as far and lays double trail), p2 winter stores (twice as much prey in winter), p3 aphid pasture (honeydew 30 % faster),
  *           p4 hunting (prey is killed with the touches twice as fast), p5 web sense (an ant caught in the spider's web frees itself after SPIDER_ESCAPE_S seconds)
@@ -284,7 +288,7 @@ export type ResearchArm = 'gather' | 'haul' | 'war' | 'nest' | 'chem' | 'wild';
 export interface ResearchNode {
   id: string;
   arm: ResearchArm;
-  /** 0..2 = the chain, 3 and 4 = the two branches at its end. */
+  /** 0..2 = the chain, 3 and 4 = the two branches at its end, 5 = a node of its own that hangs from the nest (n6, the mushroom gardens). */
   pos: number;
   name: string;
   desc: string;
@@ -323,6 +327,7 @@ export const RESEARCH_NODES: readonly ResearchNode[] = [
     'Mravenci se líhnou o 8 % rychleji.', 'Dalších 8 %.', 'Dalších 8 %.',
     'Houbové zahrady dávají o 50 % víc jídla a jde jich vykopat čtyři.', 'V zimě se mravenci nezpomalují.',
   ]),
+  { id: 'n6', arm: 'nest', pos: 5, name: 'Houbové zahrady', desc: 'Odemkne houbové zahrady: v podzemí jde za jídlo vykopat zahradu, která jídlo sama vyrábí.', cost: 6, req: null },
   ...arm('chem', 'c', ['Kyselina', 'Hojná kyselina', 'Rychlé žlázy', 'Silný jed', 'Žíravina'], [
     'Černí mravenci stříkají kyselinu na červené: zpomalí je a oslabí v souboji.', 'Kyselina působí o polovinu déle.', 'Mravenci stříkají o 40 % častěji.',
     'Postříkaní červení se hýbou jen čtvrtinovou rychlostí.', 'Postříkaný červený vyhraje souboj jen s třetinou obvyklé šance.',
@@ -439,6 +444,9 @@ export const RED_FORAGE_R = 350;
 export const RED_FOOD_SENSE = 60;
 /** A red forager sees a dead black ant as this much nearer than it is, so it picks it before other food. */
 export const RED_CORPSE_PREF = 0.5;
+/** The body of a black ant rots away after this many seconds, and at most BLACK_CORPSE_MAX lie about at once (the oldest go first). */
+export const BLACK_CORPSE_S = 120;
+export const BLACK_CORPSE_MAX = 80;
 export const RED_START_STOCK = 100;
 /** Every new red ant costs this much food from the red nest's stock (while it has none, no new red ants come out). */
 export const RED_FOOD_PER_ANT = 1;

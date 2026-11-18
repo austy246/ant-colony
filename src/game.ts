@@ -161,9 +161,9 @@ export async function startGame(): Promise<void> {
     if (nestNext.textContent !== next) nestNext.textContent = next;
     nestNext.hidden = next === '';
     if (nestChambers.textContent !== h.chambers) nestChambers.textContent = h.chambers;
-    const gb = world.gardens >= world.gardenMax ? 'Houbové zahrady: nejvíc' : `Vykopat houbovou zahradu (${GARDEN_COST} jídla)`;
+    const gb = !world.has('n6') ? 'Houbové zahrady: odemkni ve výzkumu' : world.gardens >= world.gardenMax ? 'Houbové zahrady: nejvíc' : `Vykopat houbovou zahradu (${GARDEN_COST} jídla)`;
     if (gardenBtn.textContent !== gb) gardenBtn.textContent = gb;
-    gardenBtn.disabled = world.gardens >= world.gardenMax || world.ants.length < GARDEN_MIN_ANTS || world.stock < GARDEN_COST;
+    gardenBtn.disabled = !world.has('n6') || world.gardens >= world.gardenMax || world.ants.length < GARDEN_MIN_ANTS || world.stock < GARDEN_COST;
   };
   const views = createViewController({
     setSurfaceView: (v) => renderer.setView(v),

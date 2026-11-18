@@ -85,13 +85,10 @@ export function cardElement(card: Card, big: boolean): HTMLElement {
   el.style.setProperty('--rar', RARITY_COLORS[card.rarity]);
   el.dataset.rarity = String(card.rarity);
   el.appendChild(portrait(card, big));
-  const name = document.createElement('div');
-  name.className = 'ac-name';
-  name.textContent = `Mravenec #${card.ant.id}`;
   const rar = document.createElement('div');
   rar.className = 'ac-rarity';
   rar.textContent = `${RARITY_NAMES[card.rarity]} · ${antKind(card.ant)}`;
-  el.append(name, rar);
+  el.append(rar);
   if (big) {
     const stats = document.createElement('div');
     stats.className = 'ac-stats';

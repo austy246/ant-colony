@@ -43,7 +43,7 @@ describe('wheel window', () => {
     expect(world.wheels).toBe(2);
     expect(world.ants).toHaveLength(30);
     expect(root.querySelector('.wheel-result .ac-card')).not.toBeNull();
-    expect(root.querySelector('.wheel-note')?.textContent).toContain(`#${world.ants[9].id}`); // the 10th ant
+    expect(root.querySelector('.wheel-note')?.textContent).not.toContain('#');
   });
 
   it('spins everything waiting at once and shows all the ants drawn', () => {

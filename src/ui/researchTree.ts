@@ -27,10 +27,15 @@ export interface Placed {
   y: number;
 }
 
-/** Positions of all nodes around the nest at (0, 0): every arm is a straight chain of three that forks into two branches. */
+/** Positions of all nodes around the nest at (0, 0): every arm is a straight chain of three that forks into two branches (the gardens' node stands by itself). */
 export function researchLayout(): Placed[] {
   return RESEARCH_NODES.map((node) => {
     const a = ARM_ANGLE[node.arm];
+    if (node.pos === 5) {
+      // the gardens' node: between its arm and the next one, level with the second node of a chain
+      const g = a + Math.PI / 6;
+      return { node, x: Math.cos(g) * RING[1], y: Math.sin(g) * RING[1] };
+    }
     if (node.pos < 3) return { node, x: Math.cos(a) * RING[node.pos], y: Math.sin(a) * RING[node.pos] };
     const b = a + (node.pos === 3 ? -BRANCH_SPREAD : BRANCH_SPREAD);
     return { node, x: Math.cos(b) * BRANCH_R, y: Math.sin(b) * BRANCH_R };

@@ -39,6 +39,13 @@ export class PheromoneField {
     this.data[i] = Math.min(MAX_PHEROMONE, Math.max(0, this.data[i] + amount));
   }
 
+  /** Raises the cell under (x, y) to at least `value` (never adds up: laying the same trail twice does not make it stronger). */
+  raise(x: number, y: number, value: number): void {
+    if (!Number.isFinite(value)) return;
+    const i = this.index(x, y);
+    if (i >= 0 && this.data[i] < value) this.data[i] = Math.min(MAX_PHEROMONE, value);
+  }
+
   sample(x: number, y: number): number {
     const i = this.index(x, y);
     return i < 0 ? 0 : this.data[i];

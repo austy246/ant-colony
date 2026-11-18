@@ -376,15 +376,29 @@ describe('mushroom gardens', () => {
     const w = colony(1, 40);
     w.fixedSeason = 1;
     w.stock = 100;
+    expect(w.buyGarden()).toBe(false); // not researched yet
+    w.unlocked.add('n6');
     expect(w.buyGarden()).toBe(true);
     expect(w.stock).toBeCloseTo(60);
     w.stock = 500;
     expect(w.buyGarden()).toBe(true);
     expect(w.buyGarden()).toBe(true);
     expect(w.buyGarden()).toBe(false); // at most GARDEN_MAX
-    expect(colony(1, 10).buyGarden()).toBe(false); // too few ants
+    const few = colony(1, 10);
+    few.unlocked.add('n6');
+    expect(few.buyGarden()).toBe(false); // too few ants
     const save = worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } });
     expect(worldFromSave(JSON.parse(JSON.stringify(save))).gardens).toBe(3);
+  });
+
+  it('a save with gardens dug before they were researched keeps them unlocked', () => {
+    const w = colony(1, 40);
+    w.gardens = 2;
+    const save = JSON.parse(JSON.stringify(worldToSave(w, { introDone: true, camera: { x: 0, y: 0, zoom: 1 } })));
+    delete save.research;
+    const b = worldFromSave(save);
+    expect(b.has('n6')).toBe(true);
+    expect(b.gardens).toBe(2);
   });
 
   it('they grow food, twice as much in winter', () => {

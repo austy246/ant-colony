@@ -128,10 +128,10 @@ export function openWheel(root: HTMLElement, world: World, opts: { instant?: boo
       const note = document.createElement('div');
       note.className = 'wheel-note';
       if (outs.length === 1) {
-        note.textContent = `${RARITY_NAMES[best.rarity]}! Kolo vylosovalo mravence #${best.ant.id}, který se právě narodil.`;
+        note.textContent = `${RARITY_NAMES[best.rarity]}! Kolo vylosovalo mravence, který se právě narodil.`;
         result.replaceChildren(note, cardElement({ ant: best.ant, rarity: best.rarity, stored: false }, true));
       } else {
-        note.textContent = `Kolo vylosovalo ${outs.length} mravenců, nejvzácnější: ${RARITY_NAMES[best.rarity]} (#${best.ant.id}).`;
+        note.textContent = `Kolo vylosovalo ${outs.length} mravenců, nejvzácnější: ${RARITY_NAMES[best.rarity]}.`;
         const grid = document.createElement('div');
         grid.className = 'wheel-grid';
         const sorted = [...outs].sort((a, b) => b.rarity - a.rarity || a.ant.id - b.ant.id);

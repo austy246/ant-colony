@@ -32,7 +32,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   },
   {
     title: 'Hnízdo a podzemí',
-    text: 'Královna líhne nové mravence za jídlo. Klávesou U (nebo tlačítkem Podzemí) se podíváš do hnízda: uvidíš komory, larvy a spíže. Za jídlo tam jde vykopat houbovou zahradu, která jídlo sama vyrábí.',
+    text: 'Královna líhne nové mravence za jídlo. Klávesou U (nebo tlačítkem Podzemí) se podíváš do hnízda: uvidíš komory, larvy a spíže. Po odemčení ve výzkumu (uzel Houbové zahrady) tam jde za jídlo vykopat houbovou zahradu, která jídlo sama vyrábí.',
     target: byText('button', 'Podzemí'),
   },
   {

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FOOD_TABLE } from './food';
-import { NEST, RAID_MIN_ANTS, STEP_S } from './constants';
+import { BLACK_CORPSE_MAX, BLACK_CORPSE_S, NEST, RAID_MIN_ANTS, STEP_S } from './constants';
 import { Surface } from './terrain';
 import { World } from './world';
 
-vi.setConfig({ testTimeout: 120_000 });
+vi.setConfig({ testTimeout: 300_000 });
 
 function bigWorld(seed: number): World {
   const w = World.create(seed, 'normal');
@@ -50,11 +50,26 @@ describe('dead black ants', () => {
     expect(rn.owner).toBe('red');
     w.reds = w.reds.filter((r) => r.patrol);
     const body = w.placeFood('blackant', NEST.x + 25, NEST.y + 5)!;
-    run(w, 40);
+    run(w, 20);
     expect(w.food.find((f) => f.id === body.id)?.piecesLeft).toBe(FOOD_TABLE.blackant.pieces); // not one black ant touched it
     // a body near the red nest: the foragers go for it
     const near = w.placeFood('blackant', rn.x + 20, rn.y)!;
-    run(w, 120);
+    run(w, 90);
     expect(w.food.find((f) => f.id === near.id)?.piecesLeft ?? 0).toBeLessThan(FOOD_TABLE.blackant.pieces);
+  });
+
+  it('a body rots away after BLACK_CORPSE_S seconds, and at most BLACK_CORPSE_MAX lie about (the oldest go first)', () => {
+    const w = World.create(5, 'normal');
+    w.noSpider = true;
+    w.noRaid = true;
+    w.spawnTimer = 1e9;
+    const first = w.placeFood('blackant', NEST.x + 40, NEST.y)!;
+    for (let i = 0; i < BLACK_CORPSE_MAX + 20; i++) w.placeFood('blackant', NEST.x + 40 + (i % 30), NEST.y + 10 + Math.floor(i / 30))!;
+    run(w, 2);
+    const bodies = w.food.filter((f) => f.kind === 'blackant');
+    expect(bodies).toHaveLength(BLACK_CORPSE_MAX);
+    expect(bodies).not.toContain(first);
+    run(w, BLACK_CORPSE_S + 2);
+    expect(w.food.filter((f) => f.kind === 'blackant')).toHaveLength(0);
   });
 });

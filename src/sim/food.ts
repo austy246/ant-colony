@@ -54,6 +54,8 @@ export interface FoodItem {
   speedMul?: number;
   /** Set when a living creature died: `kind` is then 'carrion' and this says what it was. */
   corpseOf?: PreyKind;
+  /** TRANSIENT (not saved): seconds the body of a black ant still lies before it rots away (absent = it has just fallen). */
+  rotT?: number;
   /** TRANSIENT (not saved): seconds until the creature can be touched again (absent = 0). */
   cooldown?: number;
   /** TRANSIENT (not saved): present while a fly is in the air. */

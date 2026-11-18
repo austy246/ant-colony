@@ -2,7 +2,7 @@ import {
   MAX_PHEROMONE,
   APPROACH_WEAVE_AMP, CURIOSITY_MAX, CURIOSITY_MIN, HATCH_JITTER, LOST_MAX_S, LOST_MIN_S, LOST_P, PREY_SPEED_VAR, SPEED_MUL_MAX, SPEED_MUL_MIN,
   STRAY_MAX_S, STRAY_MIN_S, STRAY_P, STRAY_PULL_MIN, STRAY_TURN_MAX, STRAY_TURN_MIN, STUBBORNNESS_MAX, STUBBORNNESS_MIN, WEAVE_AMP, WEAVE_TAU_S,
-  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WHEEL_EVERY, WAR_AMOUNT, WAR_R, WAR_REACH, WAR_MIN, WAR_ARRIVE, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_CORPSE_PREF, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
+  BEETLE_SPEED, CATERPILLAR_FLEE_MUL, CATERPILLAR_FLEE_S, CATERPILLAR_SPEED, EXPLORE_CAP, EXPLORE_CELL, EXPLORE_HALF_LIFE_S, CARRY_SPEED_MUL, FOOD_PER_ANT, FOOD_PER_QUEEN, GNAW_S, HATCH_INTERVAL_S, HATCH_STAY_S, LARVAE_PER_NURSE, MAX_ANTS, MAJOR_CARRY_PIECES, MAJOR_CHANCE, MAJOR_MAX_FRACTION, MAJOR_MIN_ANTS, MAX_ANTS_NORMAL, SUGAR_BOOST_MUL, SUGAR_BOOST_S, SUGAR_COOLDOWN_S, MAX_QUEENS, NEST, NURSE_EVAL_S, NURSE_MAX_FRACTION, NURSES_PER_QUEEN, HOP_DUR, RESCUE_AFTER_S, STARTER_STOCK, STEP_S, TOUCH_COOLDOWN_S, TOUCH_DIST, UNLOAD_S, MAP_STEP_ANTS, MAX_MAP_STEP, SPIDER_EAT_S, SPIDER_MAJOR_HOLD_S, SPIDER_RESPAWN_S, SPIDER_WEB_R, SPIDER_SPEED, SPIDER_FLY_EAT_S, FLY_SPEED, LEAF_SENSE, LEAF_REACH, RAID_MIN_ANTS, RAID_MIN_S, RAID_MAX_S, RAID_WARN_S, RESEARCH_ESCALATION, XP_REF_ANTS, BLACK_SEP, BLACK_SEP_SPEED, XP_PER_CELL, RESEARCH_SCOUT_RANGE, RESEARCH_SCOUT_TRAIL, RESEARCH_HONEY_MUL, RESEARCH_TOUCH_MUL, SPIDER_ESCAPE_S, WEB_FREE_S, XP_PER_FOOD, XP_PER_KILL, XP_PER_S, RESEARCH_ACID_LONG, RESEARCH_COOLDOWN_MUL, RESEARCH_ACID_SLOW, RESEARCH_ACID_WIN, SPRAY_RANGE, SPRAY_MIN, SPRAY_COOLDOWN_S, SPRAY_ANIM_S, SPRAY_PER_S, ACID_S, ACID_SLOW, ACID_WIN_MUL, RESEARCH_NODES, RESEARCH_SMELL_PER_LEVEL, RESEARCH_CARRY_SPEED_PER_LEVEL, RESEARCH_FIGHT_PER_LEVEL, RESEARCH_TRAIL_MUL, RESEARCH_TRAIL_LIFE_MUL, RESEARCH_SPEED_MUL, RESEARCH_SUGAR_MUL, RESEARCH_MAJOR_CHANCE_MUL, RESEARCH_MAJOR_CAP, RESEARCH_RED_SENSE_MUL, RESEARCH_HATCH_MUL, RESEARCH_GARDEN_MUL, GARDEN_COST, GARDEN_MIN_ANTS, GARDEN_MAX, GARDEN_RATE, GARDEN_WINTER_MUL, GOAL_MAX_S, WHEEL_EVERY, WAR_AMOUNT, WAR_TAIL, WAR_R, WAR_TRAIL_LEN, WAR_SNIFF, WAR_MIN, WAR_LIFE_S, TERRARIUM_MAX, MILESTONES, MILESTONE_XP, SORTIE_FRACTION, SORTIE_MIN, SORTIE_COOLDOWN_S, SUPER_QUEENS, SUPER_HATCH_MUL, SATELLITE_MIN_ANTS, SATELLITE_COST, SATELLITE_MIN_DIST, SATELLITE_RED_GAP, MAJOR_CHANCE_FOCUS, MAJOR_MAX_FRACTION_FOCUS, type HatchFocus, LURE_R, REPEL_R, REPEL_S, REPEL_MAX, REPEL_PENALTY, SEASON_S, RAIN_BLOCK_S, RAIN_S, RAIN_P, RAIN_EVAP_MUL, WINTER_SPEED_MUL, RAID_SIZE_MIN, RAID_SIZE_MAX, RAID_MAX_S_ALIVE, RAID_DIST_MIN, RAID_DIST_MAX, RAID_SPREAD, RED_SEP, RED_SEP_SPEED, RED_NEST_GAP, RED_NEST_MIN_ANTS, RED_GUARD_FRACTION, RED_FORAGE_R, RED_FOOD_SENSE, RED_CORPSE_PREF, BLACK_CORPSE_S, BLACK_CORPSE_MAX, RED_START_STOCK, RED_FOOD_PER_ANT, GUARD_FRACTION, GUARD_MIN_COLONY, GUARD_R_MIN, GUARD_R_STEP, RED_NEST_EDGE, RED_TRICKLE_S, RED_PATROL_START, RED_PATROL_MAX, RED_PATROL_R, RED_NEST_SENSE, CAPTURE_ANTS, CAPTURE_MAX_LEFT, CAPTURE_R, CAPTURED_QUEENS, CAPTURED_HATCH_MUL, RAID_EMERGE_PER_S, RAID_MOUTH_R, ANT_SENSE_RED, RED_SPEED, RED_SENSE, RED_REACH, DUEL_S, BLACK_WIN_P, MAJOR_WIN_P, SUPER_MAJOR_EVERY, SUPER_CARRY_PIECES, SUPER_WIN_P, BUSH_MIN_ANTS, APHID_START, APHID_MAX, APHID_HONEY_S, BUSH_SENSE, BUSH_MAX_ANTS, HONEY_CLAIM_S, BUSH_REACH, BUSH_NEST_GAP, BUSH_EDGE_GAP, CATERPILLAR_BITE_S, CATERPILLAR_GAIN, CATERPILLAR_MAX_PIECES,
 } from './constants';
 import { antRarity, idWithRarity, rarityBonus, wheelRarity, type CardAnt, type StoredAnt } from './collection';
 import { FOOD_TABLE, isAlive, isFreeSpot, resolvePlacement, type FoodItem, type FoodKind, type PreyKind } from './food';
@@ -289,9 +289,9 @@ export class World {
   get gardenMax(): number {
     return GARDEN_MAX + (this.has('n4') ? 1 : 0);
   }
-  /** Buys one mushroom garden: GARDEN_COST food, from GARDEN_MIN_ANTS ants, at most GARDEN_MAX. */
+  /** Buys one mushroom garden: needs the research n6, GARDEN_COST food, from GARDEN_MIN_ANTS ants, at most GARDEN_MAX. */
   buyGarden(): boolean {
-    if (this.gardens >= this.gardenMax || this.ants.length < GARDEN_MIN_ANTS || this.stock + 1e-9 < GARDEN_COST) return false;
+    if (!this.has('n6') || this.gardens >= this.gardenMax || this.ants.length < GARDEN_MIN_ANTS || this.stock + 1e-9 < GARDEN_COST) return false;
     this.stock -= GARDEN_COST;
     this.gardens++;
     return true;
@@ -807,6 +807,7 @@ export class World {
       this.updateBush();
       this.updateRedNest();
     }
+    this.rotCorpses();
     this.updateRaid(); // also in sandbox, so the secret raid key works there (it never starts by itself below RAID_MIN_ANTS ants)
     this.updateSpider();
     this.pher.step((this.raining ? STEP_S * RAIN_EVAP_MUL : STEP_S) / (this.has('g5') ? RESEARCH_TRAIL_LIFE_MUL : 1));
@@ -1934,32 +1935,48 @@ export class World {
     }
   }
 
-  /** Lays an alarm of the war pheromone at (x, y): WAR_AMOUNT in every cell within WAR_R px, and keeps it for WAR_LIFE_S seconds. */
+  /**
+   * Lays an alarm of the war pheromone: a spot at (x, y) and a thin trail from there toward the side's own nest (WAR_TRAIL_LEN px at most,
+   * strongest at the fight, weakest at the far end); it is kept for WAR_LIFE_S seconds. The cells are raised, never added up.
+   */
   private callToArms(field: PheromoneField, x: number, y: number, red: boolean): void {
     for (let dy = -WAR_R; dy <= WAR_R; dy++) {
-      for (let dx = -WAR_R; dx <= WAR_R; dx++) if (dx * dx + dy * dy <= WAR_R * WAR_R) field.deposit(x + dx, y + dy, WAR_AMOUNT);
+      for (let dx = -WAR_R; dx <= WAR_R; dx++) if (dx * dx + dy * dy <= WAR_R * WAR_R) field.raise(x + dx, y + dy, WAR_AMOUNT);
+    }
+    // home of the side: the black nest, or the red one (a raider with no red nest standing came from the far side of the map)
+    const home = red ? this.redNest ?? { x: x + (x - NEST.x), y: y + (y - NEST.y) } : NEST;
+    const dist = Math.hypot(home.x - x, home.y - y);
+    if (dist > 1e-6) {
+      const len = Math.min(WAR_TRAIL_LEN, dist);
+      const ux = (home.x - x) / dist;
+      const uy = (home.y - y) / dist;
+      for (let d = 0; d <= len; d += 0.7) field.raise(x + ux * d, y + uy * d, WAR_AMOUNT + (WAR_TAIL - WAR_AMOUNT) * (d / WAR_TRAIL_LEN));
     }
     if (red) this.redWarT = WAR_LIFE_S;
     else this.warT = WAR_LIFE_S;
   }
 
-  /** The way to the strongest alarm within about WAR_REACH px (eight ways, three distances each), or null: no alarm here, or already in the thick of it. */
+  /**
+   * The way up the alarm trail toward the fight, or null: no trail within WAR_SNIFF px, or the trail does not rise any more (the ant is at
+   * the fight). Looks at sixteen ways, at a short and at the longest distance; the strongest cell wins.
+   */
   private warHeading(f: PheromoneField, x: number, y: number): number | null {
-    if (f.sampleMax(x, y, 2) > WAR_ARRIVE) return null;
-    let best = 0;
-    let bestA = 0;
-    for (let k = 0; k < 8; k++) {
-      const a = (k * Math.PI) / 4;
+    const here = f.sampleMax(x, y, 1);
+    let best = Math.max(here + 0.02, WAR_MIN);
+    let bestA: number | null = null;
+    for (let k = 0; k < 16; k++) {
+      const a = (k * Math.PI) / 8;
       const c = Math.cos(a);
       const s = Math.sin(a);
-      let sum = 0;
-      for (const d of [WAR_REACH * 0.25, WAR_REACH * 0.6, WAR_REACH]) sum += f.sampleMax(x + c * d, y + s * d, 2);
-      if (sum > best) {
-        best = sum;
-        bestA = a;
+      for (const d of [4, WAR_SNIFF]) {
+        const v = f.sampleMax(x + c * d, y + s * d, 1);
+        if (v > best) {
+          best = v;
+          bestA = a;
+        }
       }
     }
-    return best > WAR_MIN ? bestA : null;
+    return bestA;
   }
 
   /** The red ant a wandering black ant is after: looked up every 4th substep (staggered by ant id) and remembered in between. */
@@ -2277,6 +2294,21 @@ export class World {
       this.ants.splice(i, 1);
       this.antsKilled++;
       this.food.push({ id: this.nextId++, kind: 'blackant', x: foe.x, y: foe.y, piecesLeft: FOOD_TABLE.blackant.pieces }); // the body stays: the red ants eat it
+    }
+  }
+
+  /**
+   * The bodies of black ants rot away: each lies BLACK_CORPSE_S seconds at most, and when more than BLACK_CORPSE_MAX lie about the oldest
+   * go first (so a long war does not bury the map in bodies that slow the game down). Looked at every 16th substep.
+   */
+  private rotCorpses(): void {
+    if (this.substepNo % 16 !== 0) return;
+    let n = 0;
+    for (let i = this.food.length - 1; i >= 0; i--) {
+      const f = this.food[i];
+      if (f.kind !== 'blackant') continue;
+      f.rotT = (f.rotT ?? BLACK_CORPSE_S) - STEP_S * 16;
+      if (f.rotT <= 0 || ++n > BLACK_CORPSE_MAX) this.food.splice(i, 1); // from the newest back: the oldest are over the limit
     }
   }
 

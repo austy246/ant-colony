@@ -22,7 +22,7 @@ describe('research tree layout', () => {
   it('every node hangs from an existing node of its own arm, and the first node of an arm from the nest', () => {
     const ids = new Set(RESEARCH_NODES.map((n) => n.id));
     for (const n of RESEARCH_NODES) {
-      if (n.req === null) expect(n.pos).toBe(0);
+      if (n.req === null) expect([0, 5]).toContain(n.pos);
       else {
         expect(ids.has(n.req)).toBe(true);
         expect(RESEARCH_NODES.find((q) => q.id === n.req)!.arm).toBe(n.arm);

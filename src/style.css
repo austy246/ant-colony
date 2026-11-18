@@ -750,9 +750,6 @@ body {
 @keyframes ac-hue {
   to { filter: hue-rotate(360deg); }
 }
-.ac-name {
-  font-weight: bold;
-}
 .ac-rarity {
   color: var(--rar);
   font-size: 11px;
@@ -821,9 +818,6 @@ body {
   flex: 0 0 96px;
   width: 96px;
   cursor: default;
-}
-.wheel-item .ac-name {
-  display: none;
 }
 .wheel-marker {
   position: absolute;

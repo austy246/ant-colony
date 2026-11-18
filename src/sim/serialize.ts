@@ -127,15 +127,23 @@ function redToSave(r: RedAnt): SavedRed {
 }
 
 /** A pheromone field as one byte per cell, base64; null when there is nothing in it. */
-function fieldToBase64(data: Float32Array, max: number, skipEmpty: boolean): string | null {
+/** The field as bytes 0..255 (value / max, rounded and clamped); `any` says whether a single cell is non-zero. A tight loop: it runs over millions of cells at every autosave. */
+function quantize(data: Float32Array, max: number): { bytes: Uint8Array; any: boolean } {
   const bytes = new Uint8Array(data.length);
   let any = false;
   for (let i = 0; i < bytes.length; i++) {
-    const v = Math.max(0, Math.min(255, Math.round((data[i] / max) * 255)));
-    bytes[i] = v;
-    if (v > 0) any = true;
+    const x = (data[i] / max) * 255 + 0.5; // floor(x + 0.5) = Math.round(x) for the values kept
+    if (x >= 1) {
+      bytes[i] = x >= 255 ? 255 : x | 0;
+      any = true;
+    }
   }
-  return skipEmpty && !any ? null : bytesToBase64(bytes);
+  return { bytes, any };
+}
+
+function fieldToBase64(data: Float32Array, max: number, skipEmpty: boolean): string | null {
+  const q = quantize(data, max);
+  return skipEmpty && !q.any ? null : bytesToBase64(q.bytes);
 }
 
 /** Persistent fields of a food item only (the transient cooldown / hop / wanderT are left out). */
@@ -155,13 +163,36 @@ function antToSave(a: Ant): SaveV1['ants'][number] {
   return rest;
 }
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const B64_CODES = Uint8Array.from(B64, (c) => c.charCodeAt(0));
+const utf8 = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+
+/** Standard base64 (with padding). Uses the engine's own encoder when it has one, else encodes into a byte buffer (no huge string concatenations). */
 function bytesToBase64(bytes: Uint8Array): string {
-  let bin = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  const native = (bytes as unknown as { toBase64?: () => string }).toBase64;
+  if (typeof native === 'function') return native.call(bytes);
+  const n = bytes.length;
+  const out = new Uint8Array(Math.ceil(n / 3) * 4);
+  let o = 0;
+  let i = 0;
+  for (; i + 2 < n; i += 3) {
+    const v = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+    out[o++] = B64_CODES[v >> 18];
+    out[o++] = B64_CODES[(v >> 12) & 63];
+    out[o++] = B64_CODES[(v >> 6) & 63];
+    out[o++] = B64_CODES[v & 63];
   }
-  return btoa(bin);
+  if (i < n) {
+    const v = (bytes[i] << 16) | (i + 1 < n ? bytes[i + 1] << 8 : 0);
+    out[o++] = B64_CODES[v >> 18];
+    out[o++] = B64_CODES[(v >> 12) & 63];
+    out[o++] = i + 1 < n ? B64_CODES[(v >> 6) & 63] : 61;
+    out[o++] = 61; // '='
+  }
+  if (utf8) return utf8.decode(out);
+  let s = '';
+  for (let k = 0; k < out.length; k += 0x8000) s += String.fromCharCode(...out.subarray(k, k + 0x8000));
+  return s;
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -186,11 +217,7 @@ function redField(w: World): { redPheromone?: string } {
 }
 
 export function worldToSave(w: World, extra: { introDone: boolean; camera: SaveV1['camera'] }): SaveV1 {
-  const bytes = new Uint8Array(w.pher.data.length);
-  for (let i = 0; i < bytes.length; i++) {
-    const v = Math.round((w.pher.data[i] / MAX_PHEROMONE) * 255);
-    bytes[i] = Math.max(0, Math.min(255, v));
-  }
+  const bytes = quantize(w.pher.data, MAX_PHEROMONE).bytes;
   return {
     version: 1,
     seed: w.seed,
@@ -269,6 +296,7 @@ export function worldFromSave(s: SaveV1): World {
   w.terrarium = (s.terrarium ?? []).slice(0, TERRARIUM_MAX).map((a) => ({ ...a }));
   w.milestones = new Set((s.milestones ?? []).filter((m) => (MILESTONES as readonly number[]).includes(m)));
   w.unlocked = new Set((s.research ?? []).filter((id) => RESEARCH_IDS.has(id)));
+  if ((s.gardens ?? 0) > 0) w.unlocked.add('n6'); // a save from before the gardens were researched: the gardens it has dug stay unlocked
   w.gardens = Math.max(0, Math.min(w.gardenMax, Math.floor(s.gardens ?? 0)));
   w.satellite = s.satellite ? { x: s.satellite.x, y: s.satellite.y } : null;
   w.hatchFocus = (HATCH_FOCUSES as readonly string[]).includes(s.hatchFocus ?? '') ? (s.hatchFocus as HatchFocus) : 'mix';
